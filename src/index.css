@@ -141,3 +141,44 @@
     @apply bg-gradient-to-r from-[#e9e1ff] to-[#f4f0ff] hover:from-[#e0d6ff] hover:to-[#eee8ff];
   }
 }
+
+/* BlockNote Editor Customizations */
+.bn-container {
+  /* Custom container styling */
+  @apply border-none shadow-none;
+}
+
+.bn-editor {
+  /* Ensure the editor takes full height */
+  min-height: 100%;
+  @apply px-6 py-4;
+}
+
+/* Dark mode customizations */
+.dark .bn-container {
+  --bn-colors-editor-background: #12141f;
+  --bn-colors-menu-background: #1a1c2a;
+  --bn-colors-tooltip-background: #1a1c2a;
+  --bn-colors-menu-divider: #2a1e3f;
+  --bn-colors-inline-control-background: #1a1c2a;
+}
+
+/* Light mode customizations */
+.light .bn-container {
+  --bn-colors-editor-background: #f8f6ff;
+  --bn-colors-menu-background: #ffffff;
+  --bn-colors-tooltip-background: #ffffff;
+  --bn-colors-menu-divider: #e9e1ff;
+  --bn-colors-inline-control-background: #ffffff;
+}
+
+/* Remove default styling for both modes */
+.bn-container {
+  --bn-colors-editor-text: inherit;
+  --bn-border-radius: 0.5rem;
+}
+
+/* Fix focus issues */
+.bn-editor:focus-visible {
+  outline: none !important;
+}

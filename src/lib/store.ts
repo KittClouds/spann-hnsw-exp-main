@@ -1,11 +1,12 @@
 
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
+import { PartialBlock } from '@blocknote/core';
 
 export interface Note {
   id: number;
   title: string;
-  content: string;
+  content: PartialBlock[];
   createdAt: string;
   updatedAt: string;
 }
@@ -13,19 +14,19 @@ export interface Note {
 // Helper function to get current date in ISO format
 const getCurrentDate = () => new Date().toISOString();
 
-// Initial notes with better formatting and timestamps
+// Initial notes with BlockNote format for content
 const initialNotes: Note[] = [
   { 
     id: 1, 
     title: 'Untitled Note', 
-    content: 'Welcome to Galaxy Notes! Start typing here...', 
+    content: [{ type: 'paragraph', content: 'Welcome to Galaxy Notes! Start typing here...' }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate() 
   },
   { 
     id: 2, 
     title: 'Untitled Note', 
-    content: 'This is your second note. You can edit the title by clicking on it.', 
+    content: [{ type: 'paragraph', content: 'This is your second note. You can edit the title by clicking on it.' }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate() 
   },
@@ -78,7 +79,7 @@ export const createNote = (setNotesFunction: Function) => {
     const newNote: Note = {
       id: Date.now(),
       title: 'Untitled Note',
-      content: '',
+      content: [{ type: 'paragraph', content: '' }],
       createdAt: getCurrentDate(),
       updatedAt: getCurrentDate()
     };
