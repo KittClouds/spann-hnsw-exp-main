@@ -1,24 +1,30 @@
 
 import { useAtom } from 'jotai';
-import { Plus, Search } from 'lucide-react';
+import { FolderIcon, Plus, Search, Tag, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   activeNoteIdAtom, 
   createNote, 
+  deleteNote, 
   notesAtom,
   currentFolderPathAtom,
+  currentFolderNotesAtom,
+  foldersAtom,
 } from '@/lib/store';
+import { cn } from '@/lib/utils';
+import { toast } from "sonner";
+import { useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { FolderTree } from './FolderTree';
-import { toast } from 'sonner';
-import { useCallback } from 'react';
 
 export function NotesSidebar() {
   const [notes, setNotes] = useAtom(notesAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [currentPath] = useAtom(currentFolderPathAtom);
+  const [currentFolderNotes] = useAtom(currentFolderNotesAtom);
+  const [folders] = useAtom(foldersAtom);
 
   const handleNewNote = useCallback(() => {
     const { id, note } = createNote(currentPath);
@@ -33,6 +39,52 @@ export function NotesSidebar() {
       description: "Start typing to edit your note",
     });
   }, [setNotes, setActiveNoteId, currentPath]);
+  
+  const handleDeleteNote = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Prevent deleting if it's the last note
+    if (notes.length <= 1) {
+      toast("Cannot delete", {
+        description: "You must keep at least one note",
+      });
+      return;
+    }
+    
+    // Save the index for selecting another note
+    const noteIndex = notes.findIndex(note => note.id === id);
+    const isActiveNote = id === activeNoteId;
+    
+    // Delete the note
+    setNotes(prevNotes => deleteNote(prevNotes, id));
+    
+    // If we deleted the active note, select another note
+    if (isActiveNote) {
+      // Find the next note to select (prefer the one after, otherwise take the one before)
+      const nextNoteIndex = noteIndex < notes.length - 1 ? noteIndex : noteIndex - 1;
+      const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
+      
+      if (nextNoteId) {
+        setActiveNoteId(nextNoteId);
+      }
+    }
+    
+    toast("Note deleted", {
+      description: "Your note has been removed",
+    });
+  }, [notes, activeNoteId, setNotes, setActiveNoteId]);
+
+  const handleNoteClick = useCallback((id: string) => {
+    setActiveNoteId(id);
+  }, [setActiveNoteId]);
+
+  // Get the current folder name
+  const getCurrentFolderName = () => {
+    if (currentPath === '/') return 'Home';
+    
+    const folderName = folders.find(f => f.path === currentPath)?.name;
+    return folderName || 'Unknown Folder';
+  };
 
   return (
     <div className="w-64 border-r border-border dark:bg-[#12141f] light:bg-[#f8f6ff] h-full flex flex-col">
@@ -62,17 +114,70 @@ export function NotesSidebar() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="px-2 py-3">
           <div className="px-2 py-1 text-muted-foreground text-xs font-semibold">FOLDERS</div>
-          <ScrollArea className="h-[calc(100vh-180px)]">
+          <ScrollArea className="h-[200px]">
             <div className="mt-2">
               <div 
-                className="flex items-center py-1 px-2 rounded-md text-sm cursor-pointer transition-colors hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
+                className={cn(
+                  "flex items-center py-1 px-2 rounded-md text-sm cursor-pointer transition-colors",
+                  currentPath === '/' 
+                    ? "dark:bg-[#1c1f2e]/60 dark:text-white light:bg-[#e5deff]/60 light:text-[#614ac2]" 
+                    : "hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
+                )}
                 onClick={() => setActiveNoteId(currentFolderPathAtom, '/')}
               >
-                <FolderTree parentId={null} path="/" level={0} />
+                <FolderIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>Home</span>
               </div>
+              <FolderTree parentId={null} path="/" level={0} />
             </div>
           </ScrollArea>
         </div>
+        
+        <div className="px-2 py-1">
+          <div className="flex items-center px-2 py-1 text-xs font-semibold text-muted-foreground">
+            <span>NOTES IN</span>
+            <span className="ml-1 text-foreground">{getCurrentFolderName()}</span>
+          </div>
+        </div>
+        
+        <ScrollArea className="flex-1">
+          <div className="py-2">
+            {currentFolderNotes.length > 0 ? (
+              currentFolderNotes.map((note) => (
+                <div 
+                  key={note.id}
+                  onClick={() => handleNoteClick(note.id)}
+                  className={cn(
+                    "px-4 py-3 cursor-pointer transition-all duration-200 flex justify-between items-center group",
+                    activeNoteId === note.id 
+                      ? "dark:sidebar-note-active-dark light:sidebar-note-active-light" 
+                      : "dark:hover:bg-[#1c1f2e] light:hover:bg-[#efeaff]"
+                  )}
+                >
+                  <div className="font-medium truncate">{note.title}</div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => handleDeleteNote(note.id, e)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 dark:bg-[#1e1f2e]/60 dark:hover:bg-[#1e1f2e] light:bg-[#e5deff]/60 light:hover:bg-[#e5deff]"
+                  >
+                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <div className="px-4 py-2 text-sm text-muted-foreground">No notes in this folder</div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+      
+      <Separator className="dark:bg-[#1e1f2e] light:bg-[#e5deff]" />
+      
+      <div className="p-3">
+        <Button variant="outline" className="w-full flex items-center" size="sm">
+          <Tag className="mr-2 h-3 w-3" /> Manage Tags
+        </Button>
       </div>
     </div>
   );
