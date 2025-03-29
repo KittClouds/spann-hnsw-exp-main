@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
-import { ChevronRight, FolderIcon, FolderOpen, Plus } from 'lucide-react';
+import { ChevronRight, FolderIcon, FolderOpen, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Folder, currentFolderPathAtom, foldersAtom, createFolder } from '@/lib/store';
+import { Folder, currentFolderPathAtom, foldersAtom, notesAtom, createFolder } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { 
   ContextMenu,
@@ -21,6 +21,16 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface FolderTreeProps {
   parentId: string | null;
@@ -30,10 +40,14 @@ interface FolderTreeProps {
 
 export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   const [folders, setFolders] = useAtom(foldersAtom);
+  const [notes, setNotes] = useAtom(notesAtom);
   const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
   const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
 
   // Find children of the current folder
   const childFolders = folders.filter(folder => 
@@ -93,24 +107,51 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     toast.success('Folder created successfully');
   };
 
-  const handleDeleteFolder = (folderId: string, folderPath: string) => {
-    // Check if the folder has children
-    const hasChildFolders = folders.some(folder => folder.parentId === folderId);
+  const handleDeleteClick = (folder: Folder, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFolderToDelete(folder);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!folderToDelete) return;
+
+    // Check if the folder has subfolders
+    const hasSubFolders = folders.some(folder => folder.parentId === folderToDelete.id);
     
-    if (hasChildFolders) {
-      toast.error('Cannot delete a folder that contains other folders');
+    if (hasSubFolders) {
+      toast.error('Cannot delete a folder that contains subfolders');
+      setIsDeleteDialogOpen(false);
+      setFolderToDelete(null);
+      return;
+    }
+
+    // Check if the folder contains notes
+    const hasNotes = notes.some(note => note.path === folderToDelete.path);
+    
+    if (hasNotes) {
+      toast.error('Cannot delete a folder that contains notes');
+      setIsDeleteDialogOpen(false);
+      setFolderToDelete(null);
       return;
     }
     
-    setFolders(folders.filter(folder => folder.id !== folderId));
-    
-    // If we're deleting the current folder, navigate to parent
-    if (currentPath === folderPath) {
-      const parentPath = folderPath.split('/').slice(0, -1).join('/') || '/';
+    // Navigate to parent folder if we're deleting the current folder
+    if (currentPath === folderToDelete.path) {
+      const parentPath = folderToDelete.path.split('/').slice(0, -1).join('/') || '/';
       setCurrentPath(parentPath);
     }
-    
-    toast.success('Folder deleted');
+
+    // Remove the folder
+    setFolders(folders.filter(folder => folder.id !== folderToDelete.id));
+    setIsDeleteDialogOpen(false);
+    setFolderToDelete(null);
+    toast.success('Folder deleted successfully');
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setFolderToDelete(null);
   };
 
   return (
@@ -121,11 +162,13 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
             <ContextMenuTrigger>
               <div 
                 className={cn(
-                  "flex items-center py-1 px-2 rounded-md text-sm cursor-pointer transition-colors",
+                  "flex items-center py-1 px-2 rounded-md text-sm cursor-pointer transition-colors group",
                   currentPath === folder.path 
                     ? "dark:bg-[#1c1f2e]/60 dark:text-white light:bg-[#e5deff]/60 light:text-[#614ac2]" 
                     : "hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
                 )}
+                onMouseEnter={() => setHoveredFolderId(folder.id)}
+                onMouseLeave={() => setHoveredFolderId(null)}
               >
                 <button 
                   onClick={() => toggleFolder(folder.id)}
@@ -150,11 +193,25 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
                   )}
                   <span>{folder.name}</span>
                 </button>
+
+                {hoveredFolderId === folder.id && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => handleDeleteClick(folder, e)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                  </Button>
+                )}
               </div>
             </ContextMenuTrigger>
             
             <ContextMenuContent>
-              <ContextMenuItem onClick={() => handleDeleteFolder(folder.id, folder.path)}>
+              <ContextMenuItem onClick={() => {
+                setFolderToDelete(folder);
+                setIsDeleteDialogOpen(true);
+              }}>
                 Delete Folder
               </ContextMenuItem>
             </ContextMenuContent>
@@ -207,6 +264,24 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
           </DialogContent>
         </Dialog>
       </div>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete folder</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this folder?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
