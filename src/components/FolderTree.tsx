@@ -25,7 +25,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -57,6 +56,8 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
+  const [parentForNewFolder, setParentForNewFolder] = useState<string | null>(null);
+  const [folderPathForNewFolder, setFolderPathForNewFolder] = useState<string>("/");
 
   // Find children of the current folder
   const childFolders = folders.filter(folder => 
@@ -82,6 +83,12 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     setCurrentPath(folderPath);
   };
 
+  const openNewFolderDialog = (parentFolderId: string | null, folderPath: string) => {
+    setParentForNewFolder(parentFolderId);
+    setFolderPathForNewFolder(folderPath);
+    setIsNewFolderDialogOpen(true);
+  };
+
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) {
       toast.error('Folder name cannot be empty');
@@ -90,7 +97,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
 
     // Check if folder name already exists at this level
     const folderExists = folders.some(
-      folder => folder.parentId === parentId && folder.name.toLowerCase() === newFolderName.toLowerCase()
+      folder => folder.parentId === parentForNewFolder && folder.name.toLowerCase() === newFolderName.toLowerCase()
     );
 
     if (folderExists) {
@@ -100,8 +107,8 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
 
     const { folder } = createFolder(
       newFolderName, 
-      path, 
-      path === '/' ? null : folders.find(f => f.path === path)?.id || null
+      folderPathForNewFolder, 
+      folderPathForNewFolder === '/' ? null : folders.find(f => f.path === folderPathForNewFolder)?.id || null
     );
     
     setFolders([...folders, folder]);
@@ -109,10 +116,10 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     setIsNewFolderDialogOpen(false);
     
     // Expand the parent folder
-    if (parentId) {
+    if (parentForNewFolder) {
       setExpandedFolders(prev => ({
         ...prev,
-        [parentId]: true
+        [parentForNewFolder]: true
       }));
     }
     
@@ -281,6 +288,18 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
                     <Button
                       variant="ghost"
                       size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openNewFolderDialog(folder.id, folder.path);
+                      }}
+                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="New folder"
+                    >
+                      <FolderIcon className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={(e) => handleCreateNote(folder.path, e)}
                       className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                       title="New note"
@@ -303,13 +322,18 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
             
             <ContextMenuContent>
               <ContextMenuItem onClick={() => {
+                openNewFolderDialog(folder.id, folder.path);
+              }}>
+                New Folder
+              </ContextMenuItem>
+              <ContextMenuItem onClick={(e) => handleCreateNote(folder.path, e as React.MouseEvent)}>
+                New Note
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => {
                 setFolderToDelete(folder);
                 setIsDeleteDialogOpen(true);
               }}>
                 Delete Folder
-              </ContextMenuItem>
-              <ContextMenuItem onClick={(e) => handleCreateNote(folder.path, e as React.MouseEvent)}>
-                New Note
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
@@ -378,43 +402,46 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
         ))
       }
       
-      <div className="mt-1 pl-5">
-        <Dialog open={isNewFolderDialogOpen} onOpenChange={setIsNewFolderDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground py-1"
-            >
-              <Plus className="h-3 w-3" /> New Folder
+      {/* Root level "New Folder" button */}
+      {path === '/' && (
+        <div className="flex items-center py-1 px-2 mt-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground py-1"
+            onClick={() => openNewFolderDialog(parentId, path)}
+          >
+            <Plus className="h-3 w-3" /> New Folder
+          </Button>
+        </div>
+      )}
+
+      <Dialog open={isNewFolderDialogOpen} onOpenChange={setIsNewFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create new folder</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Folder name"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              className="w-full"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateFolder();
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewFolderDialogOpen(false)}>
+              Cancel
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create new folder</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <Input
-                placeholder="Folder name"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                className="w-full"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleCreateFolder();
-                }}
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsNewFolderDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateFolder}>
-                Create
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <Button onClick={handleCreateFolder}>
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
