@@ -44,28 +44,41 @@ export function NoteEditor() {
       const firstBlock = content[0];
       let newTitle = 'Untitled Note';
       
-      if (firstBlock && typeof firstBlock.content === 'string') {
-        // Extract the first line or a portion of it as the title
-        newTitle = firstBlock.content.split('\n')[0].substring(0, 40) || 'Untitled Note';
-      } else if (firstBlock && Array.isArray(firstBlock.content)) {
-        // Handle content that might be an array of text runs
-        const textContent = firstBlock.content
-          .map(run => typeof run === 'string' ? run : run.text)
-          .join('');
-        newTitle = textContent.substring(0, 40) || 'Untitled Note';
+      if (firstBlock) {
+        if (firstBlock.type === 'paragraph') {
+          // Try to extract a title from text content in the first block
+          const blockContent = firstBlock.content;
+          if (Array.isArray(blockContent)) {
+            const textContent = blockContent
+              .map(item => {
+                if (typeof item === 'string') return item;
+                // Handle different types of content safely
+                return 'text' in item ? item.text : '';
+              })
+              .join('');
+            newTitle = textContent.substring(0, 40) || 'Untitled Note';
+          } else if (typeof blockContent === 'string') {
+            newTitle = blockContent.split('\n')[0].substring(0, 40) || 'Untitled Note';
+          }
+        }
       }
       
       // Save the updated note with its content and new title
       updateActiveNote({
+        ...activeNote,
         title: newTitle,
         content: content
       });
     }
   };
 
-  // Create the editor instance
+  // Create the editor instance with necessary configs
   const editor = useBlockNote({
     initialContent: editorContent,
+    // Set theme to light explicitly to avoid the SideMenu error
+    theme: {
+      light: 'light'
+    }
   });
 
   // Set up the onChange handler after initialization
