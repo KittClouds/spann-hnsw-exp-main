@@ -7,55 +7,63 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { activeNoteIdAtom, createNote, deleteNote, notesAtom } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { toast } from "sonner";
+import { useCallback } from 'react';
 
 export function NotesSidebar() {
   const [notes, setNotes] = useAtom(notesAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
 
-  const handleNewNote = () => {
-    const newNoteId = createNote(setNotes);
-    setActiveNoteId(newNoteId);
+  const handleNewNote = useCallback(() => {
+    const { id, note } = createNote();
+    
+    // Add the new note to the notes array
+    setNotes(prevNotes => [...prevNotes, note]);
+    
+    // Set the new note as active
+    setActiveNoteId(id);
+    
     toast("New note created", {
       description: "Start typing to edit your note",
     });
-  };
+  }, [setNotes, setActiveNoteId]);
   
-  const handleDeleteNote = (id: number, e: React.MouseEvent) => {
+  const handleDeleteNote = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
     // Prevent deleting if it's the last note
-    const notesArray = Array.isArray(notes) ? notes : [];
-    if (notesArray.length <= 1) {
+    if (notes.length <= 1) {
       toast("Cannot delete", {
         description: "You must keep at least one note",
       });
       return;
     }
     
-    // Delete the note and get the index that was deleted
-    deleteNote(setNotes, id);
+    // Save the index for selecting another note
+    const noteIndex = notes.findIndex(note => note.id === id);
+    const isActiveNote = id === activeNoteId;
+    
+    // Delete the note
+    setNotes(prevNotes => deleteNote(prevNotes, id));
     
     // If we deleted the active note, select another note
-    if (id === activeNoteId) {
-      const remainingNotes = notesArray.filter(note => note.id !== id);
+    if (isActiveNote) {
+      // Find the next note to select (prefer the one after, otherwise take the one before)
+      const nextNoteIndex = noteIndex < notes.length - 1 ? noteIndex : noteIndex - 1;
+      const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
       
-      if (remainingNotes.length > 0) {
-        // Set the first available note as active if we deleted the active note
-        setActiveNoteId(remainingNotes[0].id);
+      if (nextNoteId) {
+        setActiveNoteId(nextNoteId);
       }
     }
     
     toast("Note deleted", {
       description: "Your note has been removed",
     });
-  };
+  }, [notes, activeNoteId, setNotes, setActiveNoteId]);
 
-  const handleNoteClick = (id: number) => {
-    // Only change if it's different than the current active note
-    if (id !== activeNoteId) {
-      setActiveNoteId(id);
-    }
-  };
+  const handleNoteClick = useCallback((id: string) => {
+    setActiveNoteId(id);
+  }, [setActiveNoteId]);
 
   return (
     <div className="w-64 border-r border-border dark:bg-[#12141f] light:bg-[#f8f6ff] h-full flex flex-col">
@@ -72,7 +80,7 @@ export function NotesSidebar() {
       
       <ScrollArea className="flex-1">
         <div className="py-2">
-          {Array.isArray(notes) && notes.length > 0 ? (
+          {notes.length > 0 ? (
             notes.map((note) => (
               <div 
                 key={note.id}

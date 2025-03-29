@@ -4,7 +4,7 @@ import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
 
 export interface Note {
-  id: number;
+  id: string;
   title: string;
   content: PartialBlock[];
   createdAt: string;
@@ -14,19 +14,22 @@ export interface Note {
 // Helper function to get current date in ISO format
 const getCurrentDate = () => new Date().toISOString();
 
-// Initial notes with BlockNote format for content
+// Generate a unique ID
+const generateId = () => `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+// Create initial notes with proper structure
 const initialNotes: Note[] = [
   { 
-    id: 1, 
-    title: 'Untitled Note', 
+    id: generateId(), 
+    title: 'Welcome Note', 
     content: [{ type: 'paragraph', content: 'Welcome to Galaxy Notes! Start typing here...' }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate() 
   },
   { 
-    id: 2, 
-    title: 'Untitled Note', 
-    content: [{ type: 'paragraph', content: 'This is your second note. You can edit the title by clicking on it.' }], 
+    id: generateId(), 
+    title: 'Getting Started', 
+    content: [{ type: 'paragraph', content: 'Click on a note title to edit it. Create new notes with the + button.' }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate() 
   },
@@ -36,7 +39,7 @@ const initialNotes: Note[] = [
 export const notesAtom = atomWithStorage<Note[]>('galaxy-notes', initialNotes);
 
 // Active note ID atom
-export const activeNoteIdAtom = atom<number>(1);
+export const activeNoteIdAtom = atom<string | null>(initialNotes[0].id);
 
 // Derived atom for the currently active note
 export const activeNoteAtom = atom(
@@ -44,19 +47,16 @@ export const activeNoteAtom = atom(
     const notes = get(notesAtom);
     const activeId = get(activeNoteIdAtom);
     
-    // Make sure we're dealing with an array
-    const notesArray = Array.isArray(notes) ? notes : initialNotes;
-    
-    return notesArray.find((note) => note.id === activeId) || notesArray[0];
+    if (!activeId) return null;
+    return notes.find((note) => note.id === activeId) || null;
   },
   (get, set, updatedNote: Partial<Note>) => {
     const notes = get(notesAtom);
     const activeId = get(activeNoteIdAtom);
     
-    // Make sure we're dealing with an array
-    const notesArray = Array.isArray(notes) ? notes : initialNotes;
+    if (!activeId) return;
     
-    const updatedNotes = notesArray.map((note) => 
+    const updatedNotes = notes.map((note) => 
       note.id === activeId 
         ? { 
             ...note, 
@@ -70,41 +70,23 @@ export const activeNoteAtom = atom(
   }
 );
 
-// Function to create a new note
-export const createNote = (setNotesFunction: Function) => {
-  const newId = Date.now();
+// Create a new note and return its ID
+export const createNote = () => {
+  const newId = generateId();
+  const now = getCurrentDate();
   
-  setNotesFunction((prev: Note[]) => {
-    // Make sure we're dealing with an array
-    const notesArray = Array.isArray(prev) ? prev : initialNotes;
-    
-    const newNote: Note = {
-      id: newId,
-      title: 'Untitled Note',
-      content: [{ type: 'paragraph', content: '' }],
-      createdAt: getCurrentDate(),
-      updatedAt: getCurrentDate()
-    };
-    return [...notesArray, newNote];
-  });
+  const newNote: Note = {
+    id: newId,
+    title: 'Untitled Note',
+    content: [{ type: 'paragraph', content: '' }],
+    createdAt: now,
+    updatedAt: now
+  };
   
-  // Return the new note's ID so we can set it as active
-  return newId;
+  return { id: newId, note: newNote };
 };
 
-// Function to delete a note
-export const deleteNote = (setNotesFunction: Function, id: number) => {
-  let deletedNoteIndex = -1;
-  
-  setNotesFunction((prev: Note[]) => {
-    // Make sure we're dealing with an array
-    const notesArray = Array.isArray(prev) ? prev : initialNotes;
-    
-    // Find the index of the note to be deleted for later reference
-    deletedNoteIndex = notesArray.findIndex(note => note.id === id);
-    
-    return notesArray.filter(note => note.id !== id);
-  });
-  
-  return deletedNoteIndex;
+// Delete a note by ID
+export const deleteNote = (notes: Note[], id: string): Note[] => {
+  return notes.filter(note => note.id !== id);
 };

@@ -2,7 +2,7 @@
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
 import { Input } from "@/components/ui/input";
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
@@ -13,7 +13,7 @@ import { debounce } from 'lodash';
 export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
   const [activeNoteId] = useAtom(activeNoteIdAtom);
-  const [theme] = useState<"light" | "dark">(() => {
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
     }
@@ -29,8 +29,7 @@ export function NoteEditor() {
   useEffect(() => {
     const handleThemeChange = () => {
       const isDark = document.documentElement.classList.contains('dark');
-      const newTheme = isDark ? 'dark' : 'light';
-      // No direct setter for theme in BlockNote v0.11+, handled via props
+      setTheme(isDark ? 'dark' : 'light');
     };
 
     // Initial check
@@ -53,20 +52,11 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Load note content when active note changes
-  useEffect(() => {
-    if (editor && activeNote?.content) {
-      // Replace the editor content with the active note content
-      editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
-    }
-  }, [activeNoteId, activeNote?.id, editor]);
-
-  // Save changes to note when editor content changes
+  // Save changes to note content when editor changes
   const saveChanges = debounce(() => {
     if (editor && activeNote) {
       const blocks = editor.document;
       setActiveNote({
-        ...activeNote,
         content: blocks,
       });
     }
@@ -74,32 +64,34 @@ export function NoteEditor() {
 
   // Set up editor change handler
   useEffect(() => {
-    if (editor) {
-      // Subscribe to changes - store the unsubscribe function correctly
-      const unsubscribeFunction = editor.onEditorContentChange(() => {
-        saveChanges();
-      });
-      
-      // Make sure to return the function itself, not call it
-      return () => {
-        saveChanges.cancel();
-        if (typeof unsubscribeFunction === 'function') {
-          unsubscribeFunction();
-        }
-      };
-    }
+    if (!editor) return;
     
-    // Also handle the case when there's no editor
+    const unsubscribe = editor.onEditorContentChange(() => {
+      saveChanges();
+    });
+    
     return () => {
       saveChanges.cancel();
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
     };
   }, [editor, saveChanges, activeNote]);
 
+  // Load note content when active note changes
+  useEffect(() => {
+    if (editor && activeNote?.content) {
+      // Replace the editor content with the active note content
+      editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
+    }
+  }, [activeNoteId, editor]);
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setActiveNote({
-      ...activeNote,
-      title: e.target.value
-    });
+    if (activeNote) {
+      setActiveNote({
+        title: e.target.value
+      });
+    }
   };
 
   if (!activeNote) {
@@ -121,7 +113,7 @@ export function NoteEditor() {
       <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
         <BlockNoteView 
           editor={editor} 
-          theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+          theme={theme}
           className="min-h-full"
         />
       </div>
