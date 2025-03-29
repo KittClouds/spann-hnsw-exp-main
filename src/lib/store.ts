@@ -22,14 +22,20 @@ const initialNotes: Note[] = [
   { 
     id: generateId(), 
     title: 'Welcome Note', 
-    content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Welcome to Galaxy Notes! Start typing here...' }] }], 
+    content: [{ 
+      type: 'paragraph', 
+      content: [{ type: 'text', text: 'Welcome to Galaxy Notes! Start typing here...', styles: {} }] 
+    }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate() 
   },
   { 
     id: generateId(), 
     title: 'Getting Started', 
-    content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Click on a note title to edit it. Create new notes with the + button.' }] }], 
+    content: [{ 
+      type: 'paragraph', 
+      content: [{ type: 'text', text: 'Click on a note title to edit it. Create new notes with the + button.', styles: {} }] 
+    }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate() 
   },
@@ -78,7 +84,10 @@ export const createNote = () => {
   const newNote: Note = {
     id: newId,
     title: 'Untitled Note',
-    content: [{ type: 'paragraph', content: [{ type: 'text', text: '' }] }],
+    content: [{ 
+      type: 'paragraph', 
+      content: [{ type: 'text', text: '', styles: {} }] 
+    }],
     createdAt: now,
     updatedAt: now
   };

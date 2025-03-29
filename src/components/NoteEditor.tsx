@@ -20,11 +20,17 @@ export function NoteEditor() {
 
   // Create editor instance once we have a note
   const editor = useMemo(() => {
-    if (!activeNote) return undefined;
+    if (!activeNote || !activeNote.content) return undefined;
     
-    return BlockNoteEditor.create({
-      initialContent: activeNote.content as PartialBlock[],
-    });
+    try {
+      return BlockNoteEditor.create({
+        initialContent: activeNote.content,
+      });
+    } catch (error) {
+      console.error('Error creating BlockNoteEditor:', error);
+      // Return editor with empty content as fallback
+      return BlockNoteEditor.create();
+    }
   }, [activeNoteId, activeNote]);
 
   // Update theme when app theme changes
