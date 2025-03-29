@@ -18,9 +18,11 @@ export function NoteEditor() {
   }, [activeNoteId]);
   
   if (!activeNote) {
-    return <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground">
-      No note selected
-    </div>;
+    return (
+      <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground">
+        No note selected
+      </div>
+    );
   }
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,11 +40,11 @@ export function NoteEditor() {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-6">
+    <div className="flex-1 flex flex-col p-6 dark:bg-[#0f1117] light:bg-[#fcfcfd]">
       <Input
         value={activeNote.title}
         onChange={handleTitleChange}
-        className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400"
+        className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]"
         placeholder="Note Title"
       />
       <Textarea
@@ -50,7 +52,7 @@ export function NoteEditor() {
         value={activeNote.content}
         onChange={handleContentChange}
         placeholder="Enter text or type '/' for commands"
-        className="flex-1 resize-none dark:editor-gradient-dark light:editor-gradient-light rounded-md p-6 text-base leading-relaxed shadow-lg border-border"
+        className="flex-1 resize-none dark:bg-[#141824] light:bg-white rounded-md p-6 text-base leading-relaxed shadow-lg border-border"
       />
     </div>
   );
