@@ -35,36 +35,51 @@ export function NoteEditor() {
     }
   }, [activeNote?.id]);
 
+  // Function to handle content changes
+  const handleEditorContentChange = (editor: BlockNoteEditor) => {
+    const content = editor.topLevelBlocks;
+    
+    if (activeNote) {
+      // Update note title based on first block content
+      const firstBlock = content[0];
+      let newTitle = 'Untitled Note';
+      
+      if (firstBlock && typeof firstBlock.content === 'string') {
+        // Extract the first line or a portion of it as the title
+        newTitle = firstBlock.content.split('\n')[0].substring(0, 40) || 'Untitled Note';
+      } else if (firstBlock && Array.isArray(firstBlock.content)) {
+        // Handle content that might be an array of text runs
+        const textContent = firstBlock.content
+          .map(run => typeof run === 'string' ? run : run.text)
+          .join('');
+        newTitle = textContent.substring(0, 40) || 'Untitled Note';
+      }
+      
+      // Save the updated note with its content and new title
+      updateActiveNote({
+        title: newTitle,
+        content: content
+      });
+    }
+  };
+
   // Create the editor instance
   const editor = useBlockNote({
     initialContent: editorContent,
-    onEditorContentChange: (editor) => {
-      const content = editor.topLevelBlocks;
-      
-      if (activeNote) {
-        // Update note title based on first block content
-        const firstBlock = content[0];
-        let newTitle = 'Untitled Note';
-        
-        if (firstBlock && typeof firstBlock.content === 'string') {
-          // Extract the first line or a portion of it as the title
-          newTitle = firstBlock.content.split('\n')[0].substring(0, 40) || 'Untitled Note';
-        } else if (firstBlock && Array.isArray(firstBlock.content)) {
-          // Handle content that might be an array of text runs
-          const textContent = firstBlock.content
-            .map(run => typeof run === 'string' ? run : run.text)
-            .join('');
-          newTitle = textContent.substring(0, 40) || 'Untitled Note';
-        }
-        
-        // Save the updated note with its content and new title
-        updateActiveNote({
-          title: newTitle,
-          content: content
-        });
-      }
-    }
   });
+
+  // Set up the onChange handler after initialization
+  useEffect(() => {
+    if (editor) {
+      editor.onChange(handleEditorContentChange);
+    }
+    // Clean up the event handler when the component unmounts
+    return () => {
+      if (editor) {
+        editor.onChange(null);
+      }
+    };
+  }, [editor, activeNote]);
 
   if (!activeNote) {
     return (
