@@ -63,8 +63,11 @@ export const activeNoteAtom = atom(
 );
 
 // Function to create a new note
-export const createNote = (set: Function) => {
-  set(notesAtom, (prev: Note[]) => {
+export const createNote = (setNotesFunction: Function) => {
+  setNotesFunction((prev: Note[]) => {
+    // Make sure we're dealing with an array
+    const notesArray = Array.isArray(prev) ? prev : initialNotes;
+    
     const newNote: Note = {
       id: Date.now(),
       title: 'Untitled Note',
@@ -72,7 +75,7 @@ export const createNote = (set: Function) => {
       createdAt: getCurrentDate(),
       updatedAt: getCurrentDate()
     };
-    return [...prev, newNote];
+    return [...notesArray, newNote];
   });
   
   // Return the new note's ID so we can set it as active
@@ -80,6 +83,10 @@ export const createNote = (set: Function) => {
 };
 
 // Function to delete a note
-export const deleteNote = (set: Function, id: number) => {
-  set(notesAtom, (prev: Note[]) => prev.filter(note => note.id !== id));
+export const deleteNote = (setNotesFunction: Function, id: number) => {
+  setNotesFunction((prev: Note[]) => {
+    // Make sure we're dealing with an array
+    const notesArray = Array.isArray(prev) ? prev : initialNotes;
+    return notesArray.filter(note => note.id !== id);
+  });
 };

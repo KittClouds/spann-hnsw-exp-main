@@ -8,9 +8,8 @@ import { activeNoteIdAtom, createNote, deleteNote, notesAtom } from '@/lib/store
 import { cn } from '@/lib/utils';
 
 export function NotesSidebar() {
-  const [notes] = useAtom(notesAtom);
+  const [notes, setNotes] = useAtom(notesAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
-  const [, setNotes] = useAtom(notesAtom);
 
   const handleNewNote = () => {
     const newNoteId = createNote(setNotes);
@@ -32,7 +31,7 @@ export function NotesSidebar() {
       
       <ScrollArea className="flex-1">
         <div className="py-2">
-          {notes.map((note) => (
+          {Array.isArray(notes) ? notes.map((note) => (
             <div 
               key={note.id}
               onClick={() => setActiveNoteId(note.id)}
@@ -43,7 +42,7 @@ export function NotesSidebar() {
             >
               <div className="font-medium truncate">{note.title}</div>
             </div>
-          ))}
+          )) : <div className="px-4 py-2">Loading notes...</div>}
         </div>
       </ScrollArea>
     </div>
