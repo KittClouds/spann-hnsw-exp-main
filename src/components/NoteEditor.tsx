@@ -1,114 +1,133 @@
 
 import { useAtom } from 'jotai';
-import { BlockNoteEditor } from '@blocknote/core';
-import { useBlockNote, BlockNoteViewRaw as BlockNoteView } from '@blocknote/react';
-import '@blocknote/react/style.css';
-import { activeNoteAtom } from '@/lib/store';
+import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
+import { Input } from "@/components/ui/input";
 import { useEffect, useState } from 'react';
-import { ScrollArea } from './ui/scroll-area';
+import { useBlockNote } from "@blocknote/react";
+import { BlockNoteView } from "@blocknote/mantine";
+import "@blocknote/core/fonts/inter.css";
+import "@blocknote/mantine/style.css";
+import { PartialBlock } from '@blocknote/core';
+import { debounce } from 'lodash';
+import { NoteBreadcrumb } from './NoteBreadcrumb';
 
 export function NoteEditor() {
-  const [activeNote, updateActiveNote] = useAtom(activeNoteAtom);
-  const [editorContent, setEditorContent] = useState<any[]>([
-    {
-      id: `default-block-${Date.now()}`,
-      type: 'paragraph',
-      content: '',
-      props: {}
+  const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
+  const [activeNoteId] = useAtom(activeNoteIdAtom);
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
     }
-  ]);
+    return 'dark';
+  });
   
-  useEffect(() => {
-    if (activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
-      // Make a deep copy to avoid mutating the stored note
-      setEditorContent(JSON.parse(JSON.stringify(activeNote.content)));
-    } else if (activeNote) {
-      // If content is invalid, set a default paragraph block
-      setEditorContent([
-        {
-          id: `default-block-${Date.now()}`,
-          type: 'paragraph',
-          content: '',
-          props: {}
-        }
-      ]);
+  // Create editor instance
+  const editor = useBlockNote({
+    initialContent: activeNote?.content as PartialBlock[] || [],
+    // Add error handling to avoid crashes with malformed content
+    onError: (error) => {
+      console.error("BlockNote error:", error);
     }
-  }, [activeNote?.id]);
+  });
 
-  // Function to handle content changes
-  const handleEditorContentChange = (editor: BlockNoteEditor) => {
-    const content = editor.topLevelBlocks;
-    
-    if (activeNote) {
-      // Update note title based on first block content
-      const firstBlock = content[0];
-      let newTitle = 'Untitled Note';
-      
-      if (firstBlock) {
-        if (firstBlock.type === 'paragraph') {
-          // Try to extract a title from text content in the first block
-          const blockContent = firstBlock.content;
-          if (Array.isArray(blockContent)) {
-            const textContent = blockContent
-              .map(item => {
-                if (typeof item === 'string') return item;
-                // Handle different types of content safely
-                return item && typeof item === 'object' && 'text' in item ? item.text : '';
-              })
-              .join('');
-            newTitle = textContent.substring(0, 40) || 'Untitled Note';
-          } else if (typeof blockContent === 'string') {
-            newTitle = String(blockContent).substring(0, 40) || 'Untitled Note';
-          }
+  // Update theme when app theme changes
+  useEffect(() => {
+    const handleThemeChange = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setTheme(isDark ? 'dark' : 'light');
+    };
+
+    // Initial check
+    handleThemeChange();
+
+    // Listen for theme changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.type === 'attributes' &&
+          mutation.attributeName === 'class'
+        ) {
+          handleThemeChange();
         }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Save changes to note content when editor changes
+  const saveChanges = debounce(() => {
+    if (editor && activeNote) {
+      const blocks = editor.document;
+      setActiveNote({
+        content: blocks,
+      });
+    }
+  }, 500);
+
+  // Set up editor change handler
+  useEffect(() => {
+    if (!editor) return;
+    
+    const unsubscribe = editor.onEditorContentChange(() => {
+      saveChanges();
+    });
+    
+    return () => {
+      saveChanges.cancel();
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
       }
-      
-      // Save the updated note with its content and new title
-      updateActiveNote({
-        ...activeNote,
-        title: newTitle,
-        content: content
+    };
+  }, [editor, saveChanges, activeNote]);
+
+  // Load note content when active note changes
+  useEffect(() => {
+    if (editor && activeNote?.content) {
+      try {
+        // Replace the editor content with the active note content
+        editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
+      } catch (error) {
+        console.error("Error replacing blocks:", error);
+      }
+    }
+  }, [activeNoteId, editor]);
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (activeNote) {
+      setActiveNote({
+        title: e.target.value
       });
     }
   };
 
-  // Create the editor instance with necessary configs
-  const editor = useBlockNote({
-    initialContent: editorContent,
-  });
-
-  // Set up the onChange handler after initialization
-  useEffect(() => {
-    if (editor) {
-      editor.onChange(handleEditorContentChange);
-    }
-    // Clean up the event handler when the component unmounts
-    return () => {
-      if (editor) {
-        editor.onChange(null);
-      }
-    };
-  }, [editor, activeNote]);
-
   if (!activeNote) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+      <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground">
         No note selected
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-white dark:bg-[#12141f] h-full">
-      <ScrollArea className="h-full">
-        <div className="max-w-4xl mx-auto p-8">
-          <BlockNoteView
-            editor={editor}
-            theme="light"
-            className="min-h-[calc(100vh-10rem)]"
-          />
-        </div>
-      </ScrollArea>
+    <div className="flex-1 flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white">
+      <NoteBreadcrumb />
+      
+      <Input
+        value={activeNote.title}
+        onChange={handleTitleChange}
+        className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]"
+        placeholder="Note Title"
+      />
+      <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
+        <BlockNoteView 
+          editor={editor} 
+          theme={theme}
+          className="min-h-full"
+        />
+      </div>
     </div>
   );
 }

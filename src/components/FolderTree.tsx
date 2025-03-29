@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
-import { ChevronRight, FolderIcon, FolderOpen, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, FolderIcon, FolderOpen, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Folder, Note, currentFolderPathAtom, foldersAtom, createFolder, createNote, notesAtom, activeNoteIdAtom } from '@/lib/store';
+import { Folder, currentFolderPathAtom, foldersAtom, createFolder } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { 
   ContextMenu,
@@ -30,8 +30,6 @@ interface FolderTreeProps {
 
 export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   const [folders, setFolders] = useAtom(foldersAtom);
-  const [notes, setNotes] = useAtom(notesAtom);
-  const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
   const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -104,14 +102,6 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
       return;
     }
     
-    // Check if folder has notes
-    const hasNotes = notes.some(note => note.path === folderPath);
-    
-    if (hasNotes) {
-      toast.error('Cannot delete a folder that contains notes');
-      return;
-    }
-    
     setFolders(folders.filter(folder => folder.id !== folderId));
     
     // If we're deleting the current folder, navigate to parent
@@ -123,14 +113,6 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     toast.success('Folder deleted');
   };
 
-  const handleCreateNote = (folderPath: string) => {
-    const { id, note } = createNote(folderPath);
-    setNotes(prevNotes => [...prevNotes, note]);
-    setActiveNoteId(id);
-    setCurrentPath(folderPath);
-    toast.success('New note created in folder');
-  };
-
   return (
     <div className="pl-3">
       {childFolders.map((folder) => (
@@ -139,7 +121,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
             <ContextMenuTrigger>
               <div 
                 className={cn(
-                  "flex items-center py-1 px-2 rounded-md text-sm cursor-pointer transition-colors group",
+                  "flex items-center py-1 px-2 rounded-md text-sm cursor-pointer transition-colors",
                   currentPath === folder.path 
                     ? "dark:bg-[#1c1f2e]/60 dark:text-white light:bg-[#e5deff]/60 light:text-[#614ac2]" 
                     : "hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
@@ -168,41 +150,10 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
                   )}
                   <span>{folder.name}</span>
                 </button>
-                
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCreateNote(folder.path);
-                    }}
-                    title="New note in folder"
-                  >
-                    <Plus className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteFolder(folder.id, folder.path);
-                    }}
-                    title="Delete folder"
-                  >
-                    <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
-                  </Button>
-                </div>
               </div>
             </ContextMenuTrigger>
             
             <ContextMenuContent>
-              <ContextMenuItem onClick={() => handleCreateNote(folder.path)}>
-                New Note
-              </ContextMenuItem>
               <ContextMenuItem onClick={() => handleDeleteFolder(folder.id, folder.path)}>
                 Delete Folder
               </ContextMenuItem>

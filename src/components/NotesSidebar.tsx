@@ -15,23 +15,16 @@ import {
 } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { toast } from "sonner";
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { FolderTree } from './FolderTree';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export function NotesSidebar() {
   const [notes, setNotes] = useAtom(notesAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
-  const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
+  const [currentPath] = useAtom(currentFolderPathAtom);
   const [currentFolderNotes] = useAtom(currentFolderNotesAtom);
   const [folders] = useAtom(foldersAtom);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const handleNewNote = useCallback(() => {
     const { id, note } = createNote(currentPath);
@@ -85,20 +78,6 @@ export function NotesSidebar() {
     setActiveNoteId(id);
   }, [setActiveNoteId]);
 
-  const handleMoveNoteToFolder = useCallback((noteId: string, folderPath: string) => {
-    setNotes(prevNotes => 
-      prevNotes.map(note => 
-        note.id === noteId 
-          ? { ...note, path: folderPath, updatedAt: new Date().toISOString() } 
-          : note
-      )
-    );
-    
-    toast("Note moved", {
-      description: `Note moved to ${folderPath === '/' ? 'Home' : folderPath}`,
-    });
-  }, [setNotes]);
-
   // Get the current folder name
   const getCurrentFolderName = () => {
     if (currentPath === '/') return 'Home';
@@ -107,13 +86,6 @@ export function NotesSidebar() {
     return folderName || 'Unknown Folder';
   };
 
-  // Filter notes based on search term
-  const filteredNotes = searchTerm 
-    ? currentFolderNotes.filter(note => 
-        note.title.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : currentFolderNotes;
-
   return (
     <div className="w-64 border-r border-border dark:bg-[#12141f] light:bg-[#f8f6ff] h-full flex flex-col">
       <div className="p-4">
@@ -121,8 +93,6 @@ export function NotesSidebar() {
           <Input
             placeholder="Search notes..."
             className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         </div>
@@ -153,7 +123,7 @@ export function NotesSidebar() {
                     ? "dark:bg-[#1c1f2e]/60 dark:text-white light:bg-[#e5deff]/60 light:text-[#614ac2]" 
                     : "hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
                 )}
-                onClick={() => setCurrentPath('/')}
+                onClick={() => setActiveNoteId(currentFolderPathAtom, '/')}
               >
                 <FolderIcon className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span>Home</span>
@@ -172,8 +142,8 @@ export function NotesSidebar() {
         
         <ScrollArea className="flex-1">
           <div className="py-2">
-            {filteredNotes.length > 0 ? (
-              filteredNotes.map((note) => (
+            {currentFolderNotes.length > 0 ? (
+              currentFolderNotes.map((note) => (
                 <div 
                   key={note.id}
                   onClick={() => handleNoteClick(note.id)}
@@ -185,55 +155,18 @@ export function NotesSidebar() {
                   )}
                 >
                   <div className="font-medium truncate">{note.title}</div>
-                  <div className="flex gap-1">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 dark:bg-[#1e1f2e]/60 dark:hover:bg-[#1e1f2e] light:bg-[#e5deff]/60 light:hover:bg-[#e5deff]"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <FolderIcon className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          onSelect={() => handleMoveNoteToFolder(note.id, '/')}
-                          disabled={note.path === '/'}
-                        >
-                          Move to Home
-                        </DropdownMenuItem>
-                        {folders
-                          .filter(folder => folder.path !== '/' && folder.path !== note.path)
-                          .map(folder => (
-                            <DropdownMenuItem 
-                              key={folder.id}
-                              onSelect={() => handleMoveNoteToFolder(note.id, folder.path)}
-                              disabled={note.path === folder.path}
-                            >
-                              Move to {folder.name}
-                            </DropdownMenuItem>
-                          ))
-                        }
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => handleDeleteNote(note.id, e)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 dark:bg-[#1e1f2e]/60 dark:hover:bg-[#1e1f2e] light:bg-[#e5deff]/60 light:hover:bg-[#e5deff]"
-                    >
-                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => handleDeleteNote(note.id, e)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 dark:bg-[#1e1f2e]/60 dark:hover:bg-[#1e1f2e] light:bg-[#e5deff]/60 light:hover:bg-[#e5deff]"
+                  >
+                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
+                  </Button>
                 </div>
               ))
             ) : (
-              <div className="px-4 py-2 text-sm text-muted-foreground">
-                {searchTerm ? 'No matching notes found' : 'No notes in this folder'}
-              </div>
+              <div className="px-4 py-2 text-sm text-muted-foreground">No notes in this folder</div>
             )}
           </div>
         </ScrollArea>
