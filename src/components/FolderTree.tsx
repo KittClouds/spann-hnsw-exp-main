@@ -1,9 +1,17 @@
 
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
-import { ChevronRight, FolderIcon, FolderOpen, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, FolderIcon, FolderOpen, Plus, Trash2, FileIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Folder, currentFolderPathAtom, foldersAtom, notesAtom, createFolder } from '@/lib/store';
+import { 
+  Folder, 
+  currentFolderPathAtom, 
+  foldersAtom, 
+  notesAtom, 
+  createFolder, 
+  activeNoteIdAtom, 
+  createNote 
+} from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { 
   ContextMenu,
@@ -41,6 +49,7 @@ interface FolderTreeProps {
 export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   const [folders, setFolders] = useAtom(foldersAtom);
   const [notes, setNotes] = useAtom(notesAtom);
+  const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
   const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -54,6 +63,9 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     folder.parentId === parentId && 
     (parentId !== null || folder.id !== 'root')
   );
+
+  // Find notes in the current folder
+  const folderNotes = notes.filter(note => note.path === path);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => ({
@@ -154,6 +166,73 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     setFolderToDelete(null);
   };
 
+  // Handle creating a new note in a specific folder
+  const handleCreateNote = (folderPath: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const { id, note } = createNote(folderPath);
+    
+    // Add the new note to the notes array
+    setNotes(prevNotes => [...prevNotes, note]);
+    
+    // Set the new note as active
+    setActiveNoteId(id);
+    
+    // Auto-expand the folder if it's not already expanded
+    if (folderPath !== '/') {
+      const folderObj = folders.find(f => f.path === folderPath);
+      if (folderObj) {
+        setExpandedFolders(prev => ({
+          ...prev,
+          [folderObj.id]: true
+        }));
+      }
+    }
+    
+    toast("New note created", {
+      description: "Start typing to edit your note",
+    });
+  };
+
+  const handleNoteClick = (noteId: string) => {
+    setActiveNoteId(noteId);
+  };
+
+  // Handle note deletion
+  const handleDeleteNote = (noteId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Prevent deleting if it's the last note
+    if (notes.length <= 1) {
+      toast("Cannot delete", {
+        description: "You must keep at least one note",
+      });
+      return;
+    }
+    
+    // Save the index for selecting another note
+    const noteIndex = notes.findIndex(note => note.id === noteId);
+    const isActiveNote = noteId === activeNoteId;
+    
+    // Delete the note
+    setNotes(prevNotes => prevNotes.filter(note => note.id !== noteId));
+    
+    // If we deleted the active note, select another note
+    if (isActiveNote) {
+      // Find the next note to select (prefer the one after, otherwise take the one before)
+      const nextNoteIndex = noteIndex < notes.length - 1 ? noteIndex : noteIndex - 1;
+      const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
+      
+      if (nextNoteId) {
+        setActiveNoteId(nextNoteId);
+      }
+    }
+    
+    toast("Note deleted", {
+      description: "Your note has been removed",
+    });
+  };
+  
   return (
     <div className="pl-3">
       {childFolders.map((folder) => (
@@ -171,7 +250,10 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
                 onMouseLeave={() => setHoveredFolderId(null)}
               >
                 <button 
-                  onClick={() => toggleFolder(folder.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFolder(folder.id);
+                  }}
                   className="p-1 rounded-sm hover:bg-sidebar-accent mr-1"
                 >
                   <ChevronRight 
@@ -195,14 +277,26 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
                 </button>
 
                 {hoveredFolderId === folder.id && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => handleDeleteClick(folder, e)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                  </Button>
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => handleCreateNote(folder.path, e)}
+                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="New note"
+                    >
+                      <Plus className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => handleDeleteClick(folder, e)}
+                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete folder"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  </>
                 )}
               </div>
             </ContextMenuTrigger>
@@ -214,18 +308,75 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
               }}>
                 Delete Folder
               </ContextMenuItem>
+              <ContextMenuItem onClick={(e) => handleCreateNote(folder.path, e as React.MouseEvent)}>
+                New Note
+              </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
           
           {isExpanded(folder.id) && (
-            <FolderTree 
-              parentId={folder.id} 
-              path={folder.path} 
-              level={level + 1} 
-            />
+            <>
+              {/* Notes for this folder */}
+              {notes.filter(note => note.path === folder.path).map(note => (
+                <div 
+                  key={note.id}
+                  className={cn(
+                    "pl-6 py-1 pr-2 flex items-center text-sm cursor-pointer group",
+                    activeNoteId === note.id 
+                      ? "dark:bg-[#1c1f2e]/60 dark:text-white light:bg-[#e5deff]/60 light:text-[#614ac2]" 
+                      : "hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
+                  )}
+                  onClick={() => handleNoteClick(note.id)}
+                >
+                  <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                  <span className="truncate flex-1">{note.title}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => handleDeleteNote(note.id, e)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                  >
+                    <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive transition-colors" />
+                  </Button>
+                </div>
+              ))}
+              
+              <FolderTree 
+                parentId={folder.id} 
+                path={folder.path} 
+                level={level + 1} 
+              />
+            </>
           )}
         </div>
       ))}
+      
+      {/* Root level notes */}
+      {path === '/' && 
+        folderNotes.map(note => (
+          <div 
+            key={note.id}
+            className={cn(
+              "pl-6 py-1 pr-2 flex items-center text-sm cursor-pointer group",
+              activeNoteId === note.id 
+                ? "dark:bg-[#1c1f2e]/60 dark:text-white light:bg-[#e5deff]/60 light:text-[#614ac2]" 
+                : "hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
+            )}
+            onClick={() => handleNoteClick(note.id)}
+          >
+            <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+            <span className="truncate flex-1">{note.title}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => handleDeleteNote(note.id, e)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+            >
+              <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive transition-colors" />
+            </Button>
+          </div>
+        ))
+      }
       
       <div className="mt-1 pl-5">
         <Dialog open={isNewFolderDialogOpen} onOpenChange={setIsNewFolderDialogOpen}>
