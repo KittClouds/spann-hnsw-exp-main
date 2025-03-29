@@ -1,12 +1,11 @@
 
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
-import { PartialBlock } from '@blocknote/core';
 
 export interface Note {
   id: string;
   title: string;
-  content: PartialBlock[];
+  content: any[]; // Using any[] for BlockNote compatibility
   createdAt: string;
   updatedAt: string;
   path: string; // e.g., "/Personal/Journal" or "/" for root
@@ -45,9 +44,10 @@ const initialNotes: Note[] = [
     id: generateId(), 
     title: 'Welcome Note', 
     content: [{ 
+      id: 'block-1',
       type: 'paragraph', 
       content: 'Welcome to Galaxy Notes! Start typing here...',
-      styles: {} 
+      props: {}
     }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate(),
@@ -58,9 +58,10 @@ const initialNotes: Note[] = [
     id: generateId(), 
     title: 'Getting Started', 
     content: [{ 
+      id: 'block-2',
       type: 'paragraph', 
       content: 'Click on a note title to edit it. Create new notes with the + button.',
-      styles: {} 
+      props: {}
     }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate(),
@@ -152,7 +153,12 @@ export const createNote = (folderPath: string = '/') => {
   const newNote: Note = {
     id: newId,
     title: 'Untitled Note',
-    content: [{ type: 'paragraph', content: '', styles: {} }],
+    content: [{ 
+      id: `block-${Date.now()}`,
+      type: 'paragraph', 
+      content: '',
+      props: {}
+    }],
     createdAt: now,
     updatedAt: now,
     path: folderPath,

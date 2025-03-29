@@ -1,133 +1,73 @@
 
 import { useAtom } from 'jotai';
-import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
-import { Input } from "@/components/ui/input";
+import { BlockNoteEditor } from '@blocknote/core';
+import { BlockNoteView, useBlockNote } from '@blocknote/react';
+import '@blocknote/react/style.css';
+import { activeNoteAtom } from '@/lib/store';
 import { useEffect, useState } from 'react';
-import { useBlockNote } from "@blocknote/react";
-import { BlockNoteView } from "@blocknote/mantine";
-import "@blocknote/core/fonts/inter.css";
-import "@blocknote/mantine/style.css";
-import { PartialBlock } from '@blocknote/core';
-import { debounce } from 'lodash';
-import { NoteBreadcrumb } from './NoteBreadcrumb';
+import { ScrollArea } from './ui/scroll-area';
 
 export function NoteEditor() {
-  const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
-  const [activeNoteId] = useAtom(activeNoteIdAtom);
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window !== 'undefined') {
-      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-    }
-    return 'dark';
-  });
+  const [activeNote, updateActiveNote] = useAtom(activeNoteAtom);
+  const [editorContent, setEditorContent] = useState<any[]>([]);
   
-  // Create editor instance
+  useEffect(() => {
+    if (activeNote?.content) {
+      // Make a deep copy to avoid mutating the stored note
+      setEditorContent(JSON.parse(JSON.stringify(activeNote.content)));
+    }
+  }, [activeNote?.id]);
+
+  // Create the editor instance
   const editor = useBlockNote({
-    initialContent: activeNote?.content as PartialBlock[] || [],
-    // Add error handling to avoid crashes with malformed content
-    onError: (error) => {
-      console.error("BlockNote error:", error);
+    initialContent: editorContent,
+    onEditorContentChange: (editor) => {
+      const content = editor.topLevelBlocks;
+      
+      if (activeNote) {
+        // Update note title based on first block content
+        const firstBlock = content[0];
+        let newTitle = 'Untitled Note';
+        
+        if (firstBlock && typeof firstBlock.content === 'string') {
+          // Extract the first line or a portion of it as the title
+          newTitle = firstBlock.content.split('\n')[0].substring(0, 40) || 'Untitled Note';
+        } else if (firstBlock && Array.isArray(firstBlock.content)) {
+          // Handle content that might be an array of text runs
+          const textContent = firstBlock.content
+            .map(run => typeof run === 'string' ? run : run.text)
+            .join('');
+          newTitle = textContent.substring(0, 40) || 'Untitled Note';
+        }
+        
+        // Save the updated note with its content and new title
+        updateActiveNote({
+          title: newTitle,
+          content: content
+        });
+      }
     }
   });
-
-  // Update theme when app theme changes
-  useEffect(() => {
-    const handleThemeChange = () => {
-      const isDark = document.documentElement.classList.contains('dark');
-      setTheme(isDark ? 'dark' : 'light');
-    };
-
-    // Initial check
-    handleThemeChange();
-
-    // Listen for theme changes
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (
-          mutation.type === 'attributes' &&
-          mutation.attributeName === 'class'
-        ) {
-          handleThemeChange();
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, { attributes: true });
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Save changes to note content when editor changes
-  const saveChanges = debounce(() => {
-    if (editor && activeNote) {
-      const blocks = editor.document;
-      setActiveNote({
-        content: blocks,
-      });
-    }
-  }, 500);
-
-  // Set up editor change handler
-  useEffect(() => {
-    if (!editor) return;
-    
-    const unsubscribe = editor.onEditorContentChange(() => {
-      saveChanges();
-    });
-    
-    return () => {
-      saveChanges.cancel();
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-    };
-  }, [editor, saveChanges, activeNote]);
-
-  // Load note content when active note changes
-  useEffect(() => {
-    if (editor && activeNote?.content) {
-      try {
-        // Replace the editor content with the active note content
-        editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
-      } catch (error) {
-        console.error("Error replacing blocks:", error);
-      }
-    }
-  }, [activeNoteId, editor]);
-
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (activeNote) {
-      setActiveNote({
-        title: e.target.value
-      });
-    }
-  };
 
   if (!activeNote) {
     return (
-      <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground">
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
         No note selected
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white">
-      <NoteBreadcrumb />
-      
-      <Input
-        value={activeNote.title}
-        onChange={handleTitleChange}
-        className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]"
-        placeholder="Note Title"
-      />
-      <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
-        <BlockNoteView 
-          editor={editor} 
-          theme={theme}
-          className="min-h-full"
-        />
-      </div>
+    <div className="flex-1 overflow-auto bg-white dark:bg-[#12141f] h-full">
+      <ScrollArea className="h-full">
+        <div className="max-w-4xl mx-auto p-8">
+          <BlockNoteView
+            editor={editor}
+            theme="light"
+            className="min-h-[calc(100vh-10rem)]"
+          />
+        </div>
+      </ScrollArea>
     </div>
   );
 }
