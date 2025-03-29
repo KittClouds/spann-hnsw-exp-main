@@ -9,19 +9,36 @@ import { ScrollArea } from './ui/scroll-area';
 
 export function NoteEditor() {
   const [activeNote, updateActiveNote] = useAtom(activeNoteAtom);
-  const [editorContent, setEditorContent] = useState<any[]>([]);
+  const [editorContent, setEditorContent] = useState<any[]>([
+    {
+      id: `default-block-${Date.now()}`,
+      type: 'paragraph',
+      content: '',
+      props: {}
+    }
+  ]);
   
   useEffect(() => {
-    if (activeNote?.content) {
+    if (activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
       // Make a deep copy to avoid mutating the stored note
       setEditorContent(JSON.parse(JSON.stringify(activeNote.content)));
+    } else if (activeNote) {
+      // If content is invalid, set a default paragraph block
+      setEditorContent([
+        {
+          id: `default-block-${Date.now()}`,
+          type: 'paragraph',
+          content: '',
+          props: {}
+        }
+      ]);
     }
   }, [activeNote?.id]);
 
   // Create the editor instance
   const editor = useBlockNote({
     initialContent: editorContent,
-    onChange: (editor) => {
+    onEditorContentChange: (editor) => {
       const content = editor.topLevelBlocks;
       
       if (activeNote) {
