@@ -38,7 +38,7 @@ export function NotesSidebar() {
       return;
     }
     
-    // Find note index for selecting another note later
+    // Save the index for selecting another note
     const noteIndex = notes.findIndex(note => note.id === id);
     const isActiveNote = id === activeNoteId;
     
@@ -49,7 +49,11 @@ export function NotesSidebar() {
     if (isActiveNote) {
       // Find the next note to select (prefer the one after, otherwise take the one before)
       const nextNoteIndex = noteIndex < notes.length - 1 ? noteIndex : noteIndex - 1;
-      setActiveNoteId(notes[nextNoteIndex].id);
+      const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
+      
+      if (nextNoteId) {
+        setActiveNoteId(nextNoteId);
+      }
     }
     
     toast("Note deleted", {
@@ -84,7 +88,7 @@ export function NotesSidebar() {
                 className={cn(
                   "px-4 py-3 cursor-pointer transition-all duration-200 flex justify-between items-center group",
                   activeNoteId === note.id 
-                    ? "dark:bg-[#1c1f2e] dark:text-[#7c5bf1] light:bg-[#efeaff] light:text-[#614ac2]" 
+                    ? "dark:sidebar-note-active-dark light:sidebar-note-active-light" 
                     : "dark:hover:bg-[#1c1f2e] light:hover:bg-[#efeaff]"
                 )}
               >

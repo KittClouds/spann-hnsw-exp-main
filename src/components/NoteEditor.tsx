@@ -2,11 +2,13 @@
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
 import { Input } from "@/components/ui/input";
-import { useEffect, useMemo, useState } from 'react';
-import { BlockNoteEditor, PartialBlock } from "@blocknote/core";
+import { useEffect, useState } from 'react';
+import { useBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
+import { PartialBlock } from '@blocknote/core';
+import { debounce } from 'lodash';
 
 export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
@@ -17,21 +19,11 @@ export function NoteEditor() {
     }
     return 'dark';
   });
-
-  // Create editor instance once we have a note
-  const editor = useMemo(() => {
-    if (!activeNote || !activeNote.content) return undefined;
-    
-    try {
-      return BlockNoteEditor.create({
-        initialContent: activeNote.content,
-      });
-    } catch (error) {
-      console.error('Error creating BlockNoteEditor:', error);
-      // Return editor with empty content as fallback
-      return BlockNoteEditor.create();
-    }
-  }, [activeNoteId, activeNote]);
+  
+  // Create editor instance
+  const editor = useBlockNote({
+    initialContent: activeNote?.content as PartialBlock[] || [],
+  });
 
   // Update theme when app theme changes
   useEffect(() => {
@@ -60,7 +52,40 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Handle title change
+  // Save changes to note content when editor changes
+  const saveChanges = debounce(() => {
+    if (editor && activeNote) {
+      const blocks = editor.document;
+      setActiveNote({
+        content: blocks,
+      });
+    }
+  }, 500);
+
+  // Set up editor change handler
+  useEffect(() => {
+    if (!editor) return;
+    
+    const unsubscribe = editor.onEditorContentChange(() => {
+      saveChanges();
+    });
+    
+    return () => {
+      saveChanges.cancel();
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [editor, saveChanges, activeNote]);
+
+  // Load note content when active note changes
+  useEffect(() => {
+    if (editor && activeNote?.content) {
+      // Replace the editor content with the active note content
+      editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
+    }
+  }, [activeNoteId, editor]);
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
       setActiveNote({
@@ -69,10 +94,10 @@ export function NoteEditor() {
     }
   };
 
-  if (!activeNote || !editor) {
+  if (!activeNote) {
     return (
       <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground">
-        {!activeNote ? "No note selected" : "Loading editor..."}
+        No note selected
       </div>
     );
   }
@@ -90,14 +115,6 @@ export function NoteEditor() {
           editor={editor} 
           theme={theme}
           className="min-h-full"
-          onChange={() => {
-            // Save changes when editor content changes
-            if (editor && activeNote) {
-              setActiveNote({
-                content: editor.document
-              });
-            }
-          }}
         />
       </div>
     </div>
