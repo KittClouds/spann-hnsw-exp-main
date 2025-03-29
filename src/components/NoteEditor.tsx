@@ -40,7 +40,7 @@ export function NoteEditor() {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-6 dark:bg-[#0f1117] light:bg-[#fcfcfd]">
+    <div className="flex-1 flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white">
       <Input
         value={activeNote.title}
         onChange={handleTitleChange}
@@ -52,7 +52,7 @@ export function NoteEditor() {
         value={activeNote.content}
         onChange={handleContentChange}
         placeholder="Enter text or type '/' for commands"
-        className="flex-1 resize-none dark:bg-[#141824] light:bg-white rounded-md p-6 text-base leading-relaxed shadow-lg border-border"
+        className="flex-1 resize-none dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md p-6 text-base leading-relaxed shadow-xl border-border transition-all duration-200"
       />
     </div>
   );

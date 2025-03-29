@@ -5,7 +5,7 @@
 
 @layer base {
   :root {
-    /* Light mode colors */
+    /* Light mode colors - with enhanced purple accents */
     --background: 0 0% 100%;
     --foreground: 222 47% 11%;
 
@@ -18,55 +18,55 @@
     --primary: 259 65% 55%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 260 60% 96%;
+    --secondary-foreground: 259 65% 45%;
 
     --muted: 210 20% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 210 20% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 260 60% 95%;
+    --accent-foreground: 259 65% 45%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 222 47% 11%;
+    --border: 260 30% 90%;
+    --input: 260 30% 90%;
+    --ring: 259 65% 55%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 220 25% 97%;
-    --sidebar-foreground: 240 10% 26%;
-    --sidebar-primary: 240 10% 10%;
+    --sidebar-background: 260 25% 97%;
+    --sidebar-foreground: 259 30% 30%;
+    --sidebar-primary: 259 65% 55%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 5% 96%;
-    --sidebar-accent-foreground: 240 10% 10%;
-    --sidebar-border: 220 15% 91%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 260 70% 94%;
+    --sidebar-accent-foreground: 259 65% 45%;
+    --sidebar-border: 260 30% 90%;
+    --sidebar-ring: 259 65% 55%;
   }
 
   .dark {
     /* Dark mode colors - more black with hints of purple */
-    --background: 230 35% 4%;
+    --background: 230 25% 5%;
     --foreground: 210 40% 98%;
 
-    --card: 230 35% 4%;
+    --card: 230 25% 5%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 230 35% 4%;
+    --popover: 230 25% 5%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 263 60% 50%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 230 25% 12%;
+    --secondary: 230 25% 10%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 230 25% 12%;
+    --muted: 230 25% 10%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 230 25% 16%;
+    --accent: 263 25% 16%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 63% 31%;
@@ -74,16 +74,16 @@
 
     --border: 240 13% 15%;
     --input: 230 25% 12%;
-    --ring: 212 27% 84%;
+    --ring: 263 60% 50%;
 
-    --sidebar-background: 232 35% 8%;
+    --sidebar-background: 230 30% 8%;
     --sidebar-foreground: 240 5% 96%;
-    --sidebar-primary: 263 60% 45%;
+    --sidebar-primary: 263 60% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 235 30% 12%;
+    --sidebar-accent: 263 25% 14%;
     --sidebar-accent-foreground: 240 5% 96%;
     --sidebar-border: 240 13% 15%;
-    --sidebar-ring: 259 60% 55%;
+    --sidebar-ring: 263 60% 50%;
   }
 }
 
@@ -105,29 +105,39 @@
   
   /* Dark mode gradients - more black with subtle purple hints */
   .bg-gradient-dark {
-    background: linear-gradient(180deg, hsl(230 35% 4%) 0%, hsl(232 35% 8%) 100%);
+    background: linear-gradient(180deg, hsl(230 25% 5%) 0%, hsl(230 28% 7%) 100%);
   }
   
-  /* Light mode gradients - softer, more elegant */
+  /* Light mode gradients - softer with purple hints */
   .bg-gradient-light {
-    background: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(214 32% 96%) 100%);
+    background: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(260 30% 98%) 100%);
   }
   
   .editor-gradient-dark {
-    background: linear-gradient(135deg, hsl(230 35% 8%) 0%, hsl(235 35% 10%) 100%);
+    background: linear-gradient(135deg, hsl(230 25% 7%) 0%, hsl(235 28% 9%) 100%);
   }
   
   .editor-gradient-light {
-    background: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
+    background: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(260 40% 98%) 100%);
   }
   
+  /* Enhanced active note highlights */
   .sidebar-note-active-dark {
-    background: linear-gradient(90deg, hsl(263 35% 15%) 0%, hsl(263 25% 12%) 100%);
+    background: linear-gradient(90deg, hsl(263 30% 15%) 0%, hsl(263 25% 12%) 100%);
     border-left: 3px solid hsl(var(--primary));
   }
   
   .sidebar-note-active-light {
-    background: linear-gradient(90deg, hsl(263 35% 95%) 0%, hsl(260 35% 98%) 100%);
+    background: linear-gradient(90deg, hsl(263 60% 95%) 0%, hsl(260 65% 97%) 100%);
     border-left: 3px solid hsl(var(--primary));
+  }
+
+  /* New highlight classes for notes */
+  .note-highlight-dark {
+    @apply bg-gradient-to-r from-[#2a1e3f]/20 to-[#2a1e3f]/10 hover:from-[#2a1e3f]/30 hover:to-[#2a1e3f]/20;
+  }
+  
+  .note-highlight-light {
+    @apply bg-gradient-to-r from-[#e9e1ff] to-[#f4f0ff] hover:from-[#e0d6ff] hover:to-[#eee8ff];
   }
 }

@@ -42,17 +42,17 @@ export function NotesSidebar() {
   };
 
   return (
-    <div className="w-64 border-r border-border dark:bg-[#141824] light:bg-white h-full flex flex-col">
+    <div className="w-64 border-r border-border dark:bg-[#12141f] light:bg-[#f8f6ff] h-full flex flex-col">
       <div className="p-4">
         <Button 
           onClick={handleNewNote} 
-          className="w-full dark:bg-[#7c5bf1] dark:hover:bg-[#6b4ad5] light:bg-[#614ac2] light:hover:bg-[#563db0] text-white group transition-all duration-200"
+          className="w-full dark:bg-[#7c5bf1] dark:hover:bg-[#6b4ad5] light:bg-[#614ac2] light:hover:bg-[#563db0] text-white group transition-all duration-200 shadow-md"
         >
           <Plus className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" /> New Note
         </Button>
       </div>
       
-      <Separator className="dark:bg-[#222533] light:bg-[#f0f2f5]" />
+      <Separator className="dark:bg-[#1e1f2e] light:bg-[#e5deff]" />
       
       <ScrollArea className="flex-1">
         <div className="py-2">
@@ -61,10 +61,10 @@ export function NotesSidebar() {
               key={note.id}
               onClick={() => setActiveNoteId(note.id)}
               className={cn(
-                "px-4 py-3 cursor-pointer dark:hover:bg-[#1c1f2e] light:hover:bg-[#f5f7fa] transition-all duration-200 flex justify-between items-center group",
+                "px-4 py-3 cursor-pointer transition-all duration-200 flex justify-between items-center group",
                 activeNoteId === note.id 
                   ? "dark:sidebar-note-active-dark light:sidebar-note-active-light" 
-                  : ""
+                  : "dark:hover:bg-[#1c1f2e] light:hover:bg-[#efeaff]"
               )}
             >
               <div className="font-medium truncate">{note.title}</div>
@@ -72,7 +72,7 @@ export function NotesSidebar() {
                 variant="ghost"
                 size="icon"
                 onClick={(e) => handleDeleteNote(note.id, e)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7"
+                className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 dark:bg-[#1e1f2e]/60 dark:hover:bg-[#1e1f2e] light:bg-[#e5deff]/60 light:hover:bg-[#e5deff]"
               >
                 <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
               </Button>

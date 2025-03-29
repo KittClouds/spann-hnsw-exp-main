@@ -5,8 +5,8 @@ import { NoteEditor } from "./NoteEditor";
 
 export function GalaxyNotes() {
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b dark:from-[#0f1117] dark:to-[#141824] light:from-white light:to-[#f5f7fa] text-foreground">
-      <header className="border-b border-border p-4 flex items-center justify-between bg-opacity-95 backdrop-blur-sm">
+    <div className="flex flex-col h-screen bg-gradient-to-b dark:from-[#0f101a] dark:to-[#171926] light:from-white light:to-[#f8f6ff] text-foreground">
+      <header className="border-b border-border p-4 flex items-center justify-between bg-opacity-95 backdrop-blur-sm dark:bg-black/30 light:bg-white/70">
         <div className="flex-1">
           {/* Empty space for layout */}
         </div>
