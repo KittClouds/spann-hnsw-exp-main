@@ -2,183 +2,83 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+ 
 @layer base {
   :root {
-    /* Light mode colors - with enhanced purple accents */
     --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
-
+    --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-
-    --primary: 259 65% 55%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 260 60% 96%;
-    --secondary-foreground: 259 65% 45%;
-
-    --muted: 210 20% 96%;
-    --muted-foreground: 215 16% 47%;
-
-    --accent: 260 60% 95%;
-    --accent-foreground: 259 65% 45%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 260 30% 90%;
-    --input: 260 30% 90%;
-    --ring: 259 65% 55%;
-
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 10% 3.9%;
     --radius: 0.5rem;
-
-    --sidebar-background: 260 25% 97%;
-    --sidebar-foreground: 259 30% 30%;
-    --sidebar-primary: 259 65% 55%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 260 70% 94%;
-    --sidebar-accent-foreground: 259 65% 45%;
-    --sidebar-border: 260 30% 90%;
-    --sidebar-ring: 259 65% 55%;
+    
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-ring: 240 10% 3.9%;
   }
-
+ 
   .dark {
-    /* Dark mode colors - more black with hints of purple */
-    --background: 230 25% 5%;
-    --foreground: 210 40% 98%;
-
-    --card: 230 25% 5%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 230 25% 5%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 263 60% 50%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 230 25% 10%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 230 25% 10%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 263 25% 16%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 240 13% 15%;
-    --input: 230 25% 12%;
-    --ring: 263 60% 50%;
-
-    --sidebar-background: 230 30% 8%;
-    --sidebar-foreground: 240 5% 96%;
-    --sidebar-primary: 263 60% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 263 25% 14%;
-    --sidebar-accent-foreground: 240 5% 96%;
-    --sidebar-border: 240 13% 15%;
-    --sidebar-ring: 263 60% 50%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    
+    --sidebar: 240 10% 3.9%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 240 4.9% 83.9%;
   }
 }
-
+ 
 @layer base {
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-  
-  /* Dark mode gradients - more black with subtle purple hints */
-  .bg-gradient-dark {
-    background: linear-gradient(180deg, hsl(230 25% 5%) 0%, hsl(230 28% 7%) 100%);
-  }
-  
-  /* Light mode gradients - softer with purple hints */
-  .bg-gradient-light {
-    background: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(260 30% 98%) 100%);
-  }
-  
-  .editor-gradient-dark {
-    background: linear-gradient(135deg, hsl(230 25% 7%) 0%, hsl(235 28% 9%) 100%);
-  }
-  
-  .editor-gradient-light {
-    background: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(260 40% 98%) 100%);
-  }
-  
-  /* Enhanced active note highlights */
   .sidebar-note-active-dark {
-    background: linear-gradient(90deg, hsl(263 30% 15%) 0%, hsl(263 25% 12%) 100%);
-    border-left: 3px solid hsl(var(--primary));
+    @apply bg-gradient-to-r from-[#1c1f2e] to-[#22273b] text-white;
   }
   
   .sidebar-note-active-light {
-    background: linear-gradient(90deg, hsl(263 60% 95%) 0%, hsl(260 65% 97%) 100%);
-    border-left: 3px solid hsl(var(--primary));
+    @apply bg-gradient-to-r from-[#e5deff] to-[#f2f0ff] text-[#614ac2];
   }
-
-  /* New highlight classes for notes */
-  .note-highlight-dark {
-    @apply bg-gradient-to-r from-[#2a1e3f]/20 to-[#2a1e3f]/10 hover:from-[#2a1e3f]/30 hover:to-[#2a1e3f]/20;
-  }
-  
-  .note-highlight-light {
-    @apply bg-gradient-to-r from-[#e9e1ff] to-[#f4f0ff] hover:from-[#e0d6ff] hover:to-[#eee8ff];
-  }
-}
-
-/* BlockNote Editor Customizations */
-.bn-container {
-  /* Custom container styling */
-  @apply border-none shadow-none;
-}
-
-.bn-editor {
-  /* Ensure the editor takes full height */
-  min-height: 100%;
-  @apply px-6 py-4;
-}
-
-/* Dark mode customizations */
-.dark .bn-container {
-  --bn-colors-editor-background: #12141f;
-  --bn-colors-menu-background: #1a1c2a;
-  --bn-colors-tooltip-background: #1a1c2a;
-  --bn-colors-menu-divider: #2a1e3f;
-  --bn-colors-inline-control-background: #1a1c2a;
-}
-
-/* Light mode customizations */
-.light .bn-container {
-  --bn-colors-editor-background: #f8f6ff;
-  --bn-colors-menu-background: #ffffff;
-  --bn-colors-tooltip-background: #ffffff;
-  --bn-colors-menu-divider: #e9e1ff;
-  --bn-colors-inline-control-background: #ffffff;
-}
-
-/* Remove default styling for both modes */
-.bn-container {
-  --bn-colors-editor-text: inherit;
-  --bn-border-radius: 0.5rem;
-}
-
-/* Fix focus issues */
-.bn-editor:focus-visible {
-  outline: none !important;
 }

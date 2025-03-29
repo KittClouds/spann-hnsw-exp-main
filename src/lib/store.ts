@@ -9,6 +9,17 @@ export interface Note {
   content: PartialBlock[];
   createdAt: string;
   updatedAt: string;
+  path: string; // e.g., "/Personal/Journal" or "/" for root
+  tags: string[]; // Array of tag identifiers
+}
+
+export interface Folder {
+  id: string;
+  name: string;
+  path: string; // Full path to this folder
+  parentId: string | null; // null for root folders
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Helper function to get current date in ISO format
@@ -16,30 +27,93 @@ const getCurrentDate = () => new Date().toISOString();
 
 // Generate a unique ID
 const generateId = () => `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+const generateFolderId = () => `folder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+// Root folder for the file system
+const rootFolder: Folder = {
+  id: 'root',
+  name: 'Root',
+  path: '/',
+  parentId: null,
+  createdAt: getCurrentDate(),
+  updatedAt: getCurrentDate()
+};
 
 // Create initial notes with proper structure
 const initialNotes: Note[] = [
   { 
     id: generateId(), 
     title: 'Welcome Note', 
-    content: [{ type: 'paragraph', content: 'Welcome to Galaxy Notes! Start typing here...' }], 
+    content: [{ 
+      type: 'paragraph', 
+      content: 'Welcome to Galaxy Notes! Start typing here...',
+      styles: {} 
+    }], 
     createdAt: getCurrentDate(), 
-    updatedAt: getCurrentDate() 
+    updatedAt: getCurrentDate(),
+    path: '/',
+    tags: []
   },
   { 
     id: generateId(), 
     title: 'Getting Started', 
-    content: [{ type: 'paragraph', content: 'Click on a note title to edit it. Create new notes with the + button.' }], 
+    content: [{ 
+      type: 'paragraph', 
+      content: 'Click on a note title to edit it. Create new notes with the + button.',
+      styles: {} 
+    }], 
     createdAt: getCurrentDate(), 
-    updatedAt: getCurrentDate() 
+    updatedAt: getCurrentDate(),
+    path: '/',
+    tags: []
   },
 ];
+
+// Initial folder structure with just the root folder
+const initialFolders: Folder[] = [rootFolder];
 
 // Main notes atom with localStorage persistence
 export const notesAtom = atomWithStorage<Note[]>('galaxy-notes', initialNotes);
 
+// Folders atom with localStorage persistence
+export const foldersAtom = atomWithStorage<Folder[]>('galaxy-folders', initialFolders);
+
 // Active note ID atom
 export const activeNoteIdAtom = atom<string | null>(initialNotes[0].id);
+
+// Current folder path atom
+export const currentFolderPathAtom = atom<string>('/');
+
+// Derived atom for notes in current folder
+export const currentFolderNotesAtom = atom(
+  (get) => {
+    const notes = get(notesAtom);
+    const currentPath = get(currentFolderPathAtom);
+    
+    return notes.filter(note => note.path === currentPath);
+  }
+);
+
+// Derived atom for folders in current folder
+export const currentFolderChildrenAtom = atom(
+  (get) => {
+    const folders = get(foldersAtom);
+    const currentPath = get(currentFolderPathAtom);
+    
+    // For root path ("/"), we want folders with parentId null
+    if (currentPath === '/') {
+      return folders.filter(folder => folder.parentId === null && folder.id !== 'root');
+    }
+    
+    // Find the current folder
+    const currentFolder = folders.find(folder => folder.path === currentPath);
+    
+    if (!currentFolder) return [];
+    
+    // Return folders that have this folder as parent
+    return folders.filter(folder => folder.parentId === currentFolder.id);
+  }
+);
 
 // Derived atom for the currently active note
 export const activeNoteAtom = atom(
@@ -71,22 +145,135 @@ export const activeNoteAtom = atom(
 );
 
 // Create a new note and return its ID
-export const createNote = () => {
+export const createNote = (folderPath: string = '/') => {
   const newId = generateId();
   const now = getCurrentDate();
   
   const newNote: Note = {
     id: newId,
     title: 'Untitled Note',
-    content: [{ type: 'paragraph', content: '' }],
+    content: [{ type: 'paragraph', content: '', styles: {} }],
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    path: folderPath,
+    tags: []
   };
   
   return { id: newId, note: newNote };
 };
 
+// Create a new folder
+export const createFolder = (name: string, parentPath: string = '/', parentId: string | null = null) => {
+  const newId = generateFolderId();
+  const now = getCurrentDate();
+  
+  // Create the path for the new folder
+  const path = parentPath === '/' ? `/${name}` : `${parentPath}/${name}`;
+  
+  const newFolder: Folder = {
+    id: newId,
+    name,
+    path,
+    parentId,
+    createdAt: now,
+    updatedAt: now
+  };
+  
+  return { id: newId, folder: newFolder };
+};
+
 // Delete a note by ID
 export const deleteNote = (notes: Note[], id: string): Note[] => {
   return notes.filter(note => note.id !== id);
+};
+
+// Delete a folder by ID (this does not delete contained notes/folders)
+export const deleteFolder = (folders: Folder[], id: string): Folder[] => {
+  return folders.filter(folder => folder.id !== id);
+};
+
+// Helper to get folder path parts
+export const getPathParts = (path: string): string[] => {
+  if (path === '/') return ['/'];
+  return ['/', ...path.split('/').filter(Boolean)];
+};
+
+// Helper to get breadcrumb data from a path
+export const getBreadcrumbsFromPath = (path: string, folders: Folder[]): { name: string; path: string }[] => {
+  if (path === '/') {
+    return [{ name: 'Home', path: '/' }];
+  }
+  
+  const parts = path.split('/').filter(Boolean);
+  const breadcrumbs = [{ name: 'Home', path: '/' }];
+  
+  let currentPath = '';
+  for (const part of parts) {
+    currentPath += `/${part}`;
+    const folder = folders.find(f => f.path === currentPath);
+    breadcrumbs.push({ 
+      name: folder?.name || part, 
+      path: currentPath 
+    });
+  }
+  
+  return breadcrumbs;
+};
+
+// Move a note to a different folder
+export const moveNote = (notes: Note[], noteId: string, targetFolderPath: string): Note[] => {
+  return notes.map(note => 
+    note.id === noteId 
+      ? { ...note, path: targetFolderPath, updatedAt: getCurrentDate() } 
+      : note
+  );
+};
+
+// Rename a folder and update all child paths
+export const renameFolder = (
+  folders: Folder[],
+  notes: Note[],
+  folderId: string,
+  newName: string
+): { folders: Folder[]; notes: Note[] } => {
+  const folder = folders.find(f => f.id === folderId);
+  if (!folder) return { folders, notes };
+  
+  const oldPath = folder.path;
+  const pathParts = oldPath.split('/').filter(Boolean);
+  pathParts.pop(); // Remove old name
+  
+  const parentPath = pathParts.length ? `/${pathParts.join('/')}` : '/';
+  const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`;
+  
+  // Update this folder
+  const updatedFolders = folders.map(f => {
+    if (f.id === folderId) {
+      return { ...f, name: newName, path: newPath, updatedAt: getCurrentDate() };
+    }
+    
+    // Update child folder paths
+    if (f.path.startsWith(oldPath + '/')) {
+      const restOfPath = f.path.slice(oldPath.length);
+      return { ...f, path: newPath + restOfPath, updatedAt: getCurrentDate() };
+    }
+    
+    return f;
+  });
+  
+  // Update notes
+  const updatedNotes = notes.map(note => {
+    if (note.path === oldPath) {
+      return { ...note, path: newPath, updatedAt: getCurrentDate() };
+    }
+    
+    if (note.path.startsWith(oldPath + '/')) {
+      const restOfPath = note.path.slice(oldPath.length);
+      return { ...note, path: newPath + restOfPath, updatedAt: getCurrentDate() };
+    }
+    
+    return note;
+  });
+  
+  return { folders: updatedFolders, notes: updatedNotes };
 };

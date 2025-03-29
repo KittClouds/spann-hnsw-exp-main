@@ -9,6 +9,7 @@ import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { PartialBlock } from '@blocknote/core';
 import { debounce } from 'lodash';
+import { NoteBreadcrumb } from './NoteBreadcrumb';
 
 export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
@@ -23,6 +24,10 @@ export function NoteEditor() {
   // Create editor instance
   const editor = useBlockNote({
     initialContent: activeNote?.content as PartialBlock[] || [],
+    // Add error handling to avoid crashes with malformed content
+    onError: (error) => {
+      console.error("BlockNote error:", error);
+    }
   });
 
   // Update theme when app theme changes
@@ -81,8 +86,12 @@ export function NoteEditor() {
   // Load note content when active note changes
   useEffect(() => {
     if (editor && activeNote?.content) {
-      // Replace the editor content with the active note content
-      editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
+      try {
+        // Replace the editor content with the active note content
+        editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
+      } catch (error) {
+        console.error("Error replacing blocks:", error);
+      }
     }
   }, [activeNoteId, editor]);
 
@@ -104,6 +113,8 @@ export function NoteEditor() {
 
   return (
     <div className="flex-1 flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white">
+      <NoteBreadcrumb />
+      
       <Input
         value={activeNote.title}
         onChange={handleTitleChange}
