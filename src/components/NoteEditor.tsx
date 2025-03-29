@@ -1,7 +1,7 @@
 
 import { useAtom } from 'jotai';
 import { BlockNoteEditor } from '@blocknote/core';
-import { useBlockNote, BlockNoteViewRaw } from '@blocknote/react';
+import { useBlockNote, BlockNoteView } from '@blocknote/react';
 import '@blocknote/react/style.css';
 import { activeNoteAtom } from '@/lib/store';
 import { useEffect, useState } from 'react';
@@ -53,12 +53,12 @@ export function NoteEditor() {
               .map(item => {
                 if (typeof item === 'string') return item;
                 // Handle different types of content safely
-                return 'text' in item ? item.text : '';
+                return item && typeof item === 'object' && 'text' in item ? item.text : '';
               })
               .join('');
             newTitle = textContent.substring(0, 40) || 'Untitled Note';
           } else if (typeof blockContent === 'string') {
-            newTitle = blockContent.split('\n')[0].substring(0, 40) || 'Untitled Note';
+            newTitle = blockContent.substring(0, 40) || 'Untitled Note';
           }
         }
       }
@@ -75,10 +75,6 @@ export function NoteEditor() {
   // Create the editor instance with necessary configs
   const editor = useBlockNote({
     initialContent: editorContent,
-    // Set theme to light explicitly to avoid the SideMenu error
-    theme: {
-      light: 'light'
-    }
   });
 
   // Set up the onChange handler after initialization
@@ -106,7 +102,7 @@ export function NoteEditor() {
     <div className="flex-1 overflow-auto bg-white dark:bg-[#12141f] h-full">
       <ScrollArea className="h-full">
         <div className="max-w-4xl mx-auto p-8">
-          <BlockNoteViewRaw
+          <BlockNoteView
             editor={editor}
             theme="light"
             className="min-h-[calc(100vh-10rem)]"
