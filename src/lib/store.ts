@@ -1,7 +1,7 @@
 
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
-import { PartialBlock } from '@blocknote/core';
+import { Block, PartialBlock } from '@blocknote/core';
 
 export interface Note {
   id: string;
@@ -14,7 +14,7 @@ export interface Note {
 // Helper function to get current date in ISO format
 const getCurrentDate = () => new Date().toISOString();
 
-// Generate a unique ID
+// Generate a unique ID with a specific pattern
 const generateId = () => `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
 // Create initial notes with proper structure
@@ -22,14 +22,14 @@ const initialNotes: Note[] = [
   { 
     id: generateId(), 
     title: 'Welcome Note', 
-    content: [{ type: 'paragraph', content: 'Welcome to Galaxy Notes! Start typing here...' }], 
+    content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Welcome to Galaxy Notes! Start typing here...' }] }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate() 
   },
   { 
     id: generateId(), 
     title: 'Getting Started', 
-    content: [{ type: 'paragraph', content: 'Click on a note title to edit it. Create new notes with the + button.' }], 
+    content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Click on a note title to edit it. Create new notes with the + button.' }] }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate() 
   },
@@ -78,7 +78,7 @@ export const createNote = () => {
   const newNote: Note = {
     id: newId,
     title: 'Untitled Note',
-    content: [{ type: 'paragraph', content: '' }],
+    content: [{ type: 'paragraph', content: [{ type: 'text', text: '' }] }],
     createdAt: now,
     updatedAt: now
   };
