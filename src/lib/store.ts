@@ -46,8 +46,7 @@ const initialNotes: Note[] = [
     title: 'Welcome Note', 
     content: [{ 
       type: 'paragraph', 
-      content: 'Welcome to Galaxy Notes! Start typing here...',
-      styles: {} 
+      content: 'Welcome to Galaxy Notes! Start typing here...'
     }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate(),
@@ -59,8 +58,7 @@ const initialNotes: Note[] = [
     title: 'Getting Started', 
     content: [{ 
       type: 'paragraph', 
-      content: 'Click on a note title to edit it. Create new notes with the + button.',
-      styles: {} 
+      content: 'Click on a note title to edit it. Create new notes with the + button.'
     }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate(),
@@ -152,7 +150,7 @@ export const createNote = (folderPath: string = '/') => {
   const newNote: Note = {
     id: newId,
     title: 'Untitled Note',
-    content: [{ type: 'paragraph', content: '', styles: {} }],
+    content: [{ type: 'paragraph', content: '' }],
     createdAt: now,
     updatedAt: now,
     path: folderPath,
