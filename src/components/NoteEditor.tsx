@@ -38,18 +38,19 @@ export function NoteEditor() {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-4">
+    <div className="flex-1 flex flex-col p-6">
       <Input
         value={activeNote.title}
         onChange={handleTitleChange}
-        className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-primary"
+        className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400"
+        placeholder="Note Title"
       />
       <Textarea
         ref={textareaRef}
         value={activeNote.content}
         onChange={handleContentChange}
         placeholder="Enter text or type '/' for commands"
-        className="flex-1 resize-none bg-galaxy-editor rounded-md p-4 text-base leading-relaxed"
+        className="flex-1 resize-none dark:editor-gradient-dark light:editor-gradient-light rounded-md p-6 text-base leading-relaxed shadow-lg border-border"
       />
     </div>
   );
