@@ -1,7 +1,7 @@
 
 import { useAtom } from 'jotai';
 import { BlockNoteEditor } from '@blocknote/core';
-import { useBlockNote, BlockNoteView } from '@blocknote/react';
+import { useBlockNote, BlockNoteViewRaw as BlockNoteView } from '@blocknote/react';
 import '@blocknote/react/style.css';
 import { activeNoteAtom } from '@/lib/store';
 import { useEffect, useState } from 'react';
@@ -58,7 +58,7 @@ export function NoteEditor() {
               .join('');
             newTitle = textContent.substring(0, 40) || 'Untitled Note';
           } else if (typeof blockContent === 'string') {
-            newTitle = blockContent.substring(0, 40) || 'Untitled Note';
+            newTitle = String(blockContent).substring(0, 40) || 'Untitled Note';
           }
         }
       }
