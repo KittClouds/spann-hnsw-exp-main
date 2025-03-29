@@ -3,7 +3,7 @@ import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
 import { Input } from "@/components/ui/input";
 import { useEffect, useRef, useState } from 'react';
-import { useCreateBlockNote, useBlockNote } from "@blocknote/react";
+import { useBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
@@ -75,16 +75,24 @@ export function NoteEditor() {
   // Set up editor change handler
   useEffect(() => {
     if (editor) {
-      // Subscribe to changes
-      const unsubscribe = editor.onEditorContentChange(() => {
+      // Subscribe to changes - store the unsubscribe function correctly
+      const unsubscribeFunction = editor.onEditorContentChange(() => {
         saveChanges();
       });
       
+      // Make sure to return the function itself, not call it
       return () => {
         saveChanges.cancel();
-        unsubscribe();
+        if (typeof unsubscribeFunction === 'function') {
+          unsubscribeFunction();
+        }
       };
     }
+    
+    // Also handle the case when there's no editor
+    return () => {
+      saveChanges.cancel();
+    };
   }, [editor, saveChanges, activeNote]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
