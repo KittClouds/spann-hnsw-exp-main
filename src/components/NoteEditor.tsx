@@ -1,7 +1,7 @@
 
 import { useAtom } from 'jotai';
 import { BlockNoteEditor } from '@blocknote/core';
-import { BlockNoteView, useBlockNote } from '@blocknote/react';
+import { useBlockNote, BlockNoteViewRaw } from '@blocknote/react';
 import '@blocknote/react/style.css';
 import { activeNoteAtom } from '@/lib/store';
 import { useEffect, useState } from 'react';
@@ -21,7 +21,7 @@ export function NoteEditor() {
   // Create the editor instance
   const editor = useBlockNote({
     initialContent: editorContent,
-    onEditorContentChange: (editor) => {
+    onChange: (editor) => {
       const content = editor.topLevelBlocks;
       
       if (activeNote) {
@@ -61,7 +61,7 @@ export function NoteEditor() {
     <div className="flex-1 overflow-auto bg-white dark:bg-[#12141f] h-full">
       <ScrollArea className="h-full">
         <div className="max-w-4xl mx-auto p-8">
-          <BlockNoteView
+          <BlockNoteViewRaw
             editor={editor}
             theme="light"
             className="min-h-[calc(100vh-10rem)]"
