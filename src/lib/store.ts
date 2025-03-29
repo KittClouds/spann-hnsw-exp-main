@@ -42,13 +42,20 @@ export const activeNoteAtom = atom(
   (get) => {
     const notes = get(notesAtom);
     const activeId = get(activeNoteIdAtom);
-    return notes.find((note) => note.id === activeId) || notes[0];
+    
+    // Make sure we're dealing with an array
+    const notesArray = Array.isArray(notes) ? notes : initialNotes;
+    
+    return notesArray.find((note) => note.id === activeId) || notesArray[0];
   },
   (get, set, updatedNote: Partial<Note>) => {
     const notes = get(notesAtom);
     const activeId = get(activeNoteIdAtom);
     
-    const updatedNotes = notes.map((note) => 
+    // Make sure we're dealing with an array
+    const notesArray = Array.isArray(notes) ? notes : initialNotes;
+    
+    const updatedNotes = notesArray.map((note) => 
       note.id === activeId 
         ? { 
             ...note, 
