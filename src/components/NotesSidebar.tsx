@@ -22,16 +22,25 @@ export function NotesSidebar() {
   
   const handleDeleteNote = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Prevent deleting if it's the last note
+    const notesArray = Array.isArray(notes) ? notes : [];
+    if (notesArray.length <= 1) {
+      toast("Cannot delete", {
+        description: "You must keep at least one note",
+      });
+      return;
+    }
+    
+    // Delete the note and get the index that was deleted
     deleteNote(setNotes, id);
     
-    // If we deleted the active note, select the first available note
+    // If we deleted the active note, select another note
     if (id === activeNoteId) {
-      // Get the notes array safely
-      const notesArray = Array.isArray(notes) ? notes : [];
-      // Filter out the deleted note
       const remainingNotes = notesArray.filter(note => note.id !== id);
       
       if (remainingNotes.length > 0) {
+        // Set the first available note as active if we deleted the active note
         setActiveNoteId(remainingNotes[0].id);
       }
     }
@@ -39,6 +48,13 @@ export function NotesSidebar() {
     toast("Note deleted", {
       description: "Your note has been removed",
     });
+  };
+
+  const handleNoteClick = (id: number) => {
+    // Only change if it's different than the current active note
+    if (id !== activeNoteId) {
+      setActiveNoteId(id);
+    }
   };
 
   return (
@@ -56,28 +72,32 @@ export function NotesSidebar() {
       
       <ScrollArea className="flex-1">
         <div className="py-2">
-          {Array.isArray(notes) ? notes.map((note) => (
-            <div 
-              key={note.id}
-              onClick={() => setActiveNoteId(note.id)}
-              className={cn(
-                "px-4 py-3 cursor-pointer transition-all duration-200 flex justify-between items-center group",
-                activeNoteId === note.id 
-                  ? "dark:sidebar-note-active-dark light:sidebar-note-active-light" 
-                  : "dark:hover:bg-[#1c1f2e] light:hover:bg-[#efeaff]"
-              )}
-            >
-              <div className="font-medium truncate">{note.title}</div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => handleDeleteNote(note.id, e)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 dark:bg-[#1e1f2e]/60 dark:hover:bg-[#1e1f2e] light:bg-[#e5deff]/60 light:hover:bg-[#e5deff]"
+          {Array.isArray(notes) && notes.length > 0 ? (
+            notes.map((note) => (
+              <div 
+                key={note.id}
+                onClick={() => handleNoteClick(note.id)}
+                className={cn(
+                  "px-4 py-3 cursor-pointer transition-all duration-200 flex justify-between items-center group",
+                  activeNoteId === note.id 
+                    ? "dark:sidebar-note-active-dark light:sidebar-note-active-light" 
+                    : "dark:hover:bg-[#1c1f2e] light:hover:bg-[#efeaff]"
+                )}
               >
-                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
-              </Button>
-            </div>
-          )) : <div className="px-4 py-2">Loading notes...</div>}
+                <div className="font-medium truncate">{note.title}</div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => handleDeleteNote(note.id, e)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 dark:bg-[#1e1f2e]/60 dark:hover:bg-[#1e1f2e] light:bg-[#e5deff]/60 light:hover:bg-[#e5deff]"
+                >
+                  <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
+                </Button>
+              </div>
+            ))
+          ) : (
+            <div className="px-4 py-2 text-muted-foreground">No notes available</div>
+          )}
         </div>
       </ScrollArea>
     </div>
