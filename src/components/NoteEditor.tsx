@@ -101,7 +101,7 @@ export function NoteEditor() {
 
   if (!activeNote) {
     return (
-      <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground bg-galaxy-charcoal">
+      <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground bg-slate-100 dark:bg-galaxy-charcoal">
         No note selected
       </div>
     );
@@ -112,7 +112,7 @@ export function NoteEditor() {
       <ResizablePanel 
         defaultSize={70} 
         minSize={40}
-        className="flex flex-col p-6 bg-galaxy-charcoal"
+        className="flex flex-col p-6 bg-white dark:bg-galaxy-charcoal"
       >
         <NoteBreadcrumb />
         
@@ -122,7 +122,7 @@ export function NoteEditor() {
           className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 cosmic-text"
           placeholder="Note Title"
         />
-        <div className="flex-1 bg-galaxy-editor rounded-md shadow-cosmic border border-galaxy-dark-gray/30 transition-all duration-200 overflow-auto">
+        <div className="flex-1 bg-white dark:bg-galaxy-editor rounded-md shadow-sm dark:shadow-cosmic border border-slate-200 dark:border-galaxy-dark-gray/30 transition-all duration-200 overflow-auto">
           <BlockNoteView 
             editor={editor} 
             theme={theme}
@@ -133,13 +133,13 @@ export function NoteEditor() {
       
       <ResizableHandle 
         withHandle 
-        className="bg-galaxy-purple/20 hover:bg-galaxy-purple/40 transition-colors"
+        className="bg-slate-200 hover:bg-slate-300 dark:bg-galaxy-purple/20 dark:hover:bg-galaxy-purple/40 transition-colors"
       />
       
       <ResizablePanel 
         defaultSize={30} 
         minSize={20}
-        className="border-t border-galaxy-dark-gray/50 bg-galaxy-black"
+        className="border-t border-slate-200 dark:border-galaxy-dark-gray/50 bg-slate-50 dark:bg-galaxy-black"
       >
         <ConnectionsPanel />
       </ResizablePanel>

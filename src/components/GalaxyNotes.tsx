@@ -15,9 +15,9 @@ export function GalaxyNotes() {
   }, [syncGraph]);
 
   return (
-    <div className="flex flex-col h-screen bg-galaxy-black dark:bg-[#121212] light:bg-white text-foreground stars-bg">
+    <div className="flex flex-col h-screen bg-background dark:bg-galaxy-black text-foreground stars-bg">
       <div className="z-10 relative">
-        <header className="border-b border-galaxy-dark-gray/50 p-4 flex items-center justify-between backdrop-blur-lg bg-galaxy-black/80">
+        <header className="border-b border-galaxy-editor-border/50 p-4 flex items-center justify-between backdrop-blur-lg bg-white/90 dark:bg-galaxy-black/80">
           <div className="flex-1">
             {/* Empty space for layout */}
           </div>

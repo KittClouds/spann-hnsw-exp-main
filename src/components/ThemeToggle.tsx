@@ -37,10 +37,10 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
-      className="rounded-full transition-all duration-300 hover:bg-galaxy-dark-gray/50 bg-galaxy-dark-gray/20 relative overflow-hidden"
+      className={`rounded-full transition-all duration-300 ${theme === 'light' ? 'bg-amber-100 hover:bg-amber-200' : 'bg-galaxy-dark-gray/20 hover:bg-galaxy-dark-gray/50'} relative overflow-hidden`}
     >
-      <div className="absolute inset-0 bg-purple-glow opacity-0 hover:opacity-30 transition-opacity duration-300"></div>
-      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-amber-400" />
+      <div className={`absolute inset-0 ${theme === 'light' ? 'bg-amber-200/30' : 'bg-purple-glow'} opacity-0 hover:opacity-30 transition-opacity duration-300`}></div>
+      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-amber-500" />
       <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-galaxy-purple" />
       <span className="sr-only">Toggle theme</span>
     </Button>

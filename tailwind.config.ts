@@ -71,7 +71,8 @@ export default {
 					'light-purple': '#e5deff',
 					'highlight': '#9370DB',
 					'text': '#e0e0e0',
-					'editor': '#1a1a1a',
+					'editor': 'hsl(var(--galaxy-editor))',
+					'editor-border': 'hsl(var(--galaxy-editor-border))',
 					'white': '#ffffff',
 					'accent': '#f8f6ff',
 				}
@@ -83,7 +84,7 @@ export default {
 			},
 			backgroundImage: {
 				'purple-glow': 'radial-gradient(circle, rgba(110, 65, 192, 0.15) 0%, transparent 70%)',
-				'stars': 'url("/public/lovable-uploads/efa4d9a0-425e-4286-a1bf-24f7ad1a2a44.png")',
+				'stars': 'url("/lovable-uploads/443da7d7-f9f8-4112-a1fc-cd1a4b409185.png")',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
