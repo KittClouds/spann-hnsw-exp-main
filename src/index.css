@@ -35,32 +35,32 @@
   }
  
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 0 0% 7%;
     --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
+    --card: 0 0% 9%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 0 0% 9%;
     --popover-foreground: 0 0% 98%;
     --primary: 0 0% 98%;
     --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
+    --secondary: 0 0% 12%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
+    --muted: 0 0% 12%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
+    --accent: 270 50% 30%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 270 50% 30%;
     
-    --sidebar: 240 10% 3.9%;
+    --sidebar: 0 0% 9%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 0 0% 12%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 240 4.9% 83.9%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 270 50% 30%;
   }
 }
  
@@ -75,10 +75,66 @@
 
 @layer utilities {
   .sidebar-note-active-dark {
-    @apply bg-gradient-to-r from-[#1c1f2e] to-[#22273b] text-white;
+    @apply bg-gradient-to-r from-galaxy-dark-accent to-galaxy-dark-purple text-white border-l-2 border-l-galaxy-highlight;
   }
   
   .sidebar-note-active-light {
-    @apply bg-gradient-to-r from-[#e5deff] to-[#f2f0ff] text-[#614ac2];
+    @apply bg-gradient-to-r from-[#f0edff] to-[#f7f5ff] text-galaxy-deep-purple border-l-2 border-l-galaxy-purple;
+  }
+
+  .cosmic-bg-dark {
+    @apply bg-gradient-to-b from-galaxy-dark to-galaxy-dark-accent;
+  }
+
+  .cosmic-bg-light {
+    @apply bg-gradient-to-b from-white to-galaxy-light-accent;
+  }
+
+  .cosmic-card-dark {
+    @apply bg-galaxy-dark-accent bg-opacity-80 backdrop-blur-md border border-galaxy-dark-purple border-opacity-30 shadow-cosmic-dark;
+  }
+
+  .cosmic-card-light {
+    @apply bg-white bg-opacity-80 backdrop-blur-md border border-galaxy-light-purple border-opacity-30 shadow-cosmic;
+  }
+
+  .cosmic-button-dark {
+    @apply bg-gradient-to-r from-galaxy-deep-purple to-galaxy-purple text-white hover:from-galaxy-purple hover:to-galaxy-highlight transition-all duration-300 shadow-cosmic-glow;
+  }
+
+  .cosmic-button-light {
+    @apply bg-gradient-to-r from-galaxy-deep-purple to-galaxy-purple text-white hover:brightness-110 transition-all duration-300 shadow-sm;
+  }
+
+  .cosmic-editor-dark {
+    @apply bg-galaxy-editor border border-galaxy-dark-purple border-opacity-20 shadow-inner;
+  }
+
+  .cosmic-editor-light {
+    @apply bg-galaxy-light-editor border border-gray-200 shadow-sm;
+  }
+
+  .cosmic-sidebar-dark {
+    @apply bg-galaxy-dark border-r border-galaxy-dark-purple border-opacity-30;
+  }
+
+  .cosmic-sidebar-light {
+    @apply bg-white border-r border-gray-200;
+  }
+
+  .cosmic-header-dark {
+    @apply bg-galaxy-dark bg-opacity-70 backdrop-blur-md border-b border-galaxy-dark-purple border-opacity-30;
+  }
+  
+  .cosmic-header-light {
+    @apply bg-white bg-opacity-70 backdrop-blur-md border-b border-gray-200;
+  }
+
+  .cosmic-text-gradient-dark {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-galaxy-purple to-galaxy-highlight;
+  }
+  
+  .cosmic-text-gradient-light {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-galaxy-deep-purple to-galaxy-purple;
   }
 }

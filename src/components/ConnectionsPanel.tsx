@@ -40,17 +40,17 @@ export function ConnectionsPanel() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
-        <h3 className="text-sm font-semibold flex items-center gap-2">
+      <div className="p-4 border-b dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200">
+        <h3 className="text-sm font-semibold flex items-center gap-2 dark:text-galaxy-highlight light:text-galaxy-purple">
           <LinkIcon className="h-4 w-4" /> Connections
         </h3>
       </div>
       
       <ScrollArea className="flex-1">
         <div className="p-4">
-          <div className="flex gap-6">
+          <div className="grid gap-6 md:grid-cols-2">
             {/* Outgoing links */}
-            <div className="flex-1">
+            <div>
               <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
                 <ArrowUpRight className="h-3 w-3 mr-1" /> Outgoing Links ({outgoingLinks.length})
               </h4>
@@ -58,7 +58,10 @@ export function ConnectionsPanel() {
               {outgoingLinks.length > 0 ? (
                 <div className="space-y-2">
                   {outgoingLinks.map(link => (
-                    <Card key={link.id} className="p-2 hover:bg-accent transition-colors">
+                    <Card 
+                      key={link.id} 
+                      className="p-2 dark:bg-galaxy-dark dark:hover:bg-galaxy-dark-purple dark:hover:bg-opacity-30 light:bg-white light:hover:bg-gray-50 transition-colors dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200"
+                    >
                       <Button 
                         variant="ghost" 
                         className="w-full justify-start p-1 h-auto text-xs"
@@ -77,7 +80,7 @@ export function ConnectionsPanel() {
             </div>
             
             {/* Incoming links */}
-            <div className="flex-1">
+            <div>
               <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
                 <ArrowDownLeft className="h-3 w-3 mr-1" /> Incoming Links ({incomingLinks.length})
               </h4>
@@ -85,7 +88,10 @@ export function ConnectionsPanel() {
               {incomingLinks.length > 0 ? (
                 <div className="space-y-2">
                   {incomingLinks.map(link => (
-                    <Card key={link.id} className="p-2 hover:bg-accent transition-colors">
+                    <Card 
+                      key={link.id} 
+                      className="p-2 dark:bg-galaxy-dark dark:hover:bg-galaxy-dark-purple dark:hover:bg-opacity-30 light:bg-white light:hover:bg-gray-50 transition-colors dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200"
+                    >
                       <Button 
                         variant="ghost" 
                         className="w-full justify-start p-1 h-auto text-xs"

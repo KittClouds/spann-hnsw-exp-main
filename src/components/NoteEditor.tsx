@@ -75,7 +75,7 @@ export function NoteEditor() {
     
     return () => {
       saveChanges.cancel();
-      if (unsubscribe) unsubscribe();
+      if (typeof unsubscribe === 'function') unsubscribe();
     };
   }, [editor, saveChanges, activeNote]);
 
@@ -89,7 +89,7 @@ export function NoteEditor() {
         console.error("Error replacing blocks:", error);
       }
     }
-  }, [activeNoteId, editor]);
+  }, [activeNoteId, editor, activeNote]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
@@ -101,8 +101,11 @@ export function NoteEditor() {
 
   if (!activeNote) {
     return (
-      <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground">
-        No note selected
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        <div className="text-center p-8 max-w-md">
+          <h3 className="text-xl font-medium mb-2">No note selected</h3>
+          <p className="text-sm">Select a note from the sidebar or create a new one to get started.</p>
+        </div>
       </div>
     );
   }
@@ -112,17 +115,18 @@ export function NoteEditor() {
       <ResizablePanel 
         defaultSize={70} 
         minSize={40}
-        className="flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white"
+        className="flex flex-col p-6 dark:bg-galaxy-dark light:bg-white"
       >
         <NoteBreadcrumb />
         
         <Input
           value={activeNote.title}
           onChange={handleTitleChange}
-          className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]"
+          className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 dark:cosmic-text-gradient-dark light:cosmic-text-gradient-light"
           placeholder="Note Title"
         />
-        <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
+
+        <div className="flex-1 dark:cosmic-editor-dark light:cosmic-editor-light rounded-lg overflow-auto transition-all duration-200">
           <BlockNoteView 
             editor={editor} 
             theme={theme}
@@ -131,12 +135,12 @@ export function NoteEditor() {
         </div>
       </ResizablePanel>
       
-      <ResizableHandle withHandle />
+      <ResizableHandle withHandle className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" />
       
       <ResizablePanel 
         defaultSize={30} 
         minSize={20}
-        className="border-t border-border dark:bg-[#12141f] light:bg-[#f8f6ff]"
+        className="dark:bg-galaxy-dark-accent light:bg-gray-50 border-t dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200"
       >
         <ConnectionsPanel />
       </ResizablePanel>

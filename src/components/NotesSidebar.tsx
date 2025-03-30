@@ -35,29 +35,29 @@ export function NotesSidebar() {
   }, [setNotes, setActiveNoteId, currentPath]);
 
   return (
-    <div className="w-64 border-r border-border dark:bg-[#12141f] light:bg-[#f8f6ff] h-full flex flex-col">
+    <div className="w-64 dark:cosmic-sidebar-dark light:cosmic-sidebar-light h-full flex flex-col">
       <div className="p-4">
         <div className="relative">
           <Input
             placeholder="Search notes..."
-            className="pl-8"
+            className="pl-8 dark:bg-galaxy-dark-accent dark:border-galaxy-dark-purple dark:border-opacity-30 light:bg-white"
           />
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         </div>
       </div>
       
-      <Separator className="dark:bg-[#1e1f2e] light:bg-[#e5deff]" />
+      <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" />
       
       <div className="p-4">
         <Button 
           onClick={handleNewNote} 
-          className="w-full dark:bg-[#7c5bf1] dark:hover:bg-[#6b4ad5] light:bg-[#614ac2] light:hover:bg-[#563db0] text-white group transition-all duration-200 shadow-md"
+          className="w-full dark:cosmic-button-dark light:cosmic-button-light group"
         >
           <Plus className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" /> New Note
         </Button>
       </div>
       
-      <Separator className="dark:bg-[#1e1f2e] light:bg-[#e5deff]" />
+      <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" />
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="px-2 py-1">
@@ -71,10 +71,14 @@ export function NotesSidebar() {
         </ScrollArea>
       </div>
       
-      <Separator className="dark:bg-[#1e1f2e] light:bg-[#e5deff]" />
+      <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" />
       
       <div className="p-3">
-        <Button variant="outline" className="w-full flex items-center" size="sm">
+        <Button 
+          variant="outline" 
+          className="w-full flex items-center dark:border-galaxy-dark-purple dark:border-opacity-30 dark:bg-galaxy-dark-accent dark:hover:bg-galaxy-dark-purple dark:hover:bg-opacity-50 light:border-gray-200 light:bg-white light:hover:bg-gray-100" 
+          size="sm"
+        >
           <Tag className="mr-2 h-3 w-3" /> Manage Tags
         </Button>
       </div>
