@@ -75,9 +75,7 @@ export function NoteEditor() {
     
     return () => {
       saveChanges.cancel();
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      unsubscribe && unsubscribe();
     };
   }, [editor, saveChanges, activeNote]);
 
@@ -110,9 +108,9 @@ export function NoteEditor() {
   }
 
   return (
-    <ResizablePanelGroup className="flex-1 flex overflow-hidden" direction="horizontal">
+    <ResizablePanelGroup className="flex-1 flex flex-col overflow-hidden" direction="vertical">
       <ResizablePanel 
-        defaultSize={75} 
+        defaultSize={70} 
         minSize={40}
         className="flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white"
       >
@@ -136,9 +134,9 @@ export function NoteEditor() {
       <ResizableHandle withHandle />
       
       <ResizablePanel 
-        defaultSize={25} 
-        minSize={15}
-        className="border-l border-border dark:bg-[#12141f] light:bg-[#f8f6ff]"
+        defaultSize={30} 
+        minSize={20}
+        className="border-t border-border dark:bg-[#12141f] light:bg-[#f8f6ff]"
       >
         <ConnectionsPanel />
       </ResizablePanel>

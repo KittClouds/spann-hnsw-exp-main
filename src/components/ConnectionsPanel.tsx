@@ -47,59 +47,61 @@ export function ConnectionsPanel() {
       </div>
       
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-6">
-          {/* Outgoing links */}
-          <div>
-            <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-              <ArrowUpRight className="h-3 w-3 mr-1" /> Outgoing Links ({outgoingLinks.length})
-            </h4>
+        <div className="p-4">
+          <div className="flex gap-6">
+            {/* Outgoing links */}
+            <div className="flex-1">
+              <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                <ArrowUpRight className="h-3 w-3 mr-1" /> Outgoing Links ({outgoingLinks.length})
+              </h4>
+              
+              {outgoingLinks.length > 0 ? (
+                <div className="space-y-2">
+                  {outgoingLinks.map(link => (
+                    <Card key={link.id} className="p-2 hover:bg-accent transition-colors">
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start p-1 h-auto text-xs"
+                        onClick={() => handleLinkClick(link.id)}
+                      >
+                        {link.title}
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  No outgoing links. Create links by typing [[note title]] in your notes.
+                </p>
+              )}
+            </div>
             
-            {outgoingLinks.length > 0 ? (
-              <div className="space-y-2">
-                {outgoingLinks.map(link => (
-                  <Card key={link.id} className="p-2 hover:bg-accent transition-colors">
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start p-1 h-auto text-xs"
-                      onClick={() => handleLinkClick(link.id)}
-                    >
-                      {link.title}
-                    </Button>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                No outgoing links. Create links by typing [[note title]] in your notes.
-              </p>
-            )}
-          </div>
-          
-          {/* Incoming links */}
-          <div>
-            <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-              <ArrowDownLeft className="h-3 w-3 mr-1" /> Incoming Links ({incomingLinks.length})
-            </h4>
-            
-            {incomingLinks.length > 0 ? (
-              <div className="space-y-2">
-                {incomingLinks.map(link => (
-                  <Card key={link.id} className="p-2 hover:bg-accent transition-colors">
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start p-1 h-auto text-xs"
-                      onClick={() => handleLinkClick(link.id)}
-                    >
-                      {link.title}
-                    </Button>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                No incoming links from other notes.
-              </p>
-            )}
+            {/* Incoming links */}
+            <div className="flex-1">
+              <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                <ArrowDownLeft className="h-3 w-3 mr-1" /> Incoming Links ({incomingLinks.length})
+              </h4>
+              
+              {incomingLinks.length > 0 ? (
+                <div className="space-y-2">
+                  {incomingLinks.map(link => (
+                    <Card key={link.id} className="p-2 hover:bg-accent transition-colors">
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start p-1 h-auto text-xs"
+                        onClick={() => handleLinkClick(link.id)}
+                      >
+                        {link.title}
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  No incoming links from other notes.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </ScrollArea>
