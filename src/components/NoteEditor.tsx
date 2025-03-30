@@ -60,6 +60,7 @@ export function NoteEditor() {
     if (editor && activeNote) {
       const blocks = editor.document;
       setActiveNote({
+        ...activeNote,
         content: blocks,
       });
     }
@@ -94,6 +95,7 @@ export function NoteEditor() {
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
       setActiveNote({
+        ...activeNote,
         title: e.target.value
       });
     }
