@@ -10,7 +10,7 @@ import "@blocknote/mantine/style.css";
 import { PartialBlock } from '@blocknote/core';
 import { debounce } from 'lodash';
 import { NoteBreadcrumb } from './NoteBreadcrumb';
-import { Resizable, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/components/ui/resizable";
 import { ConnectionsPanel } from './ConnectionsPanel';
 
 export function NoteEditor() {
@@ -110,7 +110,7 @@ export function NoteEditor() {
   }
 
   return (
-    <Resizable className="flex-1 flex overflow-hidden">
+    <ResizablePanelGroup className="flex-1 flex overflow-hidden">
       <ResizablePanel 
         defaultSize={75} 
         minSize={40}
@@ -142,6 +142,6 @@ export function NoteEditor() {
       >
         <ConnectionsPanel />
       </ResizablePanel>
-    </Resizable>
+    </ResizablePanelGroup>
   );
 }
