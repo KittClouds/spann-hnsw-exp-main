@@ -15,8 +15,8 @@ export function GalaxyNotes() {
   }, [syncGraph]);
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b dark:from-galaxy-dark dark:to-[#222222] light:from-white light:to-[#f7f5ff] text-foreground animate-fade-in">
-      <header className="border-b dark:border-opacity-30 light:border-opacity-10 p-4 flex items-center justify-between backdrop-blur-sm dark:bg-black/40 light:bg-white/70 relative z-10">
+    <div className="flex flex-col h-screen bg-gradient-to-b dark:from-galaxy-dark dark:to-[#222222] from-white to-[#f7f5ff] text-foreground animate-fade-in">
+      <header className="border-b dark:border-opacity-30 border-opacity-10 p-4 flex items-center justify-between backdrop-blur-sm dark:bg-black/40 bg-white/70 relative z-10">
         <div className="flex-1">
           {/* Empty space for layout */}
         </div>

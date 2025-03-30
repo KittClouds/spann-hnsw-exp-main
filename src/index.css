@@ -103,6 +103,14 @@
   }
   
   .cosmic-text {
-    @apply dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-galaxy-purple dark:to-galaxy-highlight light:text-transparent light:bg-clip-text light:bg-gradient-to-r light:from-galaxy-deep-purple light:to-galaxy-purple;
+    @apply text-transparent bg-clip-text;
+  }
+
+  .dark .cosmic-text {
+    @apply bg-gradient-to-r from-galaxy-purple to-galaxy-highlight;
+  }
+
+  :not(.dark) .cosmic-text {
+    @apply bg-gradient-to-r from-galaxy-deep-purple to-galaxy-purple;
   }
 }
