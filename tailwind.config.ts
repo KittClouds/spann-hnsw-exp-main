@@ -54,26 +54,36 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				sidebar: {
-					DEFAULT: 'hsl(var(--sidebar-background))',
+					DEFAULT: 'hsl(var(--sidebar))',
 					foreground: 'hsl(var(--sidebar-foreground))',
-					primary: 'hsl(var(--sidebar-primary))',
-					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
 					accent: 'hsl(var(--sidebar-accent))',
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				galaxy: {
-					'dark': '#0d0e18',
-					'dark-accent': '#1c1f2e',
-					'editor': '#12141f',
-					'purple': '#7c5bf1',
+					'black': '#121212',
+					'charcoal': '#1a1a1a',
+					'dark-gray': '#222222',
+					'medium-gray': '#303030',
+					'purple': '#6e41c0',
+					'deep-purple': '#4A3B76',
 					'light-purple': '#e5deff',
+					'highlight': '#9370DB',
 					'text': '#e0e0e0',
-					'sidebar': '#12141f',
-					'light': '#ffffff',
-					'light-accent': '#f8f6ff',
+					'editor': '#1a1a1a',
+					'white': '#ffffff',
+					'accent': '#f8f6ff',
 				}
+			},
+			boxShadow: {
+				'cosmic': '0 4px 20px -2px rgba(0, 0, 0, 0.5)',
+				'inner-glow': 'inset 0 1px 4px 0 rgba(255, 255, 255, 0.05)',
+				'purple-glow': '0 0 15px rgba(110, 65, 192, 0.4)',
+			},
+			backgroundImage: {
+				'purple-glow': 'radial-gradient(circle, rgba(110, 65, 192, 0.15) 0%, transparent 70%)',
+				'stars': 'url("/public/lovable-uploads/efa4d9a0-425e-4286-a1bf-24f7ad1a2a44.png")',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -104,12 +114,22 @@ export default {
 					to: {
 						opacity: '1'
 					}
+				},
+				'float': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-5px)' },
+				},
+				'glow-pulse': {
+					'0%, 100%': { opacity: '0.6' },
+					'50%': { opacity: '1' },
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				'fade-in': 'fade-in 0.3s ease-out'
+				'fade-in': 'fade-in 0.3s ease-out',
+				'float': 'float 6s ease-in-out infinite',
+				'glow-pulse': 'glow-pulse 4s ease-in-out infinite',
 			}
 		}
 	},

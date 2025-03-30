@@ -35,31 +35,31 @@
   }
  
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 0 0% 7%;
     --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
+    --card: 0 0% 10%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 0 0% 10%;
     --popover-foreground: 0 0% 98%;
     --primary: 0 0% 98%;
     --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
+    --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
+    --muted: 0 0% 15%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
+    --accent: 0 0% 15%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
     --ring: 240 4.9% 83.9%;
     
-    --sidebar: 240 10% 3.9%;
+    --sidebar: 0 0% 9%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 0 0% 13%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-border: 0 0% 15%;
     --sidebar-ring: 240 4.9% 83.9%;
   }
 }
@@ -75,10 +75,50 @@
 
 @layer utilities {
   .sidebar-note-active-dark {
-    @apply bg-gradient-to-r from-[#1c1f2e] to-[#22273b] text-white;
+    @apply bg-gradient-to-r from-galaxy-charcoal to-galaxy-dark-gray text-white border-l-2 border-l-galaxy-highlight;
   }
   
   .sidebar-note-active-light {
-    @apply bg-gradient-to-r from-[#e5deff] to-[#f2f0ff] text-[#614ac2];
+    @apply bg-gradient-to-r from-[#f0edff] to-[#f7f5ff] text-galaxy-deep-purple border-l-2 border-l-galaxy-purple;
+  }
+
+  .glass-effect {
+    @apply backdrop-blur-md backdrop-saturate-150 bg-opacity-80;
+  }
+  
+  .glass-card {
+    @apply bg-opacity-40 backdrop-blur-md backdrop-saturate-150 border border-opacity-30 shadow-cosmic;
+  }
+  
+  .glass-panel {
+    @apply backdrop-blur-md backdrop-saturate-150 bg-opacity-50 shadow-inner-glow;
+  }
+  
+  .hover-translate {
+    @apply transition-transform duration-200 hover:translate-y-[-2px];
+  }
+  
+  .cosmic-glow {
+    @apply relative overflow-hidden before:absolute before:inset-0 before:bg-purple-glow before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100;
+  }
+  
+  .cosmic-text {
+    @apply text-transparent bg-clip-text bg-gradient-to-r;
+  }
+  
+  .dark .cosmic-text {
+    @apply from-galaxy-purple to-galaxy-highlight;
+  }
+  
+  :root:not(.dark) .cosmic-text {
+    @apply from-galaxy-deep-purple to-galaxy-purple;
+  }
+  
+  .stars-bg {
+    @apply relative before:absolute before:inset-0 before:bg-stars before:bg-repeat before:opacity-10 before:z-0;
+  }
+  
+  .cosmic-divider {
+    @apply relative border-t border-t-galaxy-purple/20 overflow-visible after:absolute after:top-[-5px] after:left-1/2 after:transform after:-translate-x-1/2 after:w-20 after:h-[1px] after:bg-gradient-to-r after:from-transparent after:via-galaxy-purple/60 after:to-transparent;
   }
 }

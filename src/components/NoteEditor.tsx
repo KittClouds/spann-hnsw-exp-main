@@ -89,7 +89,7 @@ export function NoteEditor() {
         console.error("Error replacing blocks:", error);
       }
     }
-  }, [activeNoteId, editor]);
+  }, [activeNoteId, editor, activeNote]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
@@ -101,7 +101,7 @@ export function NoteEditor() {
 
   if (!activeNote) {
     return (
-      <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground">
+      <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground bg-galaxy-charcoal">
         No note selected
       </div>
     );
@@ -112,17 +112,17 @@ export function NoteEditor() {
       <ResizablePanel 
         defaultSize={70} 
         minSize={40}
-        className="flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white"
+        className="flex flex-col p-6 bg-galaxy-charcoal"
       >
         <NoteBreadcrumb />
         
         <Input
           value={activeNote.title}
           onChange={handleTitleChange}
-          className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]"
+          className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 cosmic-text"
           placeholder="Note Title"
         />
-        <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
+        <div className="flex-1 bg-galaxy-editor rounded-md shadow-cosmic border border-galaxy-dark-gray/30 transition-all duration-200 overflow-auto">
           <BlockNoteView 
             editor={editor} 
             theme={theme}
@@ -131,12 +131,15 @@ export function NoteEditor() {
         </div>
       </ResizablePanel>
       
-      <ResizableHandle withHandle />
+      <ResizableHandle 
+        withHandle 
+        className="bg-galaxy-purple/20 hover:bg-galaxy-purple/40 transition-colors"
+      />
       
       <ResizablePanel 
         defaultSize={30} 
         minSize={20}
-        className="border-t border-border dark:bg-[#12141f] light:bg-[#f8f6ff]"
+        className="border-t border-galaxy-dark-gray/50 bg-galaxy-black"
       >
         <ConnectionsPanel />
       </ResizablePanel>
