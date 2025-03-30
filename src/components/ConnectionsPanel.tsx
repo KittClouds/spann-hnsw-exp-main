@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect } from 'react';
-import { Link, ExternalLink } from 'lucide-react';
+import { Link as LinkIcon, ExternalLink, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
 export function ConnectionsPanel() {
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
@@ -42,16 +42,16 @@ export function ConnectionsPanel() {
     <div className="flex flex-col h-full">
       <div className="p-4 border-b">
         <h3 className="text-sm font-semibold flex items-center gap-2">
-          <Link className="h-4 w-4" /> Connections
+          <LinkIcon className="h-4 w-4" /> Connections
         </h3>
       </div>
       
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-6">
           {/* Outgoing links */}
           <div>
             <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-              <ExternalLink className="h-3 w-3 mr-1" /> Outgoing Links ({outgoingLinks.length})
+              <ArrowUpRight className="h-3 w-3 mr-1" /> Outgoing Links ({outgoingLinks.length})
             </h4>
             
             {outgoingLinks.length > 0 ? (
@@ -78,7 +78,7 @@ export function ConnectionsPanel() {
           {/* Incoming links */}
           <div>
             <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-              <Link className="h-3 w-3 mr-1" /> Incoming Links ({incomingLinks.length})
+              <ArrowDownLeft className="h-3 w-3 mr-1" /> Incoming Links ({incomingLinks.length})
             </h4>
             
             {incomingLinks.length > 0 ? (

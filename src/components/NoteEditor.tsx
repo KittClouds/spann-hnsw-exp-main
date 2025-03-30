@@ -75,7 +75,7 @@ export function NoteEditor() {
     
     return () => {
       saveChanges.cancel();
-      if (typeof unsubscribe === 'function') {
+      if (unsubscribe) {
         unsubscribe();
       }
     };
@@ -110,7 +110,7 @@ export function NoteEditor() {
   }
 
   return (
-    <ResizablePanelGroup className="flex-1 flex overflow-hidden">
+    <ResizablePanelGroup className="flex-1 flex overflow-hidden" direction="horizontal">
       <ResizablePanel 
         defaultSize={75} 
         minSize={40}
