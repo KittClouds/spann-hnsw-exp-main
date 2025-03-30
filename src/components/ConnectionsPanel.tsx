@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect } from 'react';
-import { Link as LinkIcon, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Link as LinkIcon, ExternalLink, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
 export function ConnectionsPanel() {
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
@@ -40,8 +40,8 @@ export function ConnectionsPanel() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-galaxy-dark-gray/50">
-        <h3 className="text-sm font-semibold flex items-center gap-2 cosmic-text">
+      <div className="p-4 border-b">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
           <LinkIcon className="h-4 w-4" /> Connections
         </h3>
       </div>
@@ -52,16 +52,16 @@ export function ConnectionsPanel() {
             {/* Outgoing links */}
             <div className="flex-1">
               <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                <ArrowUpRight className="h-3 w-3 mr-1 text-galaxy-purple" /> Outgoing Links ({outgoingLinks.length})
+                <ArrowUpRight className="h-3 w-3 mr-1" /> Outgoing Links ({outgoingLinks.length})
               </h4>
               
               {outgoingLinks.length > 0 ? (
                 <div className="space-y-2">
                   {outgoingLinks.map(link => (
-                    <Card key={link.id} className="p-2 hover:bg-galaxy-dark-gray border-galaxy-dark-gray/70 transition-all duration-200 hover-translate cosmic-glow">
+                    <Card key={link.id} className="p-2 hover:bg-accent transition-colors">
                       <Button 
                         variant="ghost" 
-                        className="w-full justify-start p-1 h-auto text-xs hover:text-galaxy-purple"
+                        className="w-full justify-start p-1 h-auto text-xs"
                         onClick={() => handleLinkClick(link.id)}
                       >
                         {link.title}
@@ -70,7 +70,7 @@ export function ConnectionsPanel() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground p-2 border border-dashed border-galaxy-dark-gray/40 rounded-md bg-galaxy-charcoal/30">
+                <p className="text-xs text-muted-foreground">
                   No outgoing links. Create links by typing [[note title]] in your notes.
                 </p>
               )}
@@ -79,16 +79,16 @@ export function ConnectionsPanel() {
             {/* Incoming links */}
             <div className="flex-1">
               <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                <ArrowDownLeft className="h-3 w-3 mr-1 text-galaxy-highlight" /> Incoming Links ({incomingLinks.length})
+                <ArrowDownLeft className="h-3 w-3 mr-1" /> Incoming Links ({incomingLinks.length})
               </h4>
               
               {incomingLinks.length > 0 ? (
                 <div className="space-y-2">
                   {incomingLinks.map(link => (
-                    <Card key={link.id} className="p-2 hover:bg-galaxy-dark-gray border-galaxy-dark-gray/70 transition-all duration-200 hover-translate cosmic-glow">
+                    <Card key={link.id} className="p-2 hover:bg-accent transition-colors">
                       <Button 
                         variant="ghost" 
-                        className="w-full justify-start p-1 h-auto text-xs hover:text-galaxy-highlight"
+                        className="w-full justify-start p-1 h-auto text-xs"
                         onClick={() => handleLinkClick(link.id)}
                       >
                         {link.title}
@@ -97,7 +97,7 @@ export function ConnectionsPanel() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground p-2 border border-dashed border-galaxy-dark-gray/40 rounded-md bg-galaxy-charcoal/30">
+                <p className="text-xs text-muted-foreground">
                   No incoming links from other notes.
                 </p>
               )}
