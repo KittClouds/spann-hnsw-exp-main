@@ -10,6 +10,8 @@ import "@blocknote/mantine/style.css";
 import { PartialBlock } from '@blocknote/core';
 import { debounce } from 'lodash';
 import { NoteBreadcrumb } from './NoteBreadcrumb';
+import { Resizable, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { ConnectionsPanel } from './ConnectionsPanel';
 
 export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
@@ -24,10 +26,6 @@ export function NoteEditor() {
   // Create editor instance
   const editor = useBlockNote({
     initialContent: activeNote?.content as PartialBlock[] || [],
-    // Add error handling to avoid crashes with malformed content
-    onError: (error) => {
-      console.error("BlockNote error:", error);
-    }
   });
 
   // Update theme when app theme changes
@@ -112,22 +110,38 @@ export function NoteEditor() {
   }
 
   return (
-    <div className="flex-1 flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white">
-      <NoteBreadcrumb />
-      
-      <Input
-        value={activeNote.title}
-        onChange={handleTitleChange}
-        className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]"
-        placeholder="Note Title"
-      />
-      <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
-        <BlockNoteView 
-          editor={editor} 
-          theme={theme}
-          className="min-h-full"
+    <Resizable className="flex-1 flex overflow-hidden">
+      <ResizablePanel 
+        defaultSize={75} 
+        minSize={40}
+        className="flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white"
+      >
+        <NoteBreadcrumb />
+        
+        <Input
+          value={activeNote.title}
+          onChange={handleTitleChange}
+          className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]"
+          placeholder="Note Title"
         />
-      </div>
-    </div>
+        <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
+          <BlockNoteView 
+            editor={editor} 
+            theme={theme}
+            className="min-h-full"
+          />
+        </div>
+      </ResizablePanel>
+      
+      <ResizableHandle withHandle />
+      
+      <ResizablePanel 
+        defaultSize={25} 
+        minSize={15}
+        className="border-l border-border dark:bg-[#12141f] light:bg-[#f8f6ff]"
+      >
+        <ConnectionsPanel />
+      </ResizablePanel>
+    </Resizable>
   );
 }

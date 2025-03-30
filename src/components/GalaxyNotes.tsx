@@ -2,8 +2,18 @@
 import { ThemeToggle } from "./ThemeToggle";
 import { NotesSidebar } from "./NotesSidebar";
 import { NoteEditor } from "./NoteEditor";
+import { useEffect } from 'react';
+import { useAtom } from 'jotai';
+import { syncKnowledgeGraphAtom } from '@/lib/store';
 
 export function GalaxyNotes() {
+  const [, syncGraph] = useAtom(syncKnowledgeGraphAtom);
+  
+  // Initialize knowledge graph when app loads
+  useEffect(() => {
+    syncGraph();
+  }, [syncGraph]);
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b dark:from-[#0f101a] dark:to-[#171926] light:from-white light:to-[#f8f6ff] text-foreground">
       <header className="border-b border-border p-4 flex items-center justify-between bg-opacity-95 backdrop-blur-sm dark:bg-black/30 light:bg-white/70">

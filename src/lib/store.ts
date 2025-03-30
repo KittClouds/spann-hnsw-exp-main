@@ -2,6 +2,7 @@
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
+import { KnowledgeGraph } from './knowledgeGraph';
 
 export interface Note {
   id: string;
@@ -46,8 +47,7 @@ const initialNotes: Note[] = [
     title: 'Welcome Note', 
     content: [{ 
       type: 'paragraph', 
-      content: 'Welcome to Galaxy Notes! Start typing here...',
-      styles: {} 
+      content: 'Welcome to Galaxy Notes! Start typing here...'
     }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate(),
@@ -59,8 +59,7 @@ const initialNotes: Note[] = [
     title: 'Getting Started', 
     content: [{ 
       type: 'paragraph', 
-      content: 'Click on a note title to edit it. Create new notes with the + button.',
-      styles: {} 
+      content: 'Click on a note title to edit it. Create new notes with the + button.'
     }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate(),
@@ -83,6 +82,20 @@ export const activeNoteIdAtom = atom<string | null>(initialNotes[0].id);
 
 // Current folder path atom
 export const currentFolderPathAtom = atom<string>('/');
+
+// Knowledge Graph atom
+export const knowledgeGraphAtom = atom<KnowledgeGraph>(new KnowledgeGraph());
+
+// Effect atom to update knowledge graph when notes change
+export const syncKnowledgeGraphAtom = atom(
+  (get) => get(knowledgeGraphAtom),
+  (get, set) => {
+    const notes = get(notesAtom);
+    const graph = new KnowledgeGraph();
+    graph.buildFromNotes(notes);
+    set(knowledgeGraphAtom, graph);
+  }
+);
 
 // Derived atom for notes in current folder
 export const currentFolderNotesAtom = atom(
@@ -141,6 +154,9 @@ export const activeNoteAtom = atom(
     );
     
     set(notesAtom, updatedNotes);
+    
+    // Update the knowledge graph when a note changes
+    set(syncKnowledgeGraphAtom);
   }
 );
 
@@ -152,7 +168,7 @@ export const createNote = (folderPath: string = '/') => {
   const newNote: Note = {
     id: newId,
     title: 'Untitled Note',
-    content: [{ type: 'paragraph', content: '', styles: {} }],
+    content: [{ type: 'paragraph', content: '' }],
     createdAt: now,
     updatedAt: now,
     path: folderPath,
