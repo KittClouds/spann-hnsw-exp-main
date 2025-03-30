@@ -54,36 +54,31 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				sidebar: {
-					DEFAULT: 'hsl(var(--sidebar))',
+					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
+					primary: 'hsl(var(--sidebar-primary))',
+					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
 					accent: 'hsl(var(--sidebar-accent))',
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-					muted: 'hsl(var(--sidebar-muted))',
-					border: 'hsl(var(--sidebar-border))'
+					border: 'hsl(var(--sidebar-border))',
+					ring: 'hsl(var(--sidebar-ring))'
 				},
 				galaxy: {
-					'indigo': '#6366f1',
-					'violet': '#8b5cf6',
-					'purple': '#a855f7',
-					'fuchsia': '#d946ef',
-					'pink': '#ec4899',
-					'rose': '#f43f5e',
-					'dark': '#0f172a',
-					'darker': '#070b16',
-					'blue': '#3b82f6',
-					'cyan': '#06b6d4',
-					'light': '#f8fafc',
-					'lighter': '#ffffff',
+					'dark': '#0d0e18',
+					'dark-accent': '#1c1f2e',
+					'editor': '#12141f',
+					'purple': '#7c5bf1',
+					'light-purple': '#e5deff',
+					'text': '#e0e0e0',
+					'sidebar': '#12141f',
+					'light': '#ffffff',
+					'light-accent': '#f8f6ff',
 				}
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
-			},
-			boxShadow: {
-				'cosmos': '0 0 20px rgba(139, 92, 246, 0.15)',
-				'cosmos-lg': '0 0 30px rgba(139, 92, 246, 0.25)',
 			},
 			keyframes: {
 				'accordion-down': {
@@ -109,17 +104,12 @@ export default {
 					to: {
 						opacity: '1'
 					}
-				},
-				'pulse-gentle': {
-					'0%, 100%': { opacity: '1' },
-					'50%': { opacity: '0.8' },
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				'fade-in': 'fade-in 0.3s ease-out',
-				'pulse-gentle': 'pulse-gentle 3s infinite ease-in-out'
+				'fade-in': 'fade-in 0.3s ease-out'
 			}
 		}
 	},
