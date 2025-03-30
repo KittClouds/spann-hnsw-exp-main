@@ -32,16 +32,16 @@ export function ConnectionsPanel() {
   
   if (!activeNoteId) {
     return (
-      <div className="p-4 text-muted-foreground text-sm">
-        No note selected
+      <div className="p-4 text-muted-foreground text-sm flex items-center justify-center h-full">
+        <p className="italic">No note selected</p>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
-        <h3 className="text-sm font-semibold flex items-center gap-2">
+      <div className="p-4 border-b border-border/50">
+        <h3 className="text-sm font-semibold flex items-center gap-2 cosmos-text-gradient">
           <LinkIcon className="h-4 w-4" /> Connections
         </h3>
       </div>
@@ -52,16 +52,16 @@ export function ConnectionsPanel() {
             {/* Outgoing links */}
             <div className="flex-1">
               <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                <ArrowUpRight className="h-3 w-3 mr-1" /> Outgoing Links ({outgoingLinks.length})
+                <ArrowUpRight className="h-3 w-3 mr-1 text-galaxy-purple" /> Outgoing Links ({outgoingLinks.length})
               </h4>
               
               {outgoingLinks.length > 0 ? (
                 <div className="space-y-2">
                   {outgoingLinks.map(link => (
-                    <Card key={link.id} className="p-2 hover:bg-accent transition-colors">
+                    <Card key={link.id} className="p-2 hover:bg-accent/5 dark:hover:bg-accent/10 transition-colors border-border/50 shadow-sm">
                       <Button 
                         variant="ghost" 
-                        className="w-full justify-start p-1 h-auto text-xs"
+                        className="w-full justify-start p-1 h-auto text-xs hover:text-accent"
                         onClick={() => handleLinkClick(link.id)}
                       >
                         {link.title}
@@ -70,7 +70,7 @@ export function ConnectionsPanel() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground italic p-2">
                   No outgoing links. Create links by typing [[note title]] in your notes.
                 </p>
               )}
@@ -79,16 +79,16 @@ export function ConnectionsPanel() {
             {/* Incoming links */}
             <div className="flex-1">
               <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                <ArrowDownLeft className="h-3 w-3 mr-1" /> Incoming Links ({incomingLinks.length})
+                <ArrowDownLeft className="h-3 w-3 mr-1 text-galaxy-fuchsia" /> Incoming Links ({incomingLinks.length})
               </h4>
               
               {incomingLinks.length > 0 ? (
                 <div className="space-y-2">
                   {incomingLinks.map(link => (
-                    <Card key={link.id} className="p-2 hover:bg-accent transition-colors">
+                    <Card key={link.id} className="p-2 hover:bg-accent/5 dark:hover:bg-accent/10 transition-colors border-border/50 shadow-sm">
                       <Button 
                         variant="ghost" 
-                        className="w-full justify-start p-1 h-auto text-xs"
+                        className="w-full justify-start p-1 h-auto text-xs hover:text-accent"
                         onClick={() => handleLinkClick(link.id)}
                       >
                         {link.title}
@@ -97,7 +97,7 @@ export function ConnectionsPanel() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground italic p-2">
                   No incoming links from other notes.
                 </p>
               )}

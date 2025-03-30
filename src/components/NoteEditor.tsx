@@ -69,13 +69,16 @@ export function NoteEditor() {
   useEffect(() => {
     if (!editor) return;
     
-    const unsubscribe = editor.onEditorContentChange(() => {
+    const handleEditorChange = () => {
       saveChanges();
-    });
+    };
+    
+    // Use the returned unsubscribe function
+    const unsubscribe = editor.onEditorContentChange(handleEditorChange);
     
     return () => {
       saveChanges.cancel();
-      unsubscribe && unsubscribe();
+      if (unsubscribe) unsubscribe();
     };
   }, [editor, saveChanges, activeNote]);
 
@@ -102,7 +105,7 @@ export function NoteEditor() {
   if (!activeNote) {
     return (
       <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground">
-        No note selected
+        <p className="italic">No note selected</p>
       </div>
     );
   }
@@ -112,17 +115,18 @@ export function NoteEditor() {
       <ResizablePanel 
         defaultSize={70} 
         minSize={40}
-        className="flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white"
+        className="flex flex-col p-6 dark:bg-[#0f1729]/70 light:bg-white/80 backdrop-blur-sm"
       >
         <NoteBreadcrumb />
         
         <Input
           value={activeNote.title}
           onChange={handleTitleChange}
-          className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]"
+          className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-1 focus-visible:ring-accent/50 px-0 cosmos-text-gradient"
           placeholder="Note Title"
         />
-        <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
+        
+        <div className="flex-1 note-container transition-all duration-200 overflow-auto">
           <BlockNoteView 
             editor={editor} 
             theme={theme}
@@ -131,12 +135,12 @@ export function NoteEditor() {
         </div>
       </ResizablePanel>
       
-      <ResizableHandle withHandle />
+      <ResizableHandle className="h-1 bg-border/30 hover:bg-accent/30 transition-colors" withHandle />
       
       <ResizablePanel 
         defaultSize={30} 
         minSize={20}
-        className="border-t border-border dark:bg-[#12141f] light:bg-[#f8f6ff]"
+        className="border-t border-border/50 dark:bg-[#0f1729]/90 light:bg-gray-50/90 backdrop-blur-sm"
       >
         <ConnectionsPanel />
       </ResizablePanel>
