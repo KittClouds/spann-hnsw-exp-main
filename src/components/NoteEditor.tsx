@@ -23,9 +23,11 @@ export function NoteEditor() {
     return 'dark';
   });
   
-  // Create editor instance
+  // Create editor instance with default content if activeNote.content is empty
   const editor = useBlockNote({
-    initialContent: activeNote?.content as PartialBlock[] || [],
+    initialContent: activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0 
+      ? activeNote.content as PartialBlock[] 
+      : [{ type: "paragraph", content: "" }],
   });
 
   // Update theme when app theme changes
@@ -75,13 +77,15 @@ export function NoteEditor() {
     
     return () => {
       saveChanges.cancel();
-      if (typeof unsubscribe === 'function') unsubscribe();
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
     };
   }, [editor, saveChanges, activeNote]);
 
   // Load note content when active note changes
   useEffect(() => {
-    if (editor && activeNote?.content) {
+    if (editor && activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
       try {
         // Replace the editor content with the active note content
         editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
