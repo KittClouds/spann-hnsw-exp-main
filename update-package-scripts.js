@@ -6,10 +6,10 @@ import { readFileSync, writeFileSync } from 'fs';
 const packageJsonPath = './package.json';
 const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
 
-// Update scripts
+// Update scripts - removing hot reloading
 packageJson.scripts = {
   ...packageJson.scripts,
-  "dev": "bun --watch --hot server.ts",
+  "dev": "bun server.ts",
   "build": "bun build ./src/main.tsx --outdir ./dist --minify",
   "preview": "bun server.ts"
 };
@@ -18,7 +18,7 @@ packageJson.scripts = {
 writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
 console.log('Updated package.json scripts:');
-console.log('  dev: "bun --watch --hot server.ts"');
+console.log('  dev: "bun server.ts"');
 console.log('  build: "bun build ./src/main.tsx --outdir ./dist --minify"');
 console.log('  preview: "bun server.ts"');
 console.log('\nRun "bun dev" to start the development server');

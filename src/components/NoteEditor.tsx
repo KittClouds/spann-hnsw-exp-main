@@ -27,7 +27,7 @@ export function NoteEditor() {
   const editor = useBlockNote({
     initialContent: activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0 
       ? activeNote.content as PartialBlock[] 
-      : [{ type: "paragraph", content: "" }],
+      : [{ type: "paragraph", content: [] }],
   });
 
   // Update theme when app theme changes
@@ -83,17 +83,17 @@ export function NoteEditor() {
     };
   }, [editor, saveChanges, activeNote]);
 
-  // Load note content when active note changes
+  // Load note content when active note changes, but only once
   useEffect(() => {
     if (editor && activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
       try {
-        // Replace the editor content with the active note content
+        // Use a try/catch to avoid breaking if the content format is unexpected
         editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
       } catch (error) {
         console.error("Error replacing blocks:", error);
       }
     }
-  }, [activeNoteId, editor, activeNote]);
+  }, [activeNoteId, editor]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
