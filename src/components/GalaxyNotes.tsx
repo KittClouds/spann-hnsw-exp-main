@@ -15,13 +15,13 @@ export function GalaxyNotes() {
   }, [syncGraph]);
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b dark:from-galaxy-dark dark:to-[#222222] from-white to-[#f7f5ff] text-foreground animate-fade-in">
-      <header className="border-b dark:border-opacity-30 border-opacity-10 p-4 flex items-center justify-between backdrop-blur-sm dark:bg-black/40 bg-white/70 relative z-10">
+    <div className="flex flex-col h-screen bg-gradient-to-b dark:from-[#0f101a] dark:to-[#171926] light:from-white light:to-[#f8f6ff] text-foreground">
+      <header className="border-b border-border p-4 flex items-center justify-between bg-opacity-95 backdrop-blur-sm dark:bg-black/30 light:bg-white/70">
         <div className="flex-1">
           {/* Empty space for layout */}
         </div>
-        <div className="text-center flex-1 flex flex-col items-center">
-          <h1 className="text-2xl font-bold cosmic-text animate-pulse-subtle">Galaxy Notes</h1>
+        <div className="text-center flex-1">
+          <h1 className="text-2xl font-bold text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]">Galaxy Notes</h1>
           <p className="text-sm text-muted-foreground">Multi-note block editor with automatic saving</p>
         </div>
         <div className="flex-1 flex justify-end">
@@ -29,9 +29,7 @@ export function GalaxyNotes() {
         </div>
       </header>
       
-      <main className="flex flex-1 overflow-hidden relative">
-        {/* Subtle cosmic background effect - visible in dark mode */}
-        <div className="absolute inset-0 dark:bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcz4KPHBhdHRlcm4gaWQ9InN0YXJzIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CjxjaXJjbGUgY3g9IjUiIGN5PSI1IiByPSIwLjUiIGZpbGw9IiM2RTU5QTUiIGZpbGwtb3BhY2l0eT0iMC4yIiAvPgo8Y2lyY2xlIGN4PSIyNSIgY3k9IjE1IiByPSIwLjMiIGZpbGw9IiM2RTU5QTUiIGZpbGwtb3BhY2l0eT0iMC4xNSIgLz4KPGNpcmNsZSBjeD0iNDUiIGN5PSI0NSIgcj0iMC40IiBmaWxsPSIjNkU1OUE1IiBmaWxsLW9wYWNpdHk9IjAuMiIgLz4KPGNpcmNsZSBjeD0iNzAiIGN5PSIzMCIgcj0iMC4yIiBmaWxsPSIjNkU1OUE1IiBmaWxsLW9wYWNpdHk9IjAuMTUiIC8+CjxjaXJjbGUgY3g9IjkwIiBjeT0iNzUiIHI9IjAuMyIgZmlsbD0iIzZFNTlBNSIgZmlsbC1vcGFjaXR5PSIwLjIiIC8+Cjwvc3ZnPg==')] opacity-30 pointer-events-none" />
+      <main className="flex flex-1 overflow-hidden">
         <NotesSidebar />
         <NoteEditor />
       </main>
