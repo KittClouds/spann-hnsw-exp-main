@@ -75,7 +75,9 @@ export function NoteEditor() {
     
     return () => {
       saveChanges.cancel();
-      if (unsubscribe) unsubscribe();
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
   }, [editor, saveChanges, activeNote]);
 
@@ -101,7 +103,7 @@ export function NoteEditor() {
 
   if (!activeNote) {
     return (
-      <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground">
+      <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground bg-galaxy-dark">
         No note selected
       </div>
     );
@@ -112,17 +114,18 @@ export function NoteEditor() {
       <ResizablePanel 
         defaultSize={70} 
         minSize={40}
-        className="flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white"
+        className="flex flex-col p-6 dark:bg-galaxy-dark light:bg-galaxy-light relative"
       >
+        <div className="absolute inset-0 opacity-10 dark:bg-purple-glow pointer-events-none"></div>
         <NoteBreadcrumb />
         
         <Input
           value={activeNote.title}
           onChange={handleTitleChange}
-          className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]"
+          className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 cosmic-text"
           placeholder="Note Title"
         />
-        <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
+        <div className="flex-1 dark:bg-galaxy-editor light:bg-galaxy-light-accent rounded-md shadow-cosmic-lg border border-opacity-20 transition-all duration-200 overflow-auto relative hover-translate">
           <BlockNoteView 
             editor={editor} 
             theme={theme}
@@ -131,12 +134,12 @@ export function NoteEditor() {
         </div>
       </ResizablePanel>
       
-      <ResizableHandle withHandle />
+      <ResizableHandle withHandle className="dark:bg-galaxy-dark-accent light:bg-gray-200" />
       
       <ResizablePanel 
         defaultSize={30} 
         minSize={20}
-        className="border-t border-border dark:bg-[#12141f] light:bg-[#f8f6ff]"
+        className="border-t border-opacity-20 dark:bg-galaxy-sidebar light:bg-galaxy-light-accent glass-panel"
       >
         <ConnectionsPanel />
       </ResizablePanel>
