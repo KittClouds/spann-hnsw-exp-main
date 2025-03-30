@@ -23,9 +23,11 @@ export function NoteEditor() {
     return 'dark';
   });
   
-  // Create editor instance
+  // Create editor instance with default content to prevent errors
   const editor = useBlockNote({
-    initialContent: activeNote?.content as PartialBlock[] || [],
+    initialContent: activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0 
+      ? activeNote.content as PartialBlock[] 
+      : [{ type: "paragraph", content: "Start typing here..." }],
   });
 
   // Update theme when app theme changes
@@ -84,8 +86,11 @@ export function NoteEditor() {
   useEffect(() => {
     if (editor && activeNote?.content) {
       try {
-        // Replace the editor content with the active note content
-        editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
+        // Make sure content is valid before replacing blocks
+        if (Array.isArray(activeNote.content) && activeNote.content.length > 0) {
+          // Replace the editor content with the active note content
+          editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
+        }
       } catch (error) {
         console.error("Error replacing blocks:", error);
       }

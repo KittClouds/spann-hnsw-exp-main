@@ -341,29 +341,31 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
           {isExpanded(folder.id) && (
             <>
               {/* Notes for this folder */}
-              {notes.filter(note => note.path === folder.path).map(note => (
-                <div 
-                  key={note.id}
-                  className={cn(
-                    "pl-6 py-1 pr-2 flex items-center text-sm cursor-pointer group",
-                    activeNoteId === note.id 
-                      ? "dark:bg-[#1c1f2e]/60 dark:text-white light:bg-[#e5deff]/60 light:text-[#614ac2]" 
-                      : "hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
-                  )}
-                  onClick={() => handleNoteClick(note.id)}
-                >
-                  <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                  <span className="truncate flex-1">{note.title}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => handleDeleteNote(note.id, e)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+              {notes
+                .filter(note => note.path === folder.path)
+                .map(note => (
+                  <div 
+                    key={`folder-${folder.id}-note-${note.id}`}
+                    className={cn(
+                      "pl-6 py-1 pr-2 flex items-center text-sm cursor-pointer group",
+                      activeNoteId === note.id 
+                        ? "dark:bg-[#1c1f2e]/60 dark:text-white light:bg-[#e5deff]/60 light:text-[#614ac2]" 
+                        : "hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
+                    )}
+                    onClick={() => handleNoteClick(note.id)}
                   >
-                    <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive transition-colors" />
-                  </Button>
-                </div>
-              ))}
+                    <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                    <span className="truncate flex-1">{note.title}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => handleDeleteNote(note.id, e)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                    >
+                      <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive transition-colors" />
+                    </Button>
+                  </div>
+                ))}
               
               <FolderTree 
                 parentId={folder.id} 
@@ -379,7 +381,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
       {path === '/' && 
         folderNotes.map(note => (
           <div 
-            key={note.id}
+            key={`root-note-${note.id}`}
             className={cn(
               "pl-6 py-1 pr-2 flex items-center text-sm cursor-pointer group",
               activeNoteId === note.id 
