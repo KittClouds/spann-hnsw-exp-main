@@ -1,15 +1,15 @@
 
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
-import { ChevronRight, FolderIcon, FolderOpen, Plus, Trash2, Edit, Move, FileIcon } from 'lucide-react';
+import { ChevronRight, FolderIcon, FolderOpen, Plus, Trash2, Edit, MoveIcon, FileIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
   Folder, 
   currentFolderPathAtom, 
   foldersAtom, 
   notesAtom, 
-  createFolder, 
   activeNoteIdAtom, 
+  createFolder, 
   createNote,
   moveNote,
   renameFolder as renameFolderUtil
@@ -46,6 +46,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 interface FolderTreeProps {
   parentId: string | null;
@@ -70,7 +75,8 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   const [isRenameFolderDialogOpen, setIsRenameFolderDialogOpen] = useState(false);
   const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
   const [newRenameFolderName, setNewRenameFolderName] = useState('');
-  const [noteToMove, setNoteToMove] = useState<string | null>(null);
+  // Use a dedicated state for tracking which note's move popover is open
+  const [movePopoverOpenForNoteId, setMovePopoverOpenForNoteId] = useState<string | null>(null);
 
   // Find children of the current folder
   const childFolders = folders.filter(folder => 
@@ -313,11 +319,22 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     });
   };
   
+  // Toggle the move popover for a specific note
+  const toggleMovePopover = (noteId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    // If the popover is already open for this note, close it; otherwise, open it
+    setMovePopoverOpenForNoteId(movePopoverOpenForNoteId === noteId ? null : noteId);
+  };
+  
   // Handle moving a note to a folder
-  const handleMoveNote = (noteId: string, targetFolderPath: string) => {
+  const handleMoveNote = (noteId: string, targetFolderPath: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
     // Update the notes array with the moved note
     setNotes(moveNote(notes, noteId, targetFolderPath));
-    setNoteToMove(null);
+    
+    // Close the popover
+    setMovePopoverOpenForNoteId(null);
     
     toast("Note moved", {
       description: "Your note has been moved to another folder",
@@ -462,38 +479,48 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
                   
                   {hoveredNoteId === note.id && (
                     <>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                      {/* Use Popover instead of DropdownMenu for better control */}
+                      <Popover 
+                        open={movePopoverOpenForNoteId === note.id}
+                        onOpenChange={(open) => {
+                          if (!open) setMovePopoverOpenForNoteId(null);
+                        }}
+                      >
+                        <PopoverTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNoteToMove(note.id);
-                            }}
+                            onClick={(e) => toggleMovePopover(note.id, e)}
                             className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
                             title="Move note"
                           >
-                            <Move className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
+                            <MoveIcon className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {allFolders
-                            .filter(f => f.path !== note.path.split('/').slice(0, -1).join('/') || '/')
-                            .map(folder => (
-                              <DropdownMenuItem 
-                                key={folder.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleMoveNote(note.id, folder.path);
-                                }}
-                              >
-                                {folder.name === 'Home' ? 'Root' : folder.name}
-                              </DropdownMenuItem>
-                            ))
-                          }
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        </PopoverTrigger>
+                        <PopoverContent 
+                          className="p-0 w-48" 
+                          align="end"
+                          side="right"
+                        >
+                          <div className="py-1 bg-popover rounded-md shadow-md border border-border">
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                              Move to folder
+                            </div>
+                            {allFolders
+                              .filter(f => f.path !== note.path.split('/').slice(0, -1).join('/') || '/')
+                              .map(targetFolder => (
+                                <button 
+                                  key={targetFolder.id}
+                                  className="flex w-full items-center px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                                  onClick={(e) => handleMoveNote(note.id, targetFolder.path, e)}
+                                >
+                                  {targetFolder.name === 'Home' ? 'Root' : targetFolder.name}
+                                </button>
+                              ))
+                            }
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                       
                       <Button
                         variant="ghost"
@@ -538,38 +565,48 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
             
             {hoveredNoteId === note.id && (
               <>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                {/* Use Popover for root level notes as well */}
+                <Popover 
+                  open={movePopoverOpenForNoteId === note.id}
+                  onOpenChange={(open) => {
+                    if (!open) setMovePopoverOpenForNoteId(null);
+                  }}
+                >
+                  <PopoverTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setNoteToMove(note.id);
-                      }}
+                      onClick={(e) => toggleMovePopover(note.id, e)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
                       title="Move note"
                     >
-                      <Move className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
+                      <MoveIcon className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {allFolders
-                      .filter(f => f.path !== '/')
-                      .map(folder => (
-                        <DropdownMenuItem 
-                          key={folder.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMoveNote(note.id, folder.path);
-                          }}
-                        >
-                          {folder.name}
-                        </DropdownMenuItem>
-                      ))
-                    }
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </PopoverTrigger>
+                  <PopoverContent 
+                    className="p-0 w-48" 
+                    align="end"
+                    side="right"
+                  >
+                    <div className="py-1 bg-popover rounded-md shadow-md border border-border">
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                        Move to folder
+                      </div>
+                      {allFolders
+                        .filter(f => f.path !== '/')
+                        .map(targetFolder => (
+                          <button 
+                            key={targetFolder.id}
+                            className="flex w-full items-center px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                            onClick={(e) => handleMoveNote(note.id, targetFolder.path, e)}
+                          >
+                            {targetFolder.name}
+                          </button>
+                        ))
+                      }
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 
                 <Button
                   variant="ghost"
