@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
-import { ChevronRight, FolderIcon, FolderOpen, Plus, Trash2, Edit, MoveIcon, FileIcon } from 'lucide-react';
+import { ChevronRight, FolderIcon, FolderOpen, Plus, Trash2, Edit, Move, FileIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
   Folder, 
@@ -70,13 +71,14 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
   const [newRenameFolderName, setNewRenameFolderName] = useState('');
   const [noteToMove, setNoteToMove] = useState<string | null>(null);
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
+  // Find children of the current folder
   const childFolders = folders.filter(folder => 
     folder.parentId === parentId && 
     (parentId !== null || folder.id !== 'root')
   );
 
+  // Find notes in the current folder
   const folderNotes = notes.filter(note => note.path === path);
 
   const toggleFolder = (folderId: string) => {
@@ -106,6 +108,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
       return;
     }
 
+    // Check if folder name already exists at this level
     const folderExists = folders.some(
       folder => folder.parentId === parentForNewFolder && folder.name.toLowerCase() === newFolderName.toLowerCase()
     );
@@ -125,6 +128,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     setNewFolderName('');
     setIsNewFolderDialogOpen(false);
     
+    // Expand the parent folder
     if (parentForNewFolder) {
       setExpandedFolders(prev => ({
         ...prev,
@@ -135,6 +139,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     toast.success('Folder created successfully');
   };
 
+  // New function to handle folder rename
   const openRenameFolderDialog = (folder: Folder, e: React.MouseEvent) => {
     e.stopPropagation();
     setFolderToRename(folder);
@@ -150,12 +155,14 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
       return;
     }
     
+    // Check if the new name is the same as the old one
     if (folderToRename.name === newRenameFolderName) {
       setIsRenameFolderDialogOpen(false);
       setFolderToRename(null);
       return;
     }
     
+    // Check if folder name already exists at this level
     const folderExists = folders.some(
       folder => 
         folder.parentId === folderToRename.parentId && 
@@ -178,6 +185,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     setFolders(updatedFolders);
     setNotes(updatedNotes);
     
+    // Update current path if we're renaming the current folder
     if (currentPath === folderToRename.path) {
       const folder = updatedFolders.find(f => f.id === folderToRename.id);
       if (folder) {
@@ -200,6 +208,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   const confirmDelete = () => {
     if (!folderToDelete) return;
 
+    // Check if the folder has subfolders
     const hasSubFolders = folders.some(folder => folder.parentId === folderToDelete.id);
     
     if (hasSubFolders) {
@@ -209,6 +218,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
       return;
     }
 
+    // Check if the folder contains notes
     const hasNotes = notes.some(note => note.path === folderToDelete.path);
     
     if (hasNotes) {
@@ -218,11 +228,13 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
       return;
     }
     
+    // Navigate to parent folder if we're deleting the current folder
     if (currentPath === folderToDelete.path) {
       const parentPath = folderToDelete.path.split('/').slice(0, -1).join('/') || '/';
       setCurrentPath(parentPath);
     }
 
+    // Remove the folder
     setFolders(folders.filter(folder => folder.id !== folderToDelete.id));
     setIsDeleteDialogOpen(false);
     setFolderToDelete(null);
@@ -234,15 +246,19 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     setFolderToDelete(null);
   };
 
+  // Handle creating a new note in a specific folder
   const handleCreateNote = (folderPath: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
     const { id, note } = createNote(folderPath);
     
+    // Add the new note to the notes array
     setNotes(prevNotes => [...prevNotes, note]);
     
+    // Set the new note as active
     setActiveNoteId(id);
     
+    // Auto-expand the folder if it's not already expanded
     if (folderPath !== '/') {
       const folderObj = folders.find(f => f.path === folderPath);
       if (folderObj) {
@@ -262,9 +278,11 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     setActiveNoteId(noteId);
   };
 
+  // Handle note deletion
   const handleDeleteNote = (noteId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
+    // Prevent deleting if it's the last note
     if (notes.length <= 1) {
       toast("Cannot delete", {
         description: "You must keep at least one note",
@@ -272,12 +290,16 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
       return;
     }
     
+    // Save the index for selecting another note
     const noteIndex = notes.findIndex(note => note.id === noteId);
     const isActiveNote = noteId === activeNoteId;
     
+    // Delete the note
     setNotes(prevNotes => prevNotes.filter(note => note.id !== noteId));
     
+    // If we deleted the active note, select another note
     if (isActiveNote) {
+      // Find the next note to select (prefer the one after, otherwise take the one before)
       const nextNoteIndex = noteIndex < notes.length - 1 ? noteIndex : noteIndex - 1;
       const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
       
@@ -290,8 +312,10 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
       description: "Your note has been removed",
     });
   };
-
+  
+  // Handle moving a note to a folder
   const handleMoveNote = (noteId: string, targetFolderPath: string) => {
+    // Update the notes array with the moved note
     setNotes(moveNote(notes, noteId, targetFolderPath));
     setNoteToMove(null);
     
@@ -299,27 +323,14 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
       description: "Your note has been moved to another folder",
     });
   };
-
+  
+  // Generate a list of all folders for the move note dropdown
   const allFolders = React.useMemo(() => {
+    // Start with the root folder
     const rootFolder = { id: 'root', name: 'Home', path: '/' };
     return [rootFolder, ...folders.filter(f => f.id !== 'root')];
   }, [folders]);
-
-  const handleMoveButtonClick = (noteId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setNoteToMove(noteId);
-    setOpenDropdownId(noteId);
-  };
-
-  const handleDropdownOpenChange = (open: boolean, noteId: string) => {
-    if (!open) {
-      setOpenDropdownId(null);
-    } else {
-      setOpenDropdownId(noteId);
-    }
-  };
-
+  
   return (
     <div className="pl-3">
       {childFolders.map((folder) => (
@@ -432,6 +443,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
           
           {isExpanded(folder.id) && (
             <>
+              {/* Notes for this folder */}
               {notes.filter(note => note.path === folder.path).map(note => (
                 <div 
                   key={note.id}
@@ -450,22 +462,22 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
                   
                   {hoveredNoteId === note.id && (
                     <>
-                      <DropdownMenu 
-                        open={openDropdownId === note.id}
-                        onOpenChange={(open) => handleDropdownOpenChange(open, note.id)}
-                      >
+                      <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={(e) => handleMoveButtonClick(note.id, e)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNoteToMove(note.id);
+                            }}
                             className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
                             title="Move note"
                           >
-                            <MoveIcon className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
+                            <Move className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
+                        <DropdownMenuContent align="end">
                           {allFolders
                             .filter(f => f.path !== note.path.split('/').slice(0, -1).join('/') || '/')
                             .map(folder => (
@@ -506,6 +518,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
         </div>
       ))}
       
+      {/* Root level notes */}
       {path === '/' && 
         folderNotes.map(note => (
           <div 
@@ -525,22 +538,22 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
             
             {hoveredNoteId === note.id && (
               <>
-                <DropdownMenu 
-                  open={openDropdownId === note.id}
-                  onOpenChange={(open) => handleDropdownOpenChange(open, note.id)}
-                >
+                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={(e) => handleMoveButtonClick(note.id, e)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNoteToMove(note.id);
+                      }}
                       className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
                       title="Move note"
                     >
-                      <MoveIcon className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
+                      <Move className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-popover">
+                  <DropdownMenuContent align="end">
                     {allFolders
                       .filter(f => f.path !== '/')
                       .map(folder => (
@@ -572,6 +585,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
         ))
       }
       
+      {/* Root level "New Folder" button */}
       {path === '/' && (
         <div className="flex items-center py-1 px-2 mt-1">
           <Button 
@@ -585,6 +599,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
         </div>
       )}
 
+      {/* Dialog for creating new folders */}
       <Dialog open={isNewFolderDialogOpen} onOpenChange={setIsNewFolderDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -612,6 +627,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog for renaming folders */}
       <Dialog open={isRenameFolderDialogOpen} onOpenChange={setIsRenameFolderDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -639,6 +655,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
         </DialogContent>
       </Dialog>
 
+      {/* Alert dialog for confirming folder deletion */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
