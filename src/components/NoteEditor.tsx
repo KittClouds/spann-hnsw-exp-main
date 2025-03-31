@@ -1,4 +1,3 @@
-
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
 import { Input } from "@/components/ui/input";
@@ -77,9 +76,7 @@ export function NoteEditor() {
     
     return () => {
       saveChanges.cancel();
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
+      unsubscribe?.(); // Use optional chaining to safely call unsubscribe
     };
   }, [editor, saveChanges, activeNote]);
 
