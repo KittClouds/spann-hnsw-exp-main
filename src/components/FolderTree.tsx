@@ -1,18 +1,16 @@
 
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
-import { ChevronRight, FolderIcon, FolderOpen, Plus, Trash2, Edit, MoveIcon, FileIcon } from 'lucide-react';
+import { ChevronRight, FolderIcon, FolderOpen, Plus, Trash2, FileIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
   Folder, 
   currentFolderPathAtom, 
   foldersAtom, 
   notesAtom, 
-  activeNoteIdAtom, 
   createFolder, 
-  createNote,
-  moveNote,
-  renameFolder as renameFolderUtil
+  activeNoteIdAtom, 
+  createNote 
 } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { 
@@ -40,17 +38,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 
 interface FolderTreeProps {
   parentId: string | null;
@@ -71,12 +58,6 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
   const [parentForNewFolder, setParentForNewFolder] = useState<string | null>(null);
   const [folderPathForNewFolder, setFolderPathForNewFolder] = useState<string>("/");
-  const [hoveredNoteId, setHoveredNoteId] = useState<string | null>(null);
-  const [isRenameFolderDialogOpen, setIsRenameFolderDialogOpen] = useState(false);
-  const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
-  const [newRenameFolderName, setNewRenameFolderName] = useState('');
-  // Use a dedicated state for tracking which note's move popover is open
-  const [movePopoverOpenForNoteId, setMovePopoverOpenForNoteId] = useState<string | null>(null);
 
   // Find children of the current folder
   const childFolders = folders.filter(folder => 
@@ -143,66 +124,6 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     }
     
     toast.success('Folder created successfully');
-  };
-
-  // New function to handle folder rename
-  const openRenameFolderDialog = (folder: Folder, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFolderToRename(folder);
-    setNewRenameFolderName(folder.name);
-    setIsRenameFolderDialogOpen(true);
-  };
-
-  const handleRenameFolder = () => {
-    if (!folderToRename) return;
-    
-    if (!newRenameFolderName.trim()) {
-      toast.error('Folder name cannot be empty');
-      return;
-    }
-    
-    // Check if the new name is the same as the old one
-    if (folderToRename.name === newRenameFolderName) {
-      setIsRenameFolderDialogOpen(false);
-      setFolderToRename(null);
-      return;
-    }
-    
-    // Check if folder name already exists at this level
-    const folderExists = folders.some(
-      folder => 
-        folder.parentId === folderToRename.parentId && 
-        folder.id !== folderToRename.id &&
-        folder.name.toLowerCase() === newRenameFolderName.toLowerCase()
-    );
-
-    if (folderExists) {
-      toast.error('A folder with this name already exists');
-      return;
-    }
-    
-    const { folders: updatedFolders, notes: updatedNotes } = renameFolderUtil(
-      folders,
-      notes,
-      folderToRename.id,
-      newRenameFolderName
-    );
-    
-    setFolders(updatedFolders);
-    setNotes(updatedNotes);
-    
-    // Update current path if we're renaming the current folder
-    if (currentPath === folderToRename.path) {
-      const folder = updatedFolders.find(f => f.id === folderToRename.id);
-      if (folder) {
-        setCurrentPath(folder.path);
-      }
-    }
-    
-    setIsRenameFolderDialogOpen(false);
-    setFolderToRename(null);
-    
-    toast.success('Folder renamed successfully');
   };
 
   const handleDeleteClick = (folder: Folder, e: React.MouseEvent) => {
@@ -319,35 +240,6 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     });
   };
   
-  // Toggle the move popover for a specific note
-  const toggleMovePopover = (noteId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    // If the popover is already open for this note, close it; otherwise, open it
-    setMovePopoverOpenForNoteId(movePopoverOpenForNoteId === noteId ? null : noteId);
-  };
-  
-  // Handle moving a note to a folder
-  const handleMoveNote = (noteId: string, targetFolderPath: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    // Update the notes array with the moved note
-    setNotes(moveNote(notes, noteId, targetFolderPath));
-    
-    // Close the popover
-    setMovePopoverOpenForNoteId(null);
-    
-    toast("Note moved", {
-      description: "Your note has been moved to another folder",
-    });
-  };
-  
-  // Generate a list of all folders for the move note dropdown
-  const allFolders = React.useMemo(() => {
-    // Start with the root folder
-    const rootFolder = { id: 'root', name: 'Home', path: '/' };
-    return [rootFolder, ...folders.filter(f => f.id !== 'root')];
-  }, [folders]);
-  
   return (
     <div className="pl-3">
       {childFolders.map((folder) => (
@@ -417,15 +309,6 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={(e) => openRenameFolderDialog(folder, e)}
-                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Rename folder"
-                    >
-                      <Edit className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
                       onClick={(e) => handleDeleteClick(folder, e)}
                       className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Delete folder"
@@ -445,9 +328,6 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
               </ContextMenuItem>
               <ContextMenuItem onClick={(e) => handleCreateNote(folder.path, e as React.MouseEvent)}>
                 New Note
-              </ContextMenuItem>
-              <ContextMenuItem onClick={(e) => openRenameFolderDialog(folder, e as React.MouseEvent)}>
-                Rename Folder
               </ContextMenuItem>
               <ContextMenuItem onClick={() => {
                 setFolderToDelete(folder);
@@ -471,67 +351,17 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
                       : "hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
                   )}
                   onClick={() => handleNoteClick(note.id)}
-                  onMouseEnter={() => setHoveredNoteId(note.id)}
-                  onMouseLeave={() => setHoveredNoteId(null)}
                 >
                   <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
                   <span className="truncate flex-1">{note.title}</span>
-                  
-                  {hoveredNoteId === note.id && (
-                    <>
-                      {/* Use Popover instead of DropdownMenu for better control */}
-                      <Popover 
-                        open={movePopoverOpenForNoteId === note.id}
-                        onOpenChange={(open) => {
-                          if (!open) setMovePopoverOpenForNoteId(null);
-                        }}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => toggleMovePopover(note.id, e)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                            title="Move note"
-                          >
-                            <MoveIcon className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent 
-                          className="p-0 w-48" 
-                          align="end"
-                          side="right"
-                        >
-                          <div className="py-1 bg-popover rounded-md shadow-md border border-border">
-                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                              Move to folder
-                            </div>
-                            {allFolders
-                              .filter(f => f.path !== note.path.split('/').slice(0, -1).join('/') || '/')
-                              .map(targetFolder => (
-                                <button 
-                                  key={targetFolder.id}
-                                  className="flex w-full items-center px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-                                  onClick={(e) => handleMoveNote(note.id, targetFolder.path, e)}
-                                >
-                                  {targetFolder.name === 'Home' ? 'Root' : targetFolder.name}
-                                </button>
-                              ))
-                            }
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                      
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => handleDeleteNote(note.id, e)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                      >
-                        <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive transition-colors" />
-                      </Button>
-                    </>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => handleDeleteNote(note.id, e)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                  >
+                    <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive transition-colors" />
+                  </Button>
                 </div>
               ))}
               
@@ -557,67 +387,17 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
                 : "hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
             )}
             onClick={() => handleNoteClick(note.id)}
-            onMouseEnter={() => setHoveredNoteId(note.id)}
-            onMouseLeave={() => setHoveredNoteId(null)}
           >
             <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
             <span className="truncate flex-1">{note.title}</span>
-            
-            {hoveredNoteId === note.id && (
-              <>
-                {/* Use Popover for root level notes as well */}
-                <Popover 
-                  open={movePopoverOpenForNoteId === note.id}
-                  onOpenChange={(open) => {
-                    if (!open) setMovePopoverOpenForNoteId(null);
-                  }}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => toggleMovePopover(note.id, e)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                      title="Move note"
-                    >
-                      <MoveIcon className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent 
-                    className="p-0 w-48" 
-                    align="end"
-                    side="right"
-                  >
-                    <div className="py-1 bg-popover rounded-md shadow-md border border-border">
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                        Move to folder
-                      </div>
-                      {allFolders
-                        .filter(f => f.path !== '/')
-                        .map(targetFolder => (
-                          <button 
-                            key={targetFolder.id}
-                            className="flex w-full items-center px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-                            onClick={(e) => handleMoveNote(note.id, targetFolder.path, e)}
-                          >
-                            {targetFolder.name}
-                          </button>
-                        ))
-                      }
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => handleDeleteNote(note.id, e)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                >
-                  <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive transition-colors" />
-                </Button>
-              </>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => handleDeleteNote(note.id, e)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+            >
+              <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive transition-colors" />
+            </Button>
           </div>
         ))
       }
@@ -636,7 +416,6 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
         </div>
       )}
 
-      {/* Dialog for creating new folders */}
       <Dialog open={isNewFolderDialogOpen} onOpenChange={setIsNewFolderDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -664,35 +443,6 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog for renaming folders */}
-      <Dialog open={isRenameFolderDialogOpen} onOpenChange={setIsRenameFolderDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename folder</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder="Folder name"
-              value={newRenameFolderName}
-              onChange={(e) => setNewRenameFolderName(e.target.value)}
-              className="w-full"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleRenameFolder();
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRenameFolderDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleRenameFolder}>
-              Rename
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Alert dialog for confirming folder deletion */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

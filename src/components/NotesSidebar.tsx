@@ -1,6 +1,6 @@
 
 import { useAtom } from 'jotai';
-import { Plus, Search, Tag, FolderIcon, FileIcon } from 'lucide-react';
+import { Plus, Search, Tag } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,21 +9,16 @@ import {
   notesAtom,
   activeNoteIdAtom,
   currentFolderPathAtom,
-  foldersAtom,
-  getBreadcrumbsFromPath
 } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { FolderTree } from './FolderTree';
 import { toast } from 'sonner';
-import { useCallback, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { useCallback } from 'react';
 
 export function NotesSidebar() {
   const [notes, setNotes] = useAtom(notesAtom);
-  const [folders] = useAtom(foldersAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
-  const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPath] = useAtom(currentFolderPathAtom);
 
   const handleNewNote = useCallback(() => {
     const { id, note } = createNote(currentPath);
@@ -39,21 +34,6 @@ export function NotesSidebar() {
     });
   }, [setNotes, setActiveNoteId, currentPath]);
 
-  // Get breadcrumbs for the current folder
-  const breadcrumbs = getBreadcrumbsFromPath(currentPath, folders);
-  
-  // Apply search filtering if there's a search query
-  const filteredNotes = searchQuery.trim() 
-    ? notes.filter(note => 
-        note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        note.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    : [];
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
-
   return (
     <div className="w-64 dark:cosmic-sidebar-dark light:cosmic-sidebar-light h-full flex flex-col">
       <div className="p-4">
@@ -61,8 +41,6 @@ export function NotesSidebar() {
           <Input
             placeholder="Search notes..."
             className="pl-8 dark:bg-galaxy-dark-accent dark:border-galaxy-dark-purple dark:border-opacity-30 light:bg-white"
-            value={searchQuery}
-            onChange={handleSearch}
           />
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         </div>
@@ -80,54 +58,6 @@ export function NotesSidebar() {
       </div>
       
       <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" />
-
-      {/* Display current folder path */}
-      {breadcrumbs.length > 1 && (
-        <div className="px-4 py-2">
-          <div className="flex flex-wrap gap-1 items-center">
-            {breadcrumbs.map((crumb, index) => (
-              <Badge 
-                key={index} 
-                variant="outline" 
-                className="cursor-pointer hover:bg-accent truncate max-w-[100px]"
-                onClick={() => setCurrentPath(crumb.path)}
-              >
-                {index === 0 ? <FolderIcon className="h-3 w-3 mr-1" /> : null}
-                {crumb.name}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Show search results if search is active */}
-      {searchQuery.trim() !== '' && (
-        <div className="px-2 py-2">
-          <div className="text-xs font-medium text-muted-foreground px-2 py-1">
-            Search Results ({filteredNotes.length})
-          </div>
-          <ScrollArea className="max-h-40">
-            {filteredNotes.length > 0 ? (
-              filteredNotes.map(note => (
-                <div 
-                  key={note.id}
-                  className="flex items-center py-1 px-2 text-sm cursor-pointer hover:bg-accent rounded-md"
-                  onClick={() => {
-                    setActiveNoteId(note.id);
-                    // Navigate to the folder containing this note
-                    setCurrentPath(note.path);
-                  }}
-                >
-                  <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                  <span className="truncate">{note.title}</span>
-                </div>
-              ))
-            ) : (
-              <div className="text-xs text-muted-foreground p-2">No results found</div>
-            )}
-          </ScrollArea>
-        </div>
-      )}
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="px-2 py-1">
