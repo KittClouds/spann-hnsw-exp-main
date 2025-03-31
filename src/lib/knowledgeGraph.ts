@@ -1,6 +1,17 @@
 
 import { Note } from './store';
 
+export const RelationshipTypes = {
+  MENTIONS: 'Mentions', // Default
+  RELATED_TO: 'Related To',
+  SUPPORTS: 'Supports',
+  CONTRADICTS: 'Contradicts',
+  DEFINES: 'Defines',
+  EXAMPLE_OF: 'Example Of',
+} as const;
+
+export type RelationshipType = typeof RelationshipTypes[keyof typeof RelationshipTypes];
+
 export interface GraphNode {
   id: string;
   title: string;
@@ -11,6 +22,7 @@ export interface GraphEdge {
   source: string;
   target: string;
   type: 'link';
+  relationship: RelationshipType;
 }
 
 export interface Graph {
@@ -18,14 +30,26 @@ export interface Graph {
   edges: GraphEdge[];
 }
 
+export interface LinkInfo {
+  title: string;
+  relationship: RelationshipType;
+}
+
+export interface NodeWithRelationship {
+  node: GraphNode;
+  relationship: RelationshipType;
+}
+
 export class KnowledgeGraph {
   private nodes: Map<string, GraphNode>;
   private edges: Map<string, GraphEdge[]>;
+  private incomingEdges: Map<string, GraphEdge[]>;
   private noteTitleToIdMap: Map<string, string>;
 
   constructor() {
     this.nodes = new Map();
     this.edges = new Map();
+    this.incomingEdges = new Map();
     this.noteTitleToIdMap = new Map();
   }
 
@@ -46,11 +70,11 @@ export class KnowledgeGraph {
     notes.forEach(note => {
       const links = this.findLinksInContent(note.content);
       
-      links.forEach(targetTitle => {
+      links.forEach(linkInfo => {
         // Find the target note by title (case-insensitive)
-        const targetId = this._findNoteIdByTitle(targetTitle);
+        const targetId = this._findNoteIdByTitle(linkInfo.title);
         if (targetId) {
-          this.addEdge(note.id, targetId);
+          this.addEdge(note.id, targetId, linkInfo.relationship);
         }
       });
     });
@@ -59,6 +83,7 @@ export class KnowledgeGraph {
   private _clearGraph(): void {
     this.nodes.clear();
     this.edges.clear();
+    this.incomingEdges.clear();
     this.noteTitleToIdMap.clear();
   }
 
@@ -72,21 +97,37 @@ export class KnowledgeGraph {
     return this.noteTitleToIdMap.get(title.toLowerCase());
   }
 
-  findLinksInContent(content: any[]): string[] {
-    const links: Set<string> = new Set();
+  findLinksInContent(content: any[]): LinkInfo[] {
+    const links: LinkInfo[] = [];
     
     // Extract all text from blocks to find [[links]]
     const text = this._extractTextFromBlocks(content);
-    const linkRegex = /\[\[(.*?)\]\]/g;
+    const linkRegex = /\[\[(.*?)(?:\|(.*?))?(?:\|(.*?))?\]\]/g;
     let match;
     
     while ((match = linkRegex.exec(text)) !== null) {
       if (match[1] && match[1].trim()) {
-        links.add(match[1].trim());
+        const title = match[1].trim();
+        const relationshipInput = match[3]?.trim();
+        
+        // Determine relationship type based on input or default to MENTIONS
+        let relationship = RelationshipTypes.MENTIONS;
+        
+        if (relationshipInput) {
+          // Check if the relationship input matches any known relationship type
+          const matchedRelationship = Object.values(RelationshipTypes).find(
+            r => r.toLowerCase() === relationshipInput.toLowerCase()
+          );
+          if (matchedRelationship) {
+            relationship = matchedRelationship;
+          }
+        }
+        
+        links.push({ title, relationship });
       }
     }
     
-    return Array.from(links);
+    return links;
   }
 
   private _extractTextFromBlocks(blocks: any[]): string {
@@ -120,14 +161,15 @@ export class KnowledgeGraph {
     return text;
   }
 
-  private addEdge(sourceId: string, targetId: string): void {
+  private addEdge(sourceId: string, targetId: string, relationship: RelationshipType): void {
     // Don't add self-references
     if (sourceId === targetId) return;
     
     const edge: GraphEdge = {
       source: sourceId,
       target: targetId,
-      type: 'link'
+      type: 'link',
+      relationship
     };
 
     // Add to outgoing edges from source
@@ -138,36 +180,47 @@ export class KnowledgeGraph {
     // Check if this edge already exists
     const existingEdges = this.edges.get(sourceId)!;
     const edgeExists = existingEdges.some(e => 
-      e.source === sourceId && e.target === targetId
+      e.source === sourceId && e.target === targetId && e.relationship === relationship
     );
     
     if (!edgeExists) {
       existingEdges.push(edge);
     }
+    
+    // Add to incoming edges to target
+    if (!this.incomingEdges.has(targetId)) {
+      this.incomingEdges.set(targetId, []);
+    }
+    
+    // Check if this edge already exists in incoming
+    const existingIncomingEdges = this.incomingEdges.get(targetId)!;
+    const incomingEdgeExists = existingIncomingEdges.some(e => 
+      e.source === sourceId && e.target === targetId && e.relationship === relationship
+    );
+    
+    if (!incomingEdgeExists) {
+      existingIncomingEdges.push(edge);
+    }
   }
 
-  getOutgoingLinks(noteId: string): GraphNode[] {
+  getOutgoingLinks(noteId: string): NodeWithRelationship[] {
     const outgoingEdges = this.edges.get(noteId) || [];
     return outgoingEdges
-      .map(edge => this.nodes.get(edge.target))
-      .filter((node): node is GraphNode => node !== undefined);
+      .map(edge => {
+        const node = this.nodes.get(edge.target);
+        return node ? { node, relationship: edge.relationship } : null;
+      })
+      .filter((item): item is NodeWithRelationship => item !== null);
   }
 
-  getIncomingLinks(noteId: string): GraphNode[] {
-    const incomingNodes: GraphNode[] = [];
-    
-    this.edges.forEach((edges, sourceId) => {
-      edges.forEach(edge => {
-        if (edge.target === noteId) {
-          const sourceNode = this.nodes.get(sourceId);
-          if (sourceNode) {
-            incomingNodes.push(sourceNode);
-          }
-        }
-      });
-    });
-    
-    return incomingNodes;
+  getIncomingLinks(noteId: string): NodeWithRelationship[] {
+    const incomingEdges = this.incomingEdges.get(noteId) || [];
+    return incomingEdges
+      .map(edge => {
+        const node = this.nodes.get(edge.source);
+        return node ? { node, relationship: edge.relationship } : null;
+      })
+      .filter((item): item is NodeWithRelationship => item !== null);
   }
 
   toJSON(): Graph {
@@ -189,6 +242,12 @@ export class KnowledgeGraph {
         graph.edges.set(edge.source, []);
       }
       graph.edges.get(edge.source)!.push(edge);
+      
+      // Also rebuild incoming edges
+      if (!graph.incomingEdges.has(edge.target)) {
+        graph.incomingEdges.set(edge.target, []);
+      }
+      graph.incomingEdges.get(edge.target)!.push(edge);
     });
     
     return graph;

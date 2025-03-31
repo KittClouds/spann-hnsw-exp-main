@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect } from 'react';
 import { Link as LinkIcon, ExternalLink, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { RelationshipType, NodeWithRelationship } from '@/lib/knowledgeGraph';
 
 export function ConnectionsPanel() {
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
@@ -25,6 +26,23 @@ export function ConnectionsPanel() {
   const incomingLinks = activeNoteId 
     ? knowledgeGraph.getIncomingLinks(activeNoteId) 
     : [];
+
+  // Group links by relationship type
+  const groupLinksByRelationship = (links: NodeWithRelationship[]): Record<RelationshipType, NodeWithRelationship[]> => {
+    const grouped: Record<string, NodeWithRelationship[]> = {};
+    
+    for (const link of links) {
+      if (!grouped[link.relationship]) {
+        grouped[link.relationship] = [];
+      }
+      grouped[link.relationship].push(link);
+    }
+    
+    return grouped;
+  };
+  
+  const groupedOutgoingLinks = groupLinksByRelationship(outgoingLinks);
+  const groupedIncomingLinks = groupLinksByRelationship(incomingLinks);
   
   const handleLinkClick = (noteId: string) => {
     setActiveNoteId(noteId);
@@ -56,20 +74,27 @@ export function ConnectionsPanel() {
               </h4>
               
               {outgoingLinks.length > 0 ? (
-                <div className="space-y-2">
-                  {outgoingLinks.map(link => (
-                    <Card 
-                      key={link.id} 
-                      className="p-2 dark:bg-galaxy-dark dark:hover:bg-galaxy-dark-purple dark:hover:bg-opacity-30 light:bg-white light:hover:bg-gray-50 transition-colors dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200"
-                    >
-                      <Button 
-                        variant="ghost" 
-                        className="w-full justify-start p-1 h-auto text-xs"
-                        onClick={() => handleLinkClick(link.id)}
-                      >
-                        {link.title}
-                      </Button>
-                    </Card>
+                <div>
+                  {Object.entries(groupedOutgoingLinks).map(([relationship, links]) => (
+                    <div key={relationship} className="mb-4">
+                      <h5 className="text-xs font-semibold mt-2 mb-1 text-muted-foreground">{relationship} ({links.length})</h5>
+                      <div className="space-y-2">
+                        {links.map(link => (
+                          <Card 
+                            key={link.node.id} 
+                            className="p-2 dark:bg-galaxy-dark dark:hover:bg-galaxy-dark-purple dark:hover:bg-opacity-30 light:bg-white light:hover:bg-gray-50 transition-colors dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200"
+                          >
+                            <Button 
+                              variant="ghost" 
+                              className="w-full justify-start p-1 h-auto text-xs"
+                              onClick={() => handleLinkClick(link.node.id)}
+                            >
+                              {link.node.title}
+                            </Button>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -86,20 +111,27 @@ export function ConnectionsPanel() {
               </h4>
               
               {incomingLinks.length > 0 ? (
-                <div className="space-y-2">
-                  {incomingLinks.map(link => (
-                    <Card 
-                      key={link.id} 
-                      className="p-2 dark:bg-galaxy-dark dark:hover:bg-galaxy-dark-purple dark:hover:bg-opacity-30 light:bg-white light:hover:bg-gray-50 transition-colors dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200"
-                    >
-                      <Button 
-                        variant="ghost" 
-                        className="w-full justify-start p-1 h-auto text-xs"
-                        onClick={() => handleLinkClick(link.id)}
-                      >
-                        {link.title}
-                      </Button>
-                    </Card>
+                <div>
+                  {Object.entries(groupedIncomingLinks).map(([relationship, links]) => (
+                    <div key={relationship} className="mb-4">
+                      <h5 className="text-xs font-semibold mt-2 mb-1 text-muted-foreground">{relationship} ({links.length})</h5>
+                      <div className="space-y-2">
+                        {links.map(link => (
+                          <Card 
+                            key={link.node.id} 
+                            className="p-2 dark:bg-galaxy-dark dark:hover:bg-galaxy-dark-purple dark:hover:bg-opacity-30 light:bg-white light:hover:bg-gray-50 transition-colors dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200"
+                          >
+                            <Button 
+                              variant="ghost" 
+                              className="w-full justify-start p-1 h-auto text-xs"
+                              onClick={() => handleLinkClick(link.node.id)}
+                            >
+                              {link.node.title}
+                            </Button>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : (
