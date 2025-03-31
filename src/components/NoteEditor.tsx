@@ -77,7 +77,7 @@ export function NoteEditor() {
     
     return () => {
       saveChanges.cancel();
-      if (typeof unsubscribe === 'function') {
+      if (unsubscribe) {
         unsubscribe();
       }
     };
