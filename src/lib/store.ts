@@ -1,3 +1,4 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
@@ -85,15 +86,27 @@ export const currentFolderPathAtom = atom<string>('/');
 // Knowledge Graph atom
 export const knowledgeGraphAtom = atom<KnowledgeGraph>(new KnowledgeGraph());
 
-// Effect atom to update knowledge graph when notes or folders change
+// Atom that combines the source data needed for the graph
+const graphSourceDataAtom = atom((get) => ({
+  notes: get(notesAtom),
+  folders: get(foldersAtom)
+}));
+
+// Atom to hold the single instance of the KnowledgeGraph
+// Initialize it once
+const baseKnowledgeGraphAtom = atom<KnowledgeGraph>(new KnowledgeGraph());
+
+// Atom that rebuilds the graph whenever source data changes
 export const syncKnowledgeGraphAtom = atom(
-  (get) => get(knowledgeGraphAtom),
-  (get, set) => {
-    const notes = get(notesAtom);
-    const folders = get(foldersAtom);
-    const graph = new KnowledgeGraph();
-    graph.buildGraph(notes, folders);
-    set(knowledgeGraphAtom, graph);
+  (get) => {
+    const graphInstance = get(baseKnowledgeGraphAtom);
+    const { notes, folders } = get(graphSourceDataAtom);
+
+    // Perform the build - this mutates the graphInstance
+    graphInstance.buildGraph(notes, folders);
+
+    // Return the mutated instance
+    return graphInstance;
   }
 );
 
@@ -156,7 +169,7 @@ export const activeNoteAtom = atom(
     set(notesAtom, updatedNotes);
     
     // Update the knowledge graph when a note changes
-    set(syncKnowledgeGraphAtom);
+    set(knowledgeGraphAtom, get(syncKnowledgeGraphAtom));
   }
 );
 
