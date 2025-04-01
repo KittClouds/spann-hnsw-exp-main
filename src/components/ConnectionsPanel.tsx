@@ -15,6 +15,7 @@ export function ConnectionsPanel() {
   
   // Sync the graph when the component mounts
   useEffect(() => {
+    // Call the sync function
     syncGraph();
   }, [syncGraph]);
   

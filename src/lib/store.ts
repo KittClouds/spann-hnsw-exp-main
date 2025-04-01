@@ -1,4 +1,3 @@
-
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
@@ -23,14 +22,11 @@ export interface Folder {
   updatedAt: string;
 }
 
-// Helper function to get current date in ISO format
 const getCurrentDate = () => new Date().toISOString();
 
-// Generate a unique ID
 const generateId = () => `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 const generateFolderId = () => `folder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-// Root folder for the file system
 const rootFolder: Folder = {
   id: 'root',
   name: 'Root',
@@ -40,7 +36,6 @@ const rootFolder: Folder = {
   updatedAt: getCurrentDate()
 };
 
-// Create initial notes with proper structure
 const initialNotes: Note[] = [
   { 
     id: generateId(), 
@@ -68,49 +63,41 @@ const initialNotes: Note[] = [
   },
 ];
 
-// Initial folder structure with just the root folder
 const initialFolders: Folder[] = [rootFolder];
 
-// Main notes atom with localStorage persistence
 export const notesAtom = atomWithStorage<Note[]>('galaxy-notes', initialNotes);
 
-// Folders atom with localStorage persistence
 export const foldersAtom = atomWithStorage<Folder[]>('galaxy-folders', initialFolders);
 
-// Active note ID atom
 export const activeNoteIdAtom = atom<string | null>(initialNotes[0].id);
 
-// Current folder path atom
 export const currentFolderPathAtom = atom<string>('/');
 
-// Knowledge Graph atom
-export const knowledgeGraphAtom = atom<KnowledgeGraph>(new KnowledgeGraph());
-
-// Atom that combines the source data needed for the graph
 const graphSourceDataAtom = atom((get) => ({
   notes: get(notesAtom),
   folders: get(foldersAtom)
 }));
 
-// Atom to hold the single instance of the KnowledgeGraph
-// Initialize it once
 const baseKnowledgeGraphAtom = atom<KnowledgeGraph>(new KnowledgeGraph());
 
-// Atom that rebuilds the graph whenever source data changes
-export const syncKnowledgeGraphAtom = atom(
+export const knowledgeGraphAtom = atom<KnowledgeGraph>(
   (get) => {
-    const graphInstance = get(baseKnowledgeGraphAtom);
-    const { notes, folders } = get(graphSourceDataAtom);
-
-    // Perform the build - this mutates the graphInstance
-    graphInstance.buildGraph(notes, folders);
-
-    // Return the mutated instance
-    return graphInstance;
+    return get(baseKnowledgeGraphAtom);
   }
 );
 
-// Derived atom for notes in current folder
+export const syncKnowledgeGraphAtom = atom(
+  (get) => get(baseKnowledgeGraphAtom),
+  (get, set) => {
+    const graphInstance = get(baseKnowledgeGraphAtom);
+    const { notes, folders } = get(graphSourceDataAtom);
+    
+    graphInstance.buildGraph(notes, folders);
+    
+    set(knowledgeGraphAtom, graphInstance);
+  }
+);
+
 export const currentFolderNotesAtom = atom(
   (get) => {
     const notes = get(notesAtom);
@@ -120,28 +107,23 @@ export const currentFolderNotesAtom = atom(
   }
 );
 
-// Derived atom for folders in current folder
 export const currentFolderChildrenAtom = atom(
   (get) => {
     const folders = get(foldersAtom);
     const currentPath = get(currentFolderPathAtom);
     
-    // For root path ("/"), we want folders with parentId null
     if (currentPath === '/') {
       return folders.filter(folder => folder.parentId === null && folder.id !== 'root');
     }
     
-    // Find the current folder
     const currentFolder = folders.find(folder => folder.path === currentPath);
     
     if (!currentFolder) return [];
     
-    // Return folders that have this folder as parent
     return folders.filter(folder => folder.parentId === currentFolder.id);
   }
 );
 
-// Derived atom for the currently active note
 export const activeNoteAtom = atom(
   (get) => {
     const notes = get(notesAtom);
@@ -168,12 +150,10 @@ export const activeNoteAtom = atom(
     
     set(notesAtom, updatedNotes);
     
-    // Update the knowledge graph when a note changes
-    set(knowledgeGraphAtom, get(syncKnowledgeGraphAtom));
+    set(syncKnowledgeGraphAtom);
   }
 );
 
-// Create a new note and return its ID
 export const createNote = (folderPath: string = '/') => {
   const newId = generateId();
   const now = getCurrentDate();
@@ -191,12 +171,10 @@ export const createNote = (folderPath: string = '/') => {
   return { id: newId, note: newNote };
 };
 
-// Create a new folder
 export const createFolder = (name: string, parentPath: string = '/', parentId: string | null = null) => {
   const newId = generateFolderId();
   const now = getCurrentDate();
   
-  // Create the path for the new folder
   const path = parentPath === '/' ? `/${name}` : `${parentPath}/${name}`;
   
   const newFolder: Folder = {
@@ -211,23 +189,19 @@ export const createFolder = (name: string, parentPath: string = '/', parentId: s
   return { id: newId, folder: newFolder };
 };
 
-// Delete a note by ID
 export const deleteNote = (notes: Note[], id: string): Note[] => {
   return notes.filter(note => note.id !== id);
 };
 
-// Delete a folder by ID (this does not delete contained notes/folders)
 export const deleteFolder = (folders: Folder[], id: string): Folder[] => {
   return folders.filter(folder => folder.id !== id);
 };
 
-// Helper to get folder path parts
 export const getPathParts = (path: string): string[] => {
   if (path === '/') return ['/'];
   return ['/', ...path.split('/').filter(Boolean)];
 };
 
-// Helper to get breadcrumb data from a path
 export const getBreadcrumbsFromPath = (path: string, folders: Folder[]): { name: string; path: string }[] => {
   if (path === '/') {
     return [{ name: 'Home', path: '/' }];
@@ -249,7 +223,6 @@ export const getBreadcrumbsFromPath = (path: string, folders: Folder[]): { name:
   return breadcrumbs;
 };
 
-// Move a note to a different folder
 export const moveNote = (notes: Note[], noteId: string, targetFolderPath: string): Note[] => {
   return notes.map(note => 
     note.id === noteId 
@@ -258,7 +231,6 @@ export const moveNote = (notes: Note[], noteId: string, targetFolderPath: string
   );
 };
 
-// Rename a folder and update all child paths
 export const renameFolder = (
   folders: Folder[],
   notes: Note[],
@@ -270,18 +242,16 @@ export const renameFolder = (
   
   const oldPath = folder.path;
   const pathParts = oldPath.split('/').filter(Boolean);
-  pathParts.pop(); // Remove old name
+  pathParts.pop();
   
   const parentPath = pathParts.length ? `/${pathParts.join('/')}` : '/';
   const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`;
   
-  // Update this folder
   const updatedFolders = folders.map(f => {
     if (f.id === folderId) {
       return { ...f, name: newName, path: newPath, updatedAt: getCurrentDate() };
     }
     
-    // Update child folder paths
     if (f.path.startsWith(oldPath + '/')) {
       const restOfPath = f.path.slice(oldPath.length);
       return { ...f, path: newPath + restOfPath, updatedAt: getCurrentDate() };
@@ -290,7 +260,6 @@ export const renameFolder = (
     return f;
   });
   
-  // Update notes
   const updatedNotes = notes.map(note => {
     if (note.path === oldPath) {
       return { ...note, path: newPath, updatedAt: getCurrentDate() };
