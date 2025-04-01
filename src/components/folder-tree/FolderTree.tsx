@@ -13,7 +13,8 @@ import {
   createFolder,
   createNote,
   moveNote,
-  renameFolder as renameFolderUtil
+  renameFolder as renameFolderUtil,
+  currentClusterIdAtom
 } from '@/lib/store';
 import { FolderTreeProps } from './types';
 import { FolderItem } from './FolderItem';
@@ -21,11 +22,12 @@ import { NoteItem } from './NoteItem';
 import { FolderForm } from './FolderForm';
 import { DeleteFolderDialog } from './DeleteFolderDialog';
 
-export function FolderTree({ parentId, path, level }: FolderTreeProps) {
+export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps) {
   const [folders, setFolders] = useAtom(foldersAtom);
   const [notes, setNotes] = useAtom(notesAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
+  const [currentClusterId, setCurrentClusterId] = useAtom(currentClusterIdAtom);
   
   // State for UI interactions
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
@@ -38,6 +40,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   const [newFolderName, setNewFolderName] = useState('');
   const [parentForNewFolder, setParentForNewFolder] = useState<string | null>(null);
   const [folderPathForNewFolder, setFolderPathForNewFolder] = useState<string>("/");
+  const [clusterIdForNewFolder, setClusterIdForNewFolder] = useState<string>('default-cluster');
   
   // State for folder renaming dialog
   const [isRenameFolderDialogOpen, setIsRenameFolderDialogOpen] = useState(false);
@@ -48,21 +51,32 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
 
-  // Find children of the current folder
-  const childFolders = folders.filter(folder => 
-    folder.parentId === parentId && 
-    (parentId !== null || folder.id !== 'root')
-  );
+  // Find children of the current folder, filtered by clusterId if provided
+  const childFolders = folders.filter(folder => {
+    const matchesParent = folder.parentId === parentId && (parentId !== null || folder.id !== 'root');
+    const matchesCluster = clusterId ? folder.clusterId === clusterId : true;
+    return matchesParent && matchesCluster;
+  });
 
-  // Find notes in the current folder
-  const folderNotes = notes.filter(note => note.path === path);
+  // Find notes in the current folder, filtered by clusterId if provided
+  const folderNotes = notes.filter(note => {
+    const matchesPath = note.path === path;
+    const matchesCluster = clusterId ? note.clusterId === clusterId : true;
+    return matchesPath && matchesCluster;
+  });
   
   // Generate a list of all folders for the move note dropdown
+  // If clusterId is provided, only include folders from that cluster
   const allFolders = React.useMemo(() => {
     // Start with the root folder
-    const rootFolder = { id: 'root', name: 'Home', path: '/' };
+    const rootFolder = { id: 'root', name: 'Home', path: '/', clusterId: clusterId || 'default-cluster' };
+    
+    if (clusterId) {
+      return [rootFolder, ...folders.filter(f => f.id !== 'root' && f.clusterId === clusterId)];
+    }
+    
     return [rootFolder, ...folders.filter(f => f.id !== 'root')];
-  }, [folders]);
+  }, [folders, clusterId]);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => ({
@@ -75,14 +89,18 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     return expandedFolders[folderId] || false;
   };
 
-  const handleFolderClick = (folderPath: string) => {
+  const handleFolderClick = (folderPath: string, folderClusterId?: string) => {
     setCurrentPath(folderPath);
+    if (folderClusterId) {
+      setCurrentClusterId(folderClusterId);
+    }
   };
 
-  const openNewFolderDialog = (parentFolderId: string | null, folderPath: string) => {
+  const openNewFolderDialog = (parentFolderId: string | null, folderPath: string, folderClusterId?: string) => {
     setParentForNewFolder(parentFolderId);
     setFolderPathForNewFolder(folderPath);
     setNewFolderName('');
+    setClusterIdForNewFolder(folderClusterId || clusterId || 'default-cluster');
     setIsNewFolderDialogOpen(true);
   };
 
@@ -92,9 +110,12 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
       return;
     }
 
-    // Check if folder name already exists at this level
+    // Check if folder name already exists at this level and in this cluster
     const folderExists = folders.some(
-      folder => folder.parentId === parentForNewFolder && folder.name.toLowerCase() === newFolderName.toLowerCase()
+      folder => 
+        folder.parentId === parentForNewFolder && 
+        folder.name.toLowerCase() === newFolderName.toLowerCase() &&
+        folder.clusterId === clusterIdForNewFolder
     );
 
     if (folderExists) {
@@ -105,7 +126,8 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     const { folder } = createFolder(
       newFolderName, 
       folderPathForNewFolder, 
-      folderPathForNewFolder === '/' ? null : folders.find(f => f.path === folderPathForNewFolder)?.id || null
+      folderPathForNewFolder === '/' ? null : folders.find(f => f.path === folderPathForNewFolder)?.id || null,
+      clusterIdForNewFolder
     );
     
     setFolders([...folders, folder]);
@@ -149,12 +171,13 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
       return;
     }
     
-    // Check if folder name already exists at this level
+    // Check if folder name already exists at this level and in this cluster
     const folderExists = folders.some(
       folder => 
         folder.parentId === folderToRename.parentId && 
         folder.id !== folderToRename.id &&
-        folder.name.toLowerCase() === newRenameFolderName.toLowerCase()
+        folder.name.toLowerCase() === newRenameFolderName.toLowerCase() &&
+        folder.clusterId === folderToRename.clusterId
     );
 
     if (folderExists) {
@@ -240,16 +263,26 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   };
 
   // Handle creating a new note in a specific folder
-  const handleCreateNote = (folderPath: string, e: React.MouseEvent) => {
+  const handleCreateNote = (folderPath: string, e: React.MouseEvent, noteClusterId?: string) => {
     e.stopPropagation();
     
-    const { id, note } = createNote(folderPath);
+    const { id, note } = createNote(
+      folderPath, 
+      noteClusterId || clusterId || 'default-cluster'
+    );
     
     // Add the new note to the notes array
     setNotes(prevNotes => [...prevNotes, note]);
     
     // Set the new note as active
     setActiveNoteId(id);
+    
+    // Set current cluster ID if available
+    if (noteClusterId) {
+      setCurrentClusterId(noteClusterId);
+    } else if (clusterId) {
+      setCurrentClusterId(clusterId);
+    }
     
     // Auto-expand the folder if it's not already expanded
     if (folderPath !== '/') {
@@ -267,8 +300,11 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
     });
   };
 
-  const handleNoteClick = (noteId: string) => {
+  const handleNoteClick = (noteId: string, noteClusterId?: string) => {
     setActiveNoteId(noteId);
+    if (noteClusterId) {
+      setCurrentClusterId(noteClusterId);
+    }
   };
 
   // Handle note deletion
@@ -314,11 +350,11 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
   };
   
   // Handle moving a note to a folder
-  const handleMoveNote = (noteId: string, targetFolderPath: string, e: React.MouseEvent) => {
+  const handleMoveNote = (noteId: string, targetFolderPath: string, e: React.MouseEvent, targetClusterId?: string) => {
     e.stopPropagation();
     
     // Update the notes array with the moved note
-    setNotes(moveNote(notes, noteId, targetFolderPath));
+    setNotes(moveNote(notes, noteId, targetFolderPath, targetClusterId));
     
     // Close the popover
     setMovePopoverOpenForNoteId(null);
@@ -338,39 +374,47 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
             isCurrentPath={currentPath === folder.path}
             hoveredFolderId={hoveredFolderId}
             toggleFolder={toggleFolder}
-            handleFolderClick={handleFolderClick}
-            openNewFolderDialog={openNewFolderDialog}
+            handleFolderClick={() => handleFolderClick(folder.path, folder.clusterId)}
+            openNewFolderDialog={(folderId, folderPath) => openNewFolderDialog(folderId, folderPath, folder.clusterId)}
             openRenameFolderDialog={openRenameFolderDialog}
             handleDeleteClick={handleDeleteClick}
-            handleCreateNote={handleCreateNote}
+            handleCreateNote={(folderPath, e) => handleCreateNote(folderPath, e, folder.clusterId)}
             setHoveredFolderId={setHoveredFolderId}
           />
           
           {isExpanded(folder.id) && (
             <>
               {/* Notes for this folder */}
-              {notes.filter(note => note.path === folder.path).map(note => (
-                <NoteItem
-                  key={note.id}
-                  noteId={note.id}
-                  title={note.title}
-                  path={note.path}
-                  isActive={activeNoteId === note.id}
-                  hoveredNoteId={hoveredNoteId}
-                  movePopoverOpenForNoteId={movePopoverOpenForNoteId}
-                  allFolders={allFolders}
-                  handleNoteClick={handleNoteClick}
-                  handleDeleteNote={handleDeleteNote}
-                  toggleMovePopover={toggleMovePopover}
-                  handleMoveNote={handleMoveNote}
-                  setHoveredNoteId={setHoveredNoteId}
-                />
-              ))}
+              {notes
+                .filter(note => 
+                  note.path === folder.path && 
+                  (clusterId ? note.clusterId === clusterId : true)
+                )
+                .map(note => (
+                  <NoteItem
+                    key={note.id}
+                    noteId={note.id}
+                    title={note.title}
+                    path={note.path}
+                    clusterId={note.clusterId}
+                    isActive={activeNoteId === note.id}
+                    hoveredNoteId={hoveredNoteId}
+                    movePopoverOpenForNoteId={movePopoverOpenForNoteId}
+                    allFolders={allFolders}
+                    handleNoteClick={() => handleNoteClick(note.id, note.clusterId)}
+                    handleDeleteNote={handleDeleteNote}
+                    toggleMovePopover={toggleMovePopover}
+                    handleMoveNote={handleMoveNote}
+                    setHoveredNoteId={setHoveredNoteId}
+                  />
+                ))
+              }
               
               <FolderTree 
                 parentId={folder.id} 
                 path={folder.path} 
                 level={level + 1} 
+                clusterId={clusterId}
               />
             </>
           )}
@@ -385,11 +429,12 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
             noteId={note.id}
             title={note.title}
             path={note.path}
+            clusterId={note.clusterId}
             isActive={activeNoteId === note.id}
             hoveredNoteId={hoveredNoteId}
             movePopoverOpenForNoteId={movePopoverOpenForNoteId}
             allFolders={allFolders.filter(f => f.path !== '/')}
-            handleNoteClick={handleNoteClick}
+            handleNoteClick={() => handleNoteClick(note.id, note.clusterId)}
             handleDeleteNote={handleDeleteNote}
             toggleMovePopover={toggleMovePopover}
             handleMoveNote={handleMoveNote}
@@ -405,7 +450,7 @@ export function FolderTree({ parentId, path, level }: FolderTreeProps) {
             variant="ghost" 
             size="sm" 
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground py-1"
-            onClick={() => openNewFolderDialog(parentId, path)}
+            onClick={() => openNewFolderDialog(parentId, path, clusterId)}
           >
             <Plus className="h-3 w-3" /> New Folder
           </Button>

@@ -10,6 +10,7 @@ export function NoteItem({
   noteId,
   title,
   path,
+  clusterId,
   isActive,
   hoveredNoteId,
   movePopoverOpenForNoteId,
@@ -28,7 +29,7 @@ export function NoteItem({
           ? "dark:bg-[#1c1f2e]/60 dark:text-white light:bg-[#e5deff]/60 light:text-[#614ac2]" 
           : "hover:dark:bg-[#1c1f2e]/30 hover:light:bg-[#e5deff]/30"
       )}
-      onClick={() => handleNoteClick(noteId)}
+      onClick={handleNoteClick}
       onMouseEnter={() => setHoveredNoteId(noteId)}
       onMouseLeave={() => setHoveredNoteId(null)}
     >
@@ -64,12 +65,14 @@ export function NoteItem({
                   Move to folder
                 </div>
                 {allFolders
-                  .filter(f => f.path !== (path === '/' ? '/' : path.split('/').slice(0, -1).join('/') || '/'))
+                  .filter(f => 
+                    f.path !== (path === '/' ? '/' : path.split('/').slice(0, -1).join('/') || '/')
+                  )
                   .map(targetFolder => (
                     <button 
                       key={targetFolder.id}
                       className="flex w-full items-center px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-                      onClick={(e) => handleMoveNote(noteId, targetFolder.path, e)}
+                      onClick={(e) => handleMoveNote(noteId, targetFolder.path, e, targetFolder.clusterId)}
                     >
                       {targetFolder.name === 'Home' ? 'Root' : targetFolder.name}
                     </button>

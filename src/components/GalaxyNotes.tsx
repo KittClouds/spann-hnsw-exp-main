@@ -3,16 +3,30 @@ import { ThemeToggle } from "./ThemeToggle";
 import { NotesSidebar } from "./NotesSidebar";
 import { NoteEditor } from "./NoteEditor";
 import { useEffect } from 'react';
-import { useAtom } from 'jotai';
-import { syncKnowledgeGraphAtom } from '@/lib/store';
+import { useSetAtom } from 'jotai';
+import { syncKnowledgeGraphAtom, migrateToClusterSystem, notesAtom, foldersAtom } from '@/lib/store';
 
 export function GalaxyNotes() {
-  const [, syncGraph] = useAtom(syncKnowledgeGraphAtom);
+  const syncGraph = useSetAtom(syncKnowledgeGraphAtom);
+  const setNotes = useSetAtom(notesAtom);
+  const setFolders = useSetAtom(foldersAtom);
   
-  // Initialize knowledge graph when app loads
+  // Initialize knowledge graph and migrate data when app loads
   useEffect(() => {
+    // Migrate existing data to use the cluster system
+    const { notes, folders } = migrateToClusterSystem(
+      notesAtom.init, 
+      foldersAtom.init, 
+      'default-cluster'
+    );
+    
+    // Update the notes and folders with the migrated data
+    setNotes(notes);
+    setFolders(folders);
+    
+    // Initialize the knowledge graph
     syncGraph();
-  }, [syncGraph]);
+  }, [syncGraph, setNotes, setFolders]);
 
   return (
     <div className="flex flex-col h-screen dark:cosmic-bg-dark light:cosmic-bg-light text-foreground">

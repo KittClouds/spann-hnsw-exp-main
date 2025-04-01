@@ -1,8 +1,7 @@
-
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
 import { Input } from "@/components/ui/input";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
@@ -57,31 +56,40 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Save changes to note content when editor changes
-  const saveChanges = debounce(() => {
-    if (editor && activeNote) {
-      const blocks = editor.document;
-      setActiveNote({
-        content: blocks,
-      });
-    }
-  }, 500);
+  // Reference to keep track of the debounced save function
+  const saveChangesRef = useRef<ReturnType<typeof debounce>>();
+  
+  // Create a debounced save function
+  useEffect(() => {
+    saveChangesRef.current = debounce(() => {
+      if (editor && activeNote) {
+        const blocks = editor.document;
+        setActiveNote({
+          content: blocks,
+        });
+      }
+    }, 500);
+    
+    return () => {
+      // Cancel the debounce on unmount
+      saveChangesRef.current?.cancel();
+    };
+  }, [editor, activeNote, setActiveNote]);
 
   // Set up editor change handler
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || !saveChangesRef.current) return;
     
     const unsubscribe = editor.onEditorContentChange(() => {
-      saveChanges();
+      saveChangesRef.current?.();
     });
     
     return () => {
-      saveChanges.cancel();
       if (unsubscribe) {
         unsubscribe();
       }
     };
-  }, [editor, saveChanges, activeNote]);
+  }, [editor]);
 
   // Load note content when active note changes, but only once
   useEffect(() => {
@@ -93,7 +101,7 @@ export function NoteEditor() {
         console.error("Error replacing blocks:", error);
       }
     }
-  }, [activeNoteId, editor]);
+  }, [activeNoteId, editor, activeNote]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {

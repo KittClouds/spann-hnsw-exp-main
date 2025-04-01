@@ -1,10 +1,11 @@
 
-import { Folder } from '@/lib/store';
+import { Folder, Cluster } from '@/lib/store';
 
 export interface FolderTreeProps {
   parentId: string | null;
   path: string;
   level: number;
+  clusterId?: string;
 }
 
 export interface FolderItemProps {
@@ -21,18 +22,33 @@ export interface FolderItemProps {
   setHoveredFolderId: (id: string | null) => void;
 }
 
+export interface ClusterItemProps {
+  cluster: Cluster;
+  isExpanded: boolean;
+  isActive: boolean;
+  hoveredClusterId: string | null;
+  toggleCluster: (clusterId: string) => void;
+  handleClusterClick: (clusterId: string) => void;
+  openRenameClusterDialog: (cluster: Cluster, e: React.MouseEvent) => void;
+  handleDeleteClick: (cluster: Cluster, e: React.MouseEvent) => void;
+  handleCreateFolder: (clusterId: string, e: React.MouseEvent) => void;
+  handleCreateNote: (clusterId: string, e: React.MouseEvent) => void;
+  setHoveredClusterId: (id: string | null) => void;
+}
+
 export interface NoteItemProps {
   noteId: string;
   title: string;
   path: string;
+  clusterId?: string;
   isActive: boolean;
   hoveredNoteId: string | null;
   movePopoverOpenForNoteId: string | null;
-  allFolders: { id: string; name: string; path: string; }[];
+  allFolders: { id: string; name: string; path: string; clusterId?: string; }[];
   handleNoteClick: (noteId: string) => void;
   handleDeleteNote: (noteId: string, e: React.MouseEvent) => void;
   toggleMovePopover: (noteId: string, e: React.MouseEvent) => void;
-  handleMoveNote: (noteId: string, targetFolderPath: string, e: React.MouseEvent) => void;
+  handleMoveNote: (noteId: string, targetFolderPath: string, e: React.MouseEvent, targetClusterId?: string) => void;
   setHoveredNoteId: (id: string | null) => void;
 }
 

@@ -1,7 +1,16 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
 import { KnowledgeGraph } from './knowledgeGraph';
+
+// Define the Cluster interface
+export interface Cluster {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Note {
   id: string;
@@ -11,6 +20,7 @@ export interface Note {
   updatedAt: string;
   path: string; // e.g., "/Personal/Journal" or "/" for root
   tags: string[]; // Array of tag identifiers
+  clusterId: string; // Reference to parent cluster
 }
 
 export interface Folder {
@@ -20,7 +30,11 @@ export interface Folder {
   parentId: string | null; // null for root folders
   createdAt: string;
   updatedAt: string;
+  clusterId: string; // Reference to parent cluster
 }
+
+// View mode type
+export type ViewMode = 'folders' | 'clusters';
 
 // Helper function to get current date in ISO format
 const getCurrentDate = () => new Date().toISOString();
@@ -28,6 +42,16 @@ const getCurrentDate = () => new Date().toISOString();
 // Generate a unique ID
 const generateId = () => `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 const generateFolderId = () => `folder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+const generateClusterId = () => `cluster-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+// Create a default cluster
+const defaultClusterId = 'default-cluster';
+const defaultCluster: Cluster = {
+  id: defaultClusterId,
+  name: 'Main Cluster',
+  createdAt: getCurrentDate(),
+  updatedAt: getCurrentDate()
+};
 
 // Root folder for the file system
 const rootFolder: Folder = {
@@ -36,7 +60,8 @@ const rootFolder: Folder = {
   path: '/',
   parentId: null,
   createdAt: getCurrentDate(),
-  updatedAt: getCurrentDate()
+  updatedAt: getCurrentDate(),
+  clusterId: defaultClusterId
 };
 
 // Create initial notes with proper structure
@@ -51,7 +76,8 @@ const initialNotes: Note[] = [
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate(),
     path: '/',
-    tags: []
+    tags: [],
+    clusterId: defaultClusterId
   },
   { 
     id: generateId(), 
@@ -63,12 +89,19 @@ const initialNotes: Note[] = [
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate(),
     path: '/',
-    tags: []
+    tags: [],
+    clusterId: defaultClusterId
   },
 ];
 
 // Initial folder structure with just the root folder
 const initialFolders: Folder[] = [rootFolder];
+
+// Initial clusters
+const initialClusters: Cluster[] = [defaultCluster];
+
+// View mode atom (folders or clusters)
+export const viewModeAtom = atomWithStorage<ViewMode>('galaxy-view-mode', 'folders');
 
 // Main notes atom with localStorage persistence
 export const notesAtom = atomWithStorage<Note[]>('galaxy-notes', initialNotes);
@@ -76,18 +109,24 @@ export const notesAtom = atomWithStorage<Note[]>('galaxy-notes', initialNotes);
 // Folders atom with localStorage persistence
 export const foldersAtom = atomWithStorage<Folder[]>('galaxy-folders', initialFolders);
 
+// Clusters atom with localStorage persistence
+export const clustersAtom = atomWithStorage<Cluster[]>('galaxy-clusters', initialClusters);
+
 // Active note ID atom
 export const activeNoteIdAtom = atom<string | null>(initialNotes[0].id);
 
 // Current folder path atom
 export const currentFolderPathAtom = atom<string>('/');
 
+// Current cluster ID atom
+export const currentClusterIdAtom = atom<string>(defaultClusterId);
+
 // Knowledge Graph atom
 export const knowledgeGraphAtom = atom<KnowledgeGraph>(new KnowledgeGraph());
 
-// Effect atom to update knowledge graph when notes or folders change
+// Atom for syncing knowledge graph
 export const syncKnowledgeGraphAtom = atom(
-  (get) => get(knowledgeGraphAtom),
+  null, // read function returns null (not used)
   (get, set) => {
     const notes = get(notesAtom);
     const folders = get(foldersAtom);
@@ -102,8 +141,16 @@ export const currentFolderNotesAtom = atom(
   (get) => {
     const notes = get(notesAtom);
     const currentPath = get(currentFolderPathAtom);
+    const currentClusterId = get(currentClusterIdAtom);
+    const viewMode = get(viewModeAtom);
     
-    return notes.filter(note => note.path === currentPath);
+    if (viewMode === 'folders') {
+      return notes.filter(note => note.path === currentPath);
+    } else {
+      return notes.filter(note => 
+        note.path === currentPath && note.clusterId === currentClusterId
+      );
+    }
   }
 );
 
@@ -112,10 +159,22 @@ export const currentFolderChildrenAtom = atom(
   (get) => {
     const folders = get(foldersAtom);
     const currentPath = get(currentFolderPathAtom);
+    const currentClusterId = get(currentClusterIdAtom);
+    const viewMode = get(viewModeAtom);
     
     // For root path ("/"), we want folders with parentId null
     if (currentPath === '/') {
-      return folders.filter(folder => folder.parentId === null && folder.id !== 'root');
+      if (viewMode === 'folders') {
+        // In folders mode, show all root folders from all clusters
+        return folders.filter(folder => folder.parentId === null && folder.id !== 'root');
+      } else {
+        // In clusters mode, only show root folders from the current cluster
+        return folders.filter(folder => 
+          folder.parentId === null && 
+          folder.id !== 'root' && 
+          folder.clusterId === currentClusterId
+        );
+      }
     }
     
     // Find the current folder
@@ -124,7 +183,14 @@ export const currentFolderChildrenAtom = atom(
     if (!currentFolder) return [];
     
     // Return folders that have this folder as parent
-    return folders.filter(folder => folder.parentId === currentFolder.id);
+    if (viewMode === 'folders') {
+      return folders.filter(folder => folder.parentId === currentFolder.id);
+    } else {
+      return folders.filter(folder => 
+        folder.parentId === currentFolder.id && 
+        folder.clusterId === currentClusterId
+      );
+    }
   }
 );
 
@@ -161,7 +227,7 @@ export const activeNoteAtom = atom(
 );
 
 // Create a new note and return its ID
-export const createNote = (folderPath: string = '/') => {
+export const createNote = (folderPath: string = '/', clusterId: string = defaultClusterId) => {
   const newId = generateId();
   const now = getCurrentDate();
   
@@ -172,14 +238,20 @@ export const createNote = (folderPath: string = '/') => {
     createdAt: now,
     updatedAt: now,
     path: folderPath,
-    tags: []
+    tags: [],
+    clusterId
   };
   
   return { id: newId, note: newNote };
 };
 
 // Create a new folder
-export const createFolder = (name: string, parentPath: string = '/', parentId: string | null = null) => {
+export const createFolder = (
+  name: string, 
+  parentPath: string = '/', 
+  parentId: string | null = null,
+  clusterId: string = defaultClusterId
+) => {
   const newId = generateFolderId();
   const now = getCurrentDate();
   
@@ -192,10 +264,26 @@ export const createFolder = (name: string, parentPath: string = '/', parentId: s
     path,
     parentId,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    clusterId
   };
   
   return { id: newId, folder: newFolder };
+};
+
+// Create a new cluster
+export const createCluster = (name: string) => {
+  const newId = generateClusterId();
+  const now = getCurrentDate();
+  
+  const newCluster: Cluster = {
+    id: newId,
+    name,
+    createdAt: now,
+    updatedAt: now
+  };
+  
+  return { id: newId, cluster: newCluster };
 };
 
 // Delete a note by ID
@@ -206,6 +294,27 @@ export const deleteNote = (notes: Note[], id: string): Note[] => {
 // Delete a folder by ID (this does not delete contained notes/folders)
 export const deleteFolder = (folders: Folder[], id: string): Folder[] => {
   return folders.filter(folder => folder.id !== id);
+};
+
+// Delete a cluster by ID (only if empty)
+export const deleteCluster = (
+  clusters: Cluster[], 
+  folders: Folder[], 
+  notes: Note[], 
+  clusterId: string
+): { canDelete: boolean; clusters: Cluster[] } => {
+  // Check if the cluster is empty
+  const hasContent = folders.some(folder => folder.clusterId === clusterId) || 
+                     notes.some(note => note.clusterId === clusterId);
+  
+  if (hasContent) {
+    return { canDelete: false, clusters };
+  }
+  
+  return { 
+    canDelete: true, 
+    clusters: clusters.filter(cluster => cluster.id !== clusterId) 
+  };
 };
 
 // Helper to get folder path parts
@@ -237,12 +346,120 @@ export const getBreadcrumbsFromPath = (path: string, folders: Folder[]): { name:
 };
 
 // Move a note to a different folder
-export const moveNote = (notes: Note[], noteId: string, targetFolderPath: string): Note[] => {
-  return notes.map(note => 
-    note.id === noteId 
-      ? { ...note, path: targetFolderPath, updatedAt: getCurrentDate() } 
-      : note
-  );
+export const moveNote = (
+  notes: Note[], 
+  noteId: string, 
+  targetFolderPath: string,
+  targetClusterId?: string
+): Note[] => {
+  return notes.map(note => {
+    if (note.id === noteId) {
+      const updates: Partial<Note> = { 
+        path: targetFolderPath, 
+        updatedAt: getCurrentDate() 
+      };
+      
+      // Update clusterId if provided
+      if (targetClusterId) {
+        updates.clusterId = targetClusterId;
+      }
+      
+      return { ...note, ...updates };
+    }
+    return note;
+  });
+};
+
+// Move a folder to a different parent folder
+export const moveFolder = (
+  folders: Folder[],
+  notes: Note[],
+  folderId: string,
+  targetParentId: string | null,
+  targetParentPath: string,
+  targetClusterId?: string
+): { folders: Folder[]; notes: Note[] } => {
+  const folder = folders.find(f => f.id === folderId);
+  if (!folder) return { folders, notes };
+  
+  const oldPath = folder.path;
+  const folderName = folder.name;
+  
+  // Create the new path for the folder
+  const newPath = targetParentPath === '/' ? `/${folderName}` : `${targetParentPath}/${folderName}`;
+  
+  // Update this folder and all subfolders
+  const updatedFolders = folders.map(f => {
+    // Update the target folder
+    if (f.id === folderId) {
+      const updates: Partial<Folder> = {
+        parentId: targetParentId,
+        path: newPath,
+        updatedAt: getCurrentDate()
+      };
+      
+      // Update clusterId if provided
+      if (targetClusterId) {
+        updates.clusterId = targetClusterId;
+      }
+      
+      return { ...f, ...updates };
+    }
+    
+    // Update child folders' paths
+    if (f.path.startsWith(oldPath + '/')) {
+      const restOfPath = f.path.slice(oldPath.length);
+      const updates: Partial<Folder> = {
+        path: newPath + restOfPath,
+        updatedAt: getCurrentDate()
+      };
+      
+      // Update clusterId for child folders if moving to a different cluster
+      if (targetClusterId && f.clusterId !== targetClusterId) {
+        updates.clusterId = targetClusterId;
+      }
+      
+      return { ...f, ...updates };
+    }
+    
+    return f;
+  });
+  
+  // Update notes' paths
+  const updatedNotes = notes.map(note => {
+    if (note.path === oldPath) {
+      const updates: Partial<Note> = {
+        path: newPath,
+        updatedAt: getCurrentDate()
+      };
+      
+      // Update clusterId if provided
+      if (targetClusterId && note.clusterId !== targetClusterId) {
+        updates.clusterId = targetClusterId;
+      }
+      
+      return { ...note, ...updates };
+    }
+    
+    if (note.path.startsWith(oldPath + '/')) {
+      const restOfPath = note.path.slice(oldPath.length);
+      const updates: Partial<Note> = {
+        path: newPath + restOfPath,
+        updatedAt: getCurrentDate()
+      };
+      
+      // Update clusterId if provided
+      if (targetClusterId && note.clusterId !== targetClusterId) {
+        updates.clusterId = targetClusterId;
+      }
+      
+      return { ...note, ...updates };
+    }
+    
+    return note;
+  });
+  
+  return { folders: updatedFolders, notes: updatedNotes };
 };
 
 // Rename a folder and update all child paths
@@ -292,4 +509,36 @@ export const renameFolder = (
   });
   
   return { folders: updatedFolders, notes: updatedNotes };
+};
+
+// Rename a cluster
+export const renameCluster = (
+  clusters: Cluster[],
+  clusterId: string,
+  newName: string
+): Cluster[] => {
+  return clusters.map(cluster => 
+    cluster.id === clusterId
+      ? { ...cluster, name: newName, updatedAt: getCurrentDate() }
+      : cluster
+  );
+};
+
+// Migrate existing data to use the cluster system
+export const migrateToClusterSystem = (
+  notes: Note[],
+  folders: Folder[],
+  defaultClusterId: string
+): { notes: Note[], folders: Folder[] } => {
+  const migratedNotes = notes.map(note => ({
+    ...note,
+    clusterId: note.clusterId || defaultClusterId
+  }));
+  
+  const migratedFolders = folders.map(folder => ({
+    ...folder,
+    clusterId: folder.clusterId || defaultClusterId
+  }));
+  
+  return { notes: migratedNotes, folders: migratedFolders };
 };

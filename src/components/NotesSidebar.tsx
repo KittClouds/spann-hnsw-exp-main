@@ -1,19 +1,23 @@
 
 import { useAtom } from 'jotai';
-import { Plus, Search, Tag, FolderIcon, FileIcon } from 'lucide-react';
+import { Plus, Search, Tag, FolderIcon, FileIcon, Layers } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   createNote, 
   notesAtom,
   activeNoteIdAtom,
   currentFolderPathAtom,
   foldersAtom,
-  getBreadcrumbsFromPath
+  getBreadcrumbsFromPath,
+  viewModeAtom,
+  currentClusterIdAtom,
 } from '@/lib/store';
 import { Input } from '@/components/ui/input';
 import { FolderTree } from './FolderTree';
+import { ClusterView } from './ClusterView';
 import { toast } from 'sonner';
 import { useCallback, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -23,10 +27,12 @@ export function NotesSidebar() {
   const [folders] = useAtom(foldersAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
+  const [viewMode, setViewMode] = useAtom(viewModeAtom);
+  const [currentClusterId] = useAtom(currentClusterIdAtom);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleNewNote = useCallback(() => {
-    const { id, note } = createNote(currentPath);
+    const { id, note } = createNote(currentPath, currentClusterId);
     
     // Add the new note to the notes array
     setNotes(prevNotes => [...prevNotes, note]);
@@ -37,7 +43,7 @@ export function NotesSidebar() {
     toast("New note created", {
       description: "Start typing to edit your note",
     });
-  }, [setNotes, setActiveNoteId, currentPath]);
+  }, [setNotes, setActiveNoteId, currentPath, currentClusterId]);
 
   // Get breadcrumbs for the current folder
   const breadcrumbs = getBreadcrumbsFromPath(currentPath, folders);
@@ -52,6 +58,11 @@ export function NotesSidebar() {
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
+  };
+
+  // Handle changing view mode
+  const handleViewModeChange = (value: string) => {
+    setViewMode(value as 'folders' | 'clusters');
   };
 
   return (
@@ -81,8 +92,24 @@ export function NotesSidebar() {
       
       <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" />
 
-      {/* Display current folder path */}
-      {breadcrumbs.length > 1 && (
+      {/* View mode selector */}
+      <div className="px-4 py-2">
+        <Tabs value={viewMode} onValueChange={handleViewModeChange} className="w-full">
+          <TabsList className="w-full">
+            <TabsTrigger value="folders" className="flex-1">
+              <FolderIcon className="h-3.5 w-3.5 mr-1" />
+              Folders
+            </TabsTrigger>
+            <TabsTrigger value="clusters" className="flex-1">
+              <Layers className="h-3.5 w-3.5 mr-1" />
+              Clusters
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Display current folder path in folders view */}
+      {viewMode === 'folders' && breadcrumbs.length > 1 && (
         <div className="px-4 py-2">
           <div className="flex flex-wrap gap-1 items-center">
             {breadcrumbs.map((crumb, index) => (
@@ -130,15 +157,29 @@ export function NotesSidebar() {
       )}
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-2 py-1">
-          <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">FOLDERS</div>
-        </div>
-        
-        <ScrollArea className="flex-1">
-          <div className="py-2">
-            <FolderTree parentId={null} path="/" level={0} />
+        <TabsContent value="folders" className="flex-1 flex flex-col data-[state=inactive]:hidden">
+          <div className="px-2 py-1">
+            <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">FOLDERS</div>
           </div>
-        </ScrollArea>
+          
+          <ScrollArea className="flex-1">
+            <div className="py-2">
+              <FolderTree parentId={null} path="/" level={0} />
+            </div>
+          </ScrollArea>
+        </TabsContent>
+        
+        <TabsContent value="clusters" className="flex-1 flex flex-col data-[state=inactive]:hidden">
+          <div className="px-2 py-1">
+            <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">CLUSTERS</div>
+          </div>
+          
+          <ScrollArea className="flex-1">
+            <div className="py-2">
+              <ClusterView />
+            </div>
+          </ScrollArea>
+        </TabsContent>
       </div>
       
       <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" />
