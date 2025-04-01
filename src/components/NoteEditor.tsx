@@ -22,6 +22,7 @@ export function NoteEditor() {
     }
     return 'dark';
   });
+  const contentInitializedRef = useRef(false);
   
   // Initialize editor with proper defaults
   const editor = useBlockNote({
@@ -75,30 +76,37 @@ export function NoteEditor() {
     });
     
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      unsubscribe?.(); // Fixed the unsubscribe check
       saveChanges.cancel();
     };
   }, [editor, activeNote, setActiveNote, saveChanges]);
 
-  // Fix the editor content update logic
+  // Fix the editor content update logic to prevent cursor jumping
   useEffect(() => {
     if (!editor || !activeNoteId || !activeNote) return;
     
-    if (activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
-      try {
-        editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
-      } catch (error) {
-        console.error("Error replacing blocks:", error);
-        // In case of error, set simple content
+    // Only update content when note ID changes or on first load
+    if (!contentInitializedRef.current || editor.document.length === 0) {
+      if (activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
+        try {
+          editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
+          contentInitializedRef.current = true;
+        } catch (error) {
+          console.error("Error replacing blocks:", error);
+          editor.replaceBlocks(editor.document, [{ type: "paragraph", content: [] }]);
+          contentInitializedRef.current = true;
+        }
+      } else {
         editor.replaceBlocks(editor.document, [{ type: "paragraph", content: [] }]);
+        contentInitializedRef.current = true;
       }
-    } else {
-      // Set default content if note has no content
-      editor.replaceBlocks(editor.document, [{ type: "paragraph", content: [] }]);
     }
   }, [activeNoteId, editor, activeNote]);
+
+  // Reset content initialized flag when note changes
+  useEffect(() => {
+    contentInitializedRef.current = false;
+  }, [activeNoteId]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
