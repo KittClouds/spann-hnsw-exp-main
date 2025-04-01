@@ -59,7 +59,8 @@ export interface GraphEdge {
   relationship?: RelationshipType;
 }
 
-export interface Graph {
+// Rename this interface to avoid conflict with the graphology Graph
+export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
 }
@@ -307,7 +308,7 @@ export class KnowledgeGraph {
     return incomingLinks;
   }
 
-  toJSON(): Graph {
+  toJSON(): GraphData {
     // Convert the graphology graph to our Graph format
     const nodes: GraphNode[] = [];
     const edges: GraphEdge[] = [];
@@ -341,7 +342,7 @@ export class KnowledgeGraph {
     return { nodes, edges };
   }
 
-  static fromJSON(graphData: Graph): KnowledgeGraph {
+  static fromJSON(graphData: GraphData): KnowledgeGraph {
     const kg = new KnowledgeGraph();
     
     // Clear the graph first
