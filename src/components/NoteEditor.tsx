@@ -1,4 +1,3 @@
-
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
 import { Input } from "@/components/ui/input";
@@ -23,24 +22,20 @@ export function NoteEditor() {
     return 'dark';
   });
   
-  // Create editor instance with default content if activeNote.content is empty
   const editor = useBlockNote({
     initialContent: activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0 
       ? activeNote.content as PartialBlock[] 
       : [{ type: "paragraph", content: [] }],
   });
 
-  // Update theme when app theme changes
   useEffect(() => {
     const handleThemeChange = () => {
       const isDark = document.documentElement.classList.contains('dark');
       setTheme(isDark ? 'dark' : 'light');
     };
 
-    // Initial check
     handleThemeChange();
 
-    // Listen for theme changes
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (
@@ -57,10 +52,8 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Reference to keep track of the debounced save function
   const saveChangesRef = useRef<ReturnType<typeof debounce>>();
-  
-  // Create a debounced save function
+
   useEffect(() => {
     saveChangesRef.current = debounce(() => {
       if (editor && activeNote) {
@@ -72,12 +65,10 @@ export function NoteEditor() {
     }, 500);
     
     return () => {
-      // Cancel the debounce on unmount
       saveChangesRef.current?.cancel();
     };
   }, [editor, activeNote, setActiveNote]);
 
-  // Set up editor change handler
   useEffect(() => {
     if (!editor || !saveChangesRef.current) return;
     
@@ -94,11 +85,9 @@ export function NoteEditor() {
     };
   }, [editor]);
 
-  // Load note content when active note changes, but only once
   useEffect(() => {
     if (editor && activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
       try {
-        // Use a try/catch to avoid breaking if the content format is unexpected
         editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
       } catch (error) {
         console.error("Error replacing blocks:", error);

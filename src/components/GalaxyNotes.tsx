@@ -31,7 +31,7 @@ export function GalaxyNotes() {
     // Also initialize the tools service (this is just for demonstration)
     // In a real app, we'd use the useTools hook directly in the components
     const toolsService = new ToolsService(migratedNotes, migratedFolders);
-    console.log('Tools service initialized', toolsService.getStats?.());
+    console.log('Tools service initialized', toolsService.getStats());
   }, [syncGraph, setNotes, setFolders, notes, folders]);
 
   return (

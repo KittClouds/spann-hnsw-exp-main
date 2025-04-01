@@ -1,4 +1,3 @@
-
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
@@ -37,12 +36,12 @@ export interface Folder {
 export type ViewMode = 'folders' | 'clusters';
 
 // Helper function to get current date in ISO format
-const getCurrentDate = () => new Date().toISOString();
+export const getCurrentDate = () => new Date().toISOString();
 
 // Generate a unique ID
-const generateId = () => `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-const generateFolderId = () => `folder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-const generateClusterId = () => `cluster-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+export const generateId = () => `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+export const generateFolderId = () => `folder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+export const generateClusterId = () => `cluster-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
 // Create a default cluster
 const defaultClusterId = 'default-cluster';

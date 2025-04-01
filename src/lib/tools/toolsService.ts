@@ -1,4 +1,3 @@
-
 import { Note, Folder, Cluster, getCurrentDate, generateId, generateFolderId, generateClusterId } from '../store';
 import { ToolResult, NoteFilter, FolderFilter, ToolsInterface } from './types';
 import { KnowledgeGraph } from '../knowledgeGraph';
@@ -35,6 +34,15 @@ export class ToolsService implements ToolsInterface {
     if (notes.length > 0 || folders.length > 0) {
       this.knowledgeGraph.buildGraph(this.notes, this.folders);
     }
+  }
+  
+  // Stats method for debugging
+  getStats(): { notes: number, folders: number, clusters: number } {
+    return {
+      notes: this.notes.length,
+      folders: this.folders.length,
+      clusters: this.clusters.length
+    };
   }
   
   // Note operations
