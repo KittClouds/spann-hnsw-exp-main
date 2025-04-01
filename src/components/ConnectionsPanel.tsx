@@ -1,4 +1,3 @@
-
 import { useAtom } from 'jotai';
 import { activeNoteIdAtom, knowledgeGraphAtom, syncKnowledgeGraphAtom } from '@/lib/store';
 import { Button } from "@/components/ui/button";

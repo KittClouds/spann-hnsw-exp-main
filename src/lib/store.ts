@@ -78,23 +78,21 @@ const graphSourceDataAtom = atom((get) => ({
   folders: get(foldersAtom)
 }));
 
-const baseKnowledgeGraphAtom = atom<KnowledgeGraph>(new KnowledgeGraph());
+const baseKnowledgeGraph = new KnowledgeGraph();
 
-export const knowledgeGraphAtom = atom<KnowledgeGraph>(
+export const knowledgeGraphAtom = atom(
   (get) => {
-    return get(baseKnowledgeGraphAtom);
+    return baseKnowledgeGraph;
   }
 );
 
 export const syncKnowledgeGraphAtom = atom(
-  (get) => get(baseKnowledgeGraphAtom),
-  (get, set) => {
-    const graphInstance = get(baseKnowledgeGraphAtom);
-    const { notes, folders } = get(graphSourceDataAtom);
+  null, // No read function needed since we're only using this for writing
+  (_get, _set) => {
+    const notes = _get(notesAtom);
+    const folders = _get(foldersAtom);
     
-    graphInstance.buildGraph(notes, folders);
-    
-    set(knowledgeGraphAtom, graphInstance);
+    baseKnowledgeGraph.buildGraph(notes, folders);
   }
 );
 
