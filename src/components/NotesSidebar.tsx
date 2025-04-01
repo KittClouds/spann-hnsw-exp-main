@@ -106,53 +106,55 @@ export function NotesSidebar() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Display current folder path in folders view */}
-          {viewMode === 'folders' && breadcrumbs.length > 1 && (
-            <div className="px-0 py-2">
-              <div className="flex flex-wrap gap-1 items-center">
-                {breadcrumbs.map((crumb, index) => (
-                  <Badge 
-                    key={index} 
-                    variant="outline" 
-                    className="cursor-pointer hover:bg-accent truncate max-w-[100px]"
-                    onClick={() => setCurrentPath(crumb.path)}
-                  >
-                    {index === 0 ? <FolderIcon className="h-3 w-3 mr-1" /> : null}
-                    {crumb.name}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Show search results if search is active */}
-          {searchQuery.trim() !== '' && (
-            <div className="px-0 py-2">
-              <div className="text-xs font-medium text-muted-foreground py-1">
-                Search Results ({filteredNotes.length})
-              </div>
-              <ScrollArea className="max-h-40">
-                {filteredNotes.length > 0 ? (
-                  filteredNotes.map(note => (
-                    <div 
-                      key={note.id}
-                      className="flex items-center py-1 px-2 text-sm cursor-pointer hover:bg-accent rounded-md"
-                      onClick={() => {
-                        setActiveNoteId(note.id);
-                        // Navigate to the folder containing this note
-                        setCurrentPath(note.path);
-                      }}
+          <div className="space-y-2 mt-2">
+            {/* Display current folder path in folders view */}
+            {viewMode === 'folders' && breadcrumbs.length > 1 && (
+              <div className="px-0 py-2">
+                <div className="flex flex-wrap gap-1 items-center">
+                  {breadcrumbs.map((crumb, index) => (
+                    <Badge 
+                      key={index} 
+                      variant="outline" 
+                      className="cursor-pointer hover:bg-accent truncate max-w-[100px]"
+                      onClick={() => setCurrentPath(crumb.path)}
                     >
-                      <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                      <span className="truncate">{note.title}</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-xs text-muted-foreground p-2">No results found</div>
-                )}
-              </ScrollArea>
-            </div>
-          )}
+                      {index === 0 ? <FolderIcon className="h-3 w-3 mr-1" /> : null}
+                      {crumb.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Show search results if search is active */}
+            {searchQuery.trim() !== '' && (
+              <div className="px-0 py-2">
+                <div className="text-xs font-medium text-muted-foreground py-1">
+                  Search Results ({filteredNotes.length})
+                </div>
+                <ScrollArea className="max-h-40">
+                  {filteredNotes.length > 0 ? (
+                    filteredNotes.map(note => (
+                      <div 
+                        key={note.id}
+                        className="flex items-center py-1 px-2 text-sm cursor-pointer hover:bg-accent rounded-md"
+                        onClick={() => {
+                          setActiveNoteId(note.id);
+                          // Navigate to the folder containing this note
+                          setCurrentPath(note.path);
+                        }}
+                      >
+                        <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                        <span className="truncate">{note.title}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-xs text-muted-foreground p-2">No results found</div>
+                  )}
+                </ScrollArea>
+              </div>
+            )}
+          </div>
           
           <TabsContent value="folders" className="flex-1 flex flex-col">
             <div className="px-2 py-1">
@@ -180,7 +182,7 @@ export function NotesSidebar() {
         </Tabs>
       </div>
       
-      <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" className="mt-auto" />
+      <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200 mt-auto" />
       
       <div className="p-3">
         <Button 

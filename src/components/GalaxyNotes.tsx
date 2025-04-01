@@ -5,6 +5,7 @@ import { NoteEditor } from "./NoteEditor";
 import { useEffect } from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { syncKnowledgeGraphAtom, migrateToClusterSystem, notesAtom, foldersAtom } from '@/lib/store';
+import { ToolsService } from '@/lib/tools/toolsService';
 
 export function GalaxyNotes() {
   const syncGraph = useSetAtom(syncKnowledgeGraphAtom);
@@ -26,6 +27,11 @@ export function GalaxyNotes() {
     
     // Initialize the knowledge graph
     syncGraph();
+    
+    // Also initialize the tools service (this is just for demonstration)
+    // In a real app, we'd use the useTools hook directly in the components
+    const toolsService = new ToolsService(migratedNotes, migratedFolders);
+    console.log('Tools service initialized', toolsService.getStats?.());
   }, [syncGraph, setNotes, setFolders, notes, folders]);
 
   return (

@@ -1,3 +1,4 @@
+
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
 import { Input } from "@/components/ui/input";
@@ -81,7 +82,9 @@ export function NoteEditor() {
     if (!editor || !saveChangesRef.current) return;
     
     const unsubscribe = editor.onEditorContentChange(() => {
-      saveChangesRef.current?.();
+      if (saveChangesRef.current) {
+        saveChangesRef.current();
+      }
     });
     
     return () => {
