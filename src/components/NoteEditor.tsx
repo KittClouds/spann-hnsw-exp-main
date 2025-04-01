@@ -1,112 +1,153 @@
 
-import { useEffect, useRef, useState } from 'react';
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
-import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
-import { useBlockNote, BlockNoteView } from '@blocknote/react';
-import '@blocknote/core/style.css';
-import { cn } from '@/lib/utils';
+import { Input } from "@/components/ui/input";
+import { useEffect, useState } from 'react';
+import { useBlockNote } from "@blocknote/react";
+import { BlockNoteView } from "@blocknote/mantine";
+import "@blocknote/core/fonts/inter.css";
+import "@blocknote/mantine/style.css";
+import { PartialBlock } from '@blocknote/core';
+import { debounce } from 'lodash';
+import { NoteBreadcrumb } from './NoteBreadcrumb';
+import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/components/ui/resizable";
+import { ConnectionsPanel } from './ConnectionsPanel';
 
 export function NoteEditor() {
-  const [note, setNote] = useAtom(activeNoteAtom);
+  const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
   const [activeNoteId] = useAtom(activeNoteIdAtom);
-  const [title, setTitle] = useState('');
-  
-  const editorRef = useRef<BlockNoteEditor | null>(null);
-  const unsubscribeRef = useRef<(() => void) | undefined>();
-  
-  // Initialize the editor with the note content
-  const editor = useBlockNote({
-    initialContent: note?.content,
-    // Use onChange instead of onContentChange for recent versions of BlockNote
-    onChange: (editor) => {
-      if (note) {
-        // Update the note content when the editor content changes
-        setNote({
-          content: editor.topLevelBlocks,
-        });
-      }
-    },
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    }
+    return 'dark';
   });
   
-  // Store the editor instance in a ref
-  if (editor) {
-    editorRef.current = editor;
-  }
-  
-  // Update title state when the active note changes
+  // Create editor instance with default content if activeNote.content is empty
+  const editor = useBlockNote({
+    initialContent: activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0 
+      ? activeNote.content as PartialBlock[] 
+      : [{ type: "paragraph", content: [] }],
+  });
+
+  // Update theme when app theme changes
   useEffect(() => {
-    if (note) {
-      setTitle(note.title);
+    const handleThemeChange = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setTheme(isDark ? 'dark' : 'light');
+    };
+
+    // Initial check
+    handleThemeChange();
+
+    // Listen for theme changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.type === 'attributes' &&
+          mutation.attributeName === 'class'
+        ) {
+          handleThemeChange();
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Save changes to note content when editor changes
+  const saveChanges = debounce(() => {
+    if (editor && activeNote) {
+      const blocks = editor.document;
+      setActiveNote({
+        content: blocks,
+      });
     }
-  }, [note?.id]);
-  
-  // Update the note title when the user types in the title input
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value;
-    setTitle(newTitle);
+  }, 500);
+
+  // Set up editor change handler
+  useEffect(() => {
+    if (!editor) return;
     
-    if (note) {
-      // Update the note title in the store
-      setNote({
-        title: newTitle,
+    const unsubscribe = editor.onEditorContentChange(() => {
+      saveChanges();
+    });
+    
+    return () => {
+      saveChanges.cancel();
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [editor, saveChanges, activeNote]);
+
+  // Load note content when active note changes, but only once
+  useEffect(() => {
+    if (editor && activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
+      try {
+        // Use a try/catch to avoid breaking if the content format is unexpected
+        editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
+      } catch (error) {
+        console.error("Error replacing blocks:", error);
+      }
+    }
+  }, [activeNoteId, editor]);
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (activeNote) {
+      setActiveNote({
+        title: e.target.value
       });
     }
   };
-  
-  // Set up observer for content changes to maintain scroll position
-  useEffect(() => {
-    if (!editorRef.current) return;
-    
-    const previousUnsubscribe = unsubscribeRef.current;
-    if (previousUnsubscribe) {
-      previousUnsubscribe();
-      unsubscribeRef.current = undefined;
-    }
-    
-    // Disable freezing cursor position on editor re-renders
-    // This helps with line jumping issues
-    const editor = editorRef.current;
-    if (editor._tiptapEditor) {
-      editor._tiptapEditor.options.enableInputRules = false;
-    }
-    
-    return () => {
-      // Clean up the unsubscribe function when the component unmounts
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-      }
-    };
-  }, [activeNoteId, editorRef.current]);
-  
-  if (!note) {
+
+  if (!activeNote) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <p className="text-muted-foreground">No note selected</p>
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        <div className="text-center p-8 max-w-md">
+          <h3 className="text-xl font-medium mb-2">No note selected</h3>
+          <p className="text-sm">Select a note from the sidebar or create a new one to get started.</p>
+        </div>
       </div>
     );
   }
-  
+
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      <div className="p-4 border-b dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200">
-        <input
-          type="text"
-          value={title}
+    <ResizablePanelGroup className="flex-1 flex flex-col overflow-hidden" direction="vertical">
+      <ResizablePanel 
+        defaultSize={70} 
+        minSize={40}
+        className="flex flex-col p-6 dark:bg-galaxy-dark light:bg-white"
+      >
+        <NoteBreadcrumb />
+        
+        <Input
+          value={activeNote.title}
           onChange={handleTitleChange}
-          placeholder="Untitled Note"
-          className="w-full text-xl font-semibold bg-transparent border-none outline-none focus:ring-0 p-0 dark:text-white light:text-gray-900"
+          className="text-xl font-semibold mb-4 bg-transparent border-none focus-visible:ring-0 px-0 dark:cosmic-text-gradient-dark light:cosmic-text-gradient-light"
+          placeholder="Note Title"
         />
-      </div>
+
+        <div className="flex-1 dark:cosmic-editor-dark light:cosmic-editor-light rounded-lg overflow-auto transition-all duration-200">
+          <BlockNoteView 
+            editor={editor} 
+            theme={theme}
+            className="min-h-full"
+          />
+        </div>
+      </ResizablePanel>
       
-      <div className={cn("flex-1 overflow-auto p-4 prose prose-sm max-w-none dark:prose-invert")}>
-        <BlockNoteView
-          editor={editor}
-          editable={true}
-          className="min-h-[calc(100vh-8rem)]"
-          theme="light"
-        />
-      </div>
-    </div>
+      <ResizableHandle withHandle className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" />
+      
+      <ResizablePanel 
+        defaultSize={30} 
+        minSize={20}
+        className="dark:bg-galaxy-dark-accent light:bg-gray-50 border-t dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200"
+      >
+        <ConnectionsPanel />
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }

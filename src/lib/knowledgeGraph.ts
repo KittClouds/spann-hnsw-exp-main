@@ -1,6 +1,5 @@
 
-import Graph from 'graphology'; // Import graphology
-import { Note, Folder } from './store'; // Keep existing imports
+import { Note } from './store';
 
 export const RelationshipTypes = {
   MENTIONS: 'Mentions', // Default
@@ -13,54 +12,20 @@ export const RelationshipTypes = {
 
 export type RelationshipType = typeof RelationshipTypes[keyof typeof RelationshipTypes];
 
-// Define attribute interfaces for clarity
-export interface FolderNodeAttributes {
-  type: 'folder';
-  title: string; // Use folder name as title
-  path: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface NoteNodeAttributes {
-  type: 'note';
-  title: string;
-  path: string; // Path of the folder containing the note
-  createdAt: string;
-  updatedAt: string;
-  tags?: string[];
-}
-
-export interface ContainsEdgeAttributes {
-  type: 'contains';
-}
-
-export interface LinkEdgeAttributes {
-  type: 'link';
-  relationship: RelationshipType;
-}
-
-// Union type for node attributes
-export type NodeAttributes = FolderNodeAttributes | NoteNodeAttributes;
-// Union type for edge attributes
-export type EdgeAttributes = ContainsEdgeAttributes | LinkEdgeAttributes;
-
 export interface GraphNode {
   id: string;
   title: string;
-  type: 'note' | 'folder';
-  path?: string;
+  type: 'note';
 }
 
 export interface GraphEdge {
   source: string;
   target: string;
-  type: 'link' | 'contains';
-  relationship?: RelationshipType;
+  type: 'link';
+  relationship: RelationshipType;
 }
 
-// Rename this interface to avoid conflict with the graphology Graph
-export interface GraphData {
+export interface Graph {
   nodes: GraphNode[];
   edges: GraphEdge[];
 }
@@ -76,109 +41,53 @@ export interface NodeWithRelationship {
 }
 
 export class KnowledgeGraph {
-  private graph: Graph<NodeAttributes, EdgeAttributes>;
+  private nodes: Map<string, GraphNode>;
+  private edges: Map<string, GraphEdge[]>;
+  private incomingEdges: Map<string, GraphEdge[]>;
   private noteTitleToIdMap: Map<string, string>;
 
   constructor() {
-    // Initialize graphology instance with appropriate options
-    this.graph = new Graph<NodeAttributes, EdgeAttributes>({
-      type: 'directed', // We need directed edges for relationships
-      multi: false, // No parallel edges between same nodes with same type
-      allowSelfLoops: false // No self-referencing nodes
-    });
+    this.nodes = new Map();
+    this.edges = new Map();
+    this.incomingEdges = new Map();
     this.noteTitleToIdMap = new Map();
   }
 
-  buildGraph(notes: Note[], folders: Folder[]): void {
+  buildFromNotes(notes: Note[]): void {
     this._clearGraph();
     this._buildTitleMap(notes);
 
-    // 1. Add Folder Nodes
-    folders.forEach(folder => {
-      if (!this.graph.hasNode(folder.id)) {
-        this.graph.addNode(folder.id, {
-          type: 'folder',
-          title: folder.name,
-          path: folder.path,
-          createdAt: folder.createdAt,
-          updatedAt: folder.updatedAt
-        });
-      } else {
-        // Update existing node attributes if needed
-        this.graph.mergeNodeAttributes(folder.id, {
-          title: folder.name,
-          path: folder.path,
-          updatedAt: folder.updatedAt
-        });
-      }
-    });
-
-    // 2. Add Folder Hierarchy Edges ('contains')
-    folders.forEach(folder => {
-      if (folder.parentId && this.graph.hasNode(folder.parentId) && this.graph.hasNode(folder.id)) {
-        // Add folder containment edges
-        this.graph.mergeDirectedEdge(folder.parentId, folder.id, {
-          type: 'contains'
-        });
-      }
-    });
-
-    // 3. Add Note Nodes
+    // First, add all notes as nodes
     notes.forEach(note => {
-      if (!this.graph.hasNode(note.id)) {
-        this.graph.addNode(note.id, {
-          type: 'note',
-          title: note.title,
-          path: note.path,
-          createdAt: note.createdAt,
-          updatedAt: note.updatedAt,
-          tags: note.tags
-        });
-      } else {
-        // Update existing node attributes if needed
-        this.graph.mergeNodeAttributes(note.id, {
-          title: note.title,
-          path: note.path,
-          updatedAt: note.updatedAt,
-          tags: note.tags
-        });
-      }
+      this.nodes.set(note.id, {
+        id: note.id,
+        title: note.title,
+        type: 'note'
+      });
     });
 
-    // 4. Add Folder -> Note Edges ('contains')
-    notes.forEach(note => {
-      const parentFolder = folders.find(f => f.path === note.path);
-      const parentFolderId = parentFolder ? parentFolder.id : (note.path === '/' ? 'root' : null);
-
-      if (parentFolderId && this.graph.hasNode(parentFolderId) && this.graph.hasNode(note.id)) {
-        this.graph.mergeDirectedEdge(parentFolderId, note.id, {
-          type: 'contains'
-        });
-      }
-    });
-
-    // 5. Add Note -> Note Edges ('link') based on [[Title]]
+    // Then parse links from content and create edges
     notes.forEach(note => {
       const links = this.findLinksInContent(note.content);
+      
       links.forEach(linkInfo => {
+        // Find the target note by title (case-insensitive)
         const targetId = this._findNoteIdByTitle(linkInfo.title);
-        if (targetId && targetId !== note.id && this.graph.hasNode(note.id) && this.graph.hasNode(targetId)) {
-          this.graph.mergeDirectedEdge(note.id, targetId, {
-            type: 'link',
-            relationship: linkInfo.relationship
-          });
+        if (targetId) {
+          this.addEdge(note.id, targetId, linkInfo.relationship);
         }
       });
     });
   }
 
   private _clearGraph(): void {
-    this.graph.clear(); // Clears nodes and edges
+    this.nodes.clear();
+    this.edges.clear();
+    this.incomingEdges.clear();
     this.noteTitleToIdMap.clear();
   }
 
   private _buildTitleMap(notes: Note[]): void {
-    this.noteTitleToIdMap.clear();
     notes.forEach(note => {
       this.noteTitleToIdMap.set(note.title.toLowerCase(), note.id);
     });
@@ -202,7 +111,7 @@ export class KnowledgeGraph {
         const relationshipInput = match[3]?.trim();
         
         // Determine relationship type based on input or default to MENTIONS
-        let relationship: RelationshipType = RelationshipTypes.MENTIONS;
+        let relationship = RelationshipTypes.MENTIONS;
         
         if (relationshipInput) {
           // Check if the relationship input matches any known relationship type
@@ -252,138 +161,95 @@ export class KnowledgeGraph {
     return text;
   }
 
+  private addEdge(sourceId: string, targetId: string, relationship: RelationshipType): void {
+    // Don't add self-references
+    if (sourceId === targetId) return;
+    
+    const edge: GraphEdge = {
+      source: sourceId,
+      target: targetId,
+      type: 'link',
+      relationship
+    };
+
+    // Add to outgoing edges from source
+    if (!this.edges.has(sourceId)) {
+      this.edges.set(sourceId, []);
+    }
+    
+    // Check if this edge already exists
+    const existingEdges = this.edges.get(sourceId)!;
+    const edgeExists = existingEdges.some(e => 
+      e.source === sourceId && e.target === targetId && e.relationship === relationship
+    );
+    
+    if (!edgeExists) {
+      existingEdges.push(edge);
+    }
+    
+    // Add to incoming edges to target
+    if (!this.incomingEdges.has(targetId)) {
+      this.incomingEdges.set(targetId, []);
+    }
+    
+    // Check if this edge already exists in incoming
+    const existingIncomingEdges = this.incomingEdges.get(targetId)!;
+    const incomingEdgeExists = existingIncomingEdges.some(e => 
+      e.source === sourceId && e.target === targetId && e.relationship === relationship
+    );
+    
+    if (!incomingEdgeExists) {
+      existingIncomingEdges.push(edge);
+    }
+  }
+
   getOutgoingLinks(noteId: string): NodeWithRelationship[] {
-    if (!this.graph.hasNode(noteId)) return [];
-    
-    const outgoingLinks: NodeWithRelationship[] = [];
-    
-    this.graph.forEachOutboundNeighbor(noteId, (targetId, targetAttributes) => {
-      // Check if the edge type is 'link'
-      if (this.graph.hasDirectedEdge(noteId, targetId)) {
-        const edgeAttributes = this.graph.getDirectedEdgeAttributes(noteId, targetId);
-        
-        if (edgeAttributes.type === 'link' && targetAttributes.type === 'note') {
-          const node: GraphNode = {
-            id: targetId,
-            title: targetAttributes.title,
-            type: targetAttributes.type
-          };
-          
-          outgoingLinks.push({
-            node,
-            relationship: edgeAttributes.relationship as RelationshipType
-          });
-        }
-      }
-    });
-    
-    return outgoingLinks;
+    const outgoingEdges = this.edges.get(noteId) || [];
+    return outgoingEdges
+      .map(edge => {
+        const node = this.nodes.get(edge.target);
+        return node ? { node, relationship: edge.relationship } : null;
+      })
+      .filter((item): item is NodeWithRelationship => item !== null);
   }
 
   getIncomingLinks(noteId: string): NodeWithRelationship[] {
-    if (!this.graph.hasNode(noteId)) return [];
-    
-    const incomingLinks: NodeWithRelationship[] = [];
-    
-    this.graph.forEachInboundNeighbor(noteId, (sourceId, sourceAttributes) => {
-      // Check if the edge type is 'link'
-      if (this.graph.hasDirectedEdge(sourceId, noteId)) {
-        const edgeAttributes = this.graph.getDirectedEdgeAttributes(sourceId, noteId);
-        
-        if (edgeAttributes.type === 'link' && sourceAttributes.type === 'note') {
-          const node: GraphNode = {
-            id: sourceId,
-            title: sourceAttributes.title,
-            type: sourceAttributes.type
-          };
-          
-          incomingLinks.push({
-            node,
-            relationship: edgeAttributes.relationship as RelationshipType
-          });
-        }
-      }
-    });
-    
-    return incomingLinks;
+    const incomingEdges = this.incomingEdges.get(noteId) || [];
+    return incomingEdges
+      .map(edge => {
+        const node = this.nodes.get(edge.source);
+        return node ? { node, relationship: edge.relationship } : null;
+      })
+      .filter((item): item is NodeWithRelationship => item !== null);
   }
 
-  toJSON(): GraphData {
-    // Convert the graphology graph to our Graph format
-    const nodes: GraphNode[] = [];
-    const edges: GraphEdge[] = [];
-    
-    this.graph.forEachNode((nodeId, attributes) => {
-      nodes.push({
-        id: nodeId,
-        title: attributes.title,
-        type: attributes.type,
-        path: 'path' in attributes ? attributes.path : undefined
-      });
-    });
-    
-    this.graph.forEachEdge((edgeId, attributes, source, target) => {
-      if (attributes.type === 'link') {
-        edges.push({
-          source,
-          target,
-          type: 'link',
-          relationship: attributes.relationship
-        });
-      } else if (attributes.type === 'contains') {
-        edges.push({
-          source,
-          target,
-          type: 'contains'
-        });
-      }
-    });
-    
-    return { nodes, edges };
+  toJSON(): Graph {
+    return {
+      nodes: Array.from(this.nodes.values()),
+      edges: Array.from(this.edges.values()).flat()
+    };
   }
 
-  static fromJSON(graphData: GraphData): KnowledgeGraph {
-    const kg = new KnowledgeGraph();
+  static fromJSON(graphData: Graph): KnowledgeGraph {
+    const graph = new KnowledgeGraph();
     
-    // Clear the graph first
-    kg.graph.clear();
-    
-    // Add nodes
     graphData.nodes.forEach(node => {
-      const nodeAttributes: NodeAttributes = node.type === 'folder' 
-        ? {
-            type: 'folder',
-            title: node.title,
-            path: node.path || '/',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          } 
-        : {
-            type: 'note',
-            title: node.title,
-            path: node.path || '/',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            tags: []
-          };
-          
-      kg.graph.addNode(node.id, nodeAttributes);
+      graph.nodes.set(node.id, node);
     });
     
-    // Add edges
     graphData.edges.forEach(edge => {
-      if (edge.type === 'link') {
-        kg.graph.addDirectedEdge(edge.source, edge.target, {
-          type: 'link',
-          relationship: edge.relationship || RelationshipTypes.MENTIONS
-        });
-      } else if (edge.type === 'contains') {
-        kg.graph.addDirectedEdge(edge.source, edge.target, {
-          type: 'contains'
-        });
+      if (!graph.edges.has(edge.source)) {
+        graph.edges.set(edge.source, []);
       }
+      graph.edges.get(edge.source)!.push(edge);
+      
+      // Also rebuild incoming edges
+      if (!graph.incomingEdges.has(edge.target)) {
+        graph.incomingEdges.set(edge.target, []);
+      }
+      graph.incomingEdges.get(edge.target)!.push(edge);
     });
     
-    return kg;
+    return graph;
   }
 }

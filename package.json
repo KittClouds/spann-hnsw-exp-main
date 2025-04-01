@@ -48,7 +48,6 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
-    "graphology": "^0.26.0",
     "input-otp": "^1.2.4",
     "jotai": "^2.12.2",
     "lodash": "^4.17.21",
