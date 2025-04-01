@@ -1,7 +1,8 @@
+
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
 import { Input } from "@/components/ui/input";
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
@@ -22,6 +23,7 @@ export function NoteEditor() {
     return 'dark';
   });
   
+  // Initialize editor with proper defaults
   const editor = useBlockNote({
     initialContent: activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0 
       ? activeNote.content as PartialBlock[] 
@@ -52,46 +54,49 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  const saveChangesRef = useRef<ReturnType<typeof debounce>>();
-
-  useEffect(() => {
-    saveChangesRef.current = debounce(() => {
+  // Use callback to create a stable debounced function reference
+  const saveChanges = useCallback(
+    debounce((editor, activeNote, setActiveNote) => {
       if (editor && activeNote) {
         const blocks = editor.document;
         setActiveNote({
           content: blocks,
         });
       }
-    }, 500);
-    
-    return () => {
-      saveChangesRef.current?.cancel();
-    };
-  }, [editor, activeNote, setActiveNote]);
+    }, 500),
+    []
+  );
 
   useEffect(() => {
-    if (!editor || !saveChangesRef.current) return;
+    if (!editor) return;
     
     const unsubscribe = editor.onEditorContentChange(() => {
-      if (saveChangesRef.current) {
-        saveChangesRef.current();
-      }
+      saveChanges(editor, activeNote, setActiveNote);
     });
     
     return () => {
       if (unsubscribe) {
         unsubscribe();
       }
+      saveChanges.cancel();
     };
-  }, [editor]);
+  }, [editor, activeNote, setActiveNote, saveChanges]);
 
+  // Fix the editor content update logic
   useEffect(() => {
-    if (editor && activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
+    if (!editor || !activeNoteId || !activeNote) return;
+    
+    if (activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
       try {
         editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
       } catch (error) {
         console.error("Error replacing blocks:", error);
+        // In case of error, set simple content
+        editor.replaceBlocks(editor.document, [{ type: "paragraph", content: [] }]);
       }
+    } else {
+      // Set default content if note has no content
+      editor.replaceBlocks(editor.document, [{ type: "paragraph", content: [] }]);
     }
   }, [activeNoteId, editor, activeNote]);
 

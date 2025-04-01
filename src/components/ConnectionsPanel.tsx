@@ -32,10 +32,10 @@ export function ConnectionsPanel() {
     const grouped: Record<string, NodeWithRelationship[]> = {};
     
     for (const link of links) {
-      if (!grouped[link.relationship]) {
-        grouped[link.relationship] = [];
+      if (!grouped[link.relationshipType]) {
+        grouped[link.relationshipType] = [];
       }
-      grouped[link.relationship].push(link);
+      grouped[link.relationshipType].push(link);
     }
     
     return grouped;
@@ -75,21 +75,21 @@ export function ConnectionsPanel() {
               
               {outgoingLinks.length > 0 ? (
                 <div>
-                  {Object.entries(groupedOutgoingLinks).map(([relationship, links]) => (
-                    <div key={relationship} className="mb-4">
-                      <h5 className="text-xs font-semibold mt-2 mb-1 text-muted-foreground">{relationship} ({links.length})</h5>
+                  {Object.entries(groupedOutgoingLinks).map(([relationshipType, links]) => (
+                    <div key={relationshipType} className="mb-4">
+                      <h5 className="text-xs font-semibold mt-2 mb-1 text-muted-foreground">{relationshipType} ({links.length})</h5>
                       <div className="space-y-2">
                         {links.map(link => (
                           <Card 
-                            key={link.node.id} 
+                            key={link.id} 
                             className="p-2 dark:bg-galaxy-dark dark:hover:bg-galaxy-dark-purple dark:hover:bg-opacity-30 light:bg-white light:hover:bg-gray-50 transition-colors dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200"
                           >
                             <Button 
                               variant="ghost" 
                               className="w-full justify-start p-1 h-auto text-xs"
-                              onClick={() => handleLinkClick(link.node.id)}
+                              onClick={() => handleLinkClick(link.id)}
                             >
-                              {link.node.title}
+                              {link.title}
                             </Button>
                           </Card>
                         ))}
@@ -112,21 +112,21 @@ export function ConnectionsPanel() {
               
               {incomingLinks.length > 0 ? (
                 <div>
-                  {Object.entries(groupedIncomingLinks).map(([relationship, links]) => (
-                    <div key={relationship} className="mb-4">
-                      <h5 className="text-xs font-semibold mt-2 mb-1 text-muted-foreground">{relationship} ({links.length})</h5>
+                  {Object.entries(groupedIncomingLinks).map(([relationshipType, links]) => (
+                    <div key={relationshipType} className="mb-4">
+                      <h5 className="text-xs font-semibold mt-2 mb-1 text-muted-foreground">{relationshipType} ({links.length})</h5>
                       <div className="space-y-2">
                         {links.map(link => (
                           <Card 
-                            key={link.node.id} 
+                            key={link.id} 
                             className="p-2 dark:bg-galaxy-dark dark:hover:bg-galaxy-dark-purple dark:hover:bg-opacity-30 light:bg-white light:hover:bg-gray-50 transition-colors dark:border-galaxy-dark-purple dark:border-opacity-30 light:border-gray-200"
                           >
                             <Button 
                               variant="ghost" 
                               className="w-full justify-start p-1 h-auto text-xs"
-                              onClick={() => handleLinkClick(link.node.id)}
+                              onClick={() => handleLinkClick(link.id)}
                             >
-                              {link.node.title}
+                              {link.title}
                             </Button>
                           </Card>
                         ))}

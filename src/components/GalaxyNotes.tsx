@@ -14,24 +14,33 @@ export function GalaxyNotes() {
   
   // Initialize knowledge graph and migrate data when app loads
   useEffect(() => {
-    // Migrate existing data to use the cluster system
-    const { notes: migratedNotes, folders: migratedFolders } = migrateToClusterSystem(
-      notes, 
-      folders, 
-      'default-cluster'
-    );
+    // Only perform migration if notes or folders don't already have clusterId
+    const needsMigration = notes.some(note => !note.clusterId) || 
+                          folders.some(folder => !folder.clusterId);
     
-    // Update the notes and folders with the migrated data
-    setNotes(migratedNotes);
-    setFolders(migratedFolders);
+    if (needsMigration) {
+      // Migrate existing data to use the cluster system
+      const { notes: migratedNotes, folders: migratedFolders } = migrateToClusterSystem(
+        notes, 
+        folders, 
+        'default-cluster'
+      );
+      
+      // Update the notes and folders with the migrated data
+      setNotes(migratedNotes);
+      setFolders(migratedFolders);
+    }
     
     // Initialize the knowledge graph
     syncGraph();
     
-    // Also initialize the tools service (this is just for demonstration)
-    // In a real app, we'd use the useTools hook directly in the components
-    const toolsService = new ToolsService(migratedNotes, migratedFolders);
-    console.log('Tools service initialized', toolsService.getStats());
+    // Initialize the tools service (just for demonstration)
+    try {
+      const toolsService = new ToolsService(notes, folders);
+      console.log('Tools service initialized', toolsService.getStats());
+    } catch (error) {
+      console.error('Error initializing tools service:', error);
+    }
   }, [syncGraph, setNotes, setFolders, notes, folders]);
 
   return (
