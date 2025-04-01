@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
-import { useBlockNote, BlockNoteViewRaw } from '@blocknote/react';
+import { useBlockNote, BlockNoteView } from '@blocknote/react';
 import '@blocknote/core/style.css';
 import { cn } from '@/lib/utils';
 
@@ -18,9 +18,8 @@ export function NoteEditor() {
   // Initialize the editor with the note content
   const editor = useBlockNote({
     initialContent: note?.content,
-    // The 'editable' property is not valid in the options
-    // Instead, we'll pass it to the BlockNoteViewRaw component
-    onContentChange: (editor) => {
+    // Use onChange instead of onContentChange for recent versions of BlockNote
+    onChange: (editor) => {
       if (note) {
         // Update the note content when the editor content changes
         setNote({
@@ -101,7 +100,7 @@ export function NoteEditor() {
       </div>
       
       <div className={cn("flex-1 overflow-auto p-4 prose prose-sm max-w-none dark:prose-invert")}>
-        <BlockNoteViewRaw
+        <BlockNoteView
           editor={editor}
           editable={true}
           className="min-h-[calc(100vh-8rem)]"
