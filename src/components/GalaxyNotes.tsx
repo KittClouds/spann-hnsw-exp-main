@@ -11,7 +11,6 @@ export function GalaxyNotes() {
   
   // Initialize knowledge graph when app loads
   useEffect(() => {
-    // Call the sync function to build the initial graph
     syncGraph();
   }, [syncGraph]);
 
