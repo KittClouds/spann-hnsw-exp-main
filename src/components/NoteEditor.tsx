@@ -1,4 +1,3 @@
-
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom } from '@/lib/store';
 import { Input } from "@/components/ui/input";
@@ -23,24 +22,20 @@ export function NoteEditor() {
     return 'dark';
   });
   
-  // Create editor instance with default content if activeNote.content is empty
   const editor = useBlockNote({
     initialContent: activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0 
       ? activeNote.content as PartialBlock[] 
       : [{ type: "paragraph", content: [] }],
   });
 
-  // Update theme when app theme changes
   useEffect(() => {
     const handleThemeChange = () => {
       const isDark = document.documentElement.classList.contains('dark');
       setTheme(isDark ? 'dark' : 'light');
     };
 
-    // Initial check
     handleThemeChange();
 
-    // Listen for theme changes
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (
@@ -57,7 +52,6 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Save changes to note content when editor changes
   const saveChanges = debounce(() => {
     if (editor && activeNote) {
       const blocks = editor.document;
@@ -67,7 +61,6 @@ export function NoteEditor() {
     }
   }, 500);
 
-  // Set up editor change handler
   useEffect(() => {
     if (!editor) return;
     
@@ -77,17 +70,15 @@ export function NoteEditor() {
     
     return () => {
       saveChanges.cancel();
-      if (unsubscribe) {
+      if (typeof unsubscribe === 'function') {
         unsubscribe();
       }
     };
   }, [editor, saveChanges, activeNote]);
 
-  // Load note content when active note changes, but only once
   useEffect(() => {
     if (editor && activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
       try {
-        // Use a try/catch to avoid breaking if the content format is unexpected
         editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
       } catch (error) {
         console.error("Error replacing blocks:", error);

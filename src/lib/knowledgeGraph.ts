@@ -1,3 +1,4 @@
+
 import Graph from 'graphology';
 import { Note, Folder } from './store';
 
@@ -192,12 +193,15 @@ export class KnowledgeGraph {
         const title = match[1].trim();
         const relationshipInput = match[3]?.trim();
         
-        let relationship = RelationshipTypes.MENTIONS;
+        // Default to "Mentions" relationship
+        let relationship: RelationshipType = RelationshipTypes.MENTIONS;
         
         if (relationshipInput) {
+          // Find the matching relationship type if provided
           const matchedRelationship = Object.values(RelationshipTypes).find(
             r => r.toLowerCase() === relationshipInput.toLowerCase()
           );
+          
           if (matchedRelationship) {
             relationship = matchedRelationship;
           }

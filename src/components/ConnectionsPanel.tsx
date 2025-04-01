@@ -1,4 +1,3 @@
-
 import { useAtom } from 'jotai';
 import { activeNoteIdAtom, knowledgeGraphAtom, syncKnowledgeGraphAtom } from '@/lib/store';
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ export function ConnectionsPanel() {
   
   // Sync the graph when the component mounts
   useEffect(() => {
+    // Call the sync function
     syncGraph();
   }, [syncGraph]);
   
