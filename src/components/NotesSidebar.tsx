@@ -32,7 +32,10 @@ export function NotesSidebar() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleNewNote = useCallback(() => {
-    const { id, note } = createNote(currentPath, currentClusterId);
+    const { id, note } = createNote(
+      currentPath, 
+      viewMode === 'clusters' ? currentClusterId : undefined
+    );
     
     // Add the new note to the notes array
     setNotes(prevNotes => [...prevNotes, note]);
@@ -43,7 +46,7 @@ export function NotesSidebar() {
     toast("New note created", {
       description: "Start typing to edit your note",
     });
-  }, [setNotes, setActiveNoteId, currentPath, currentClusterId]);
+  }, [setNotes, setActiveNoteId, currentPath, currentClusterId, viewMode]);
 
   // Get breadcrumbs for the current folder
   const breadcrumbs = getBreadcrumbsFromPath(currentPath, folders);
@@ -63,6 +66,8 @@ export function NotesSidebar() {
   // Handle changing view mode
   const handleViewModeChange = (value: string) => {
     setViewMode(value as 'folders' | 'clusters');
+    // Reset current path to root when switching views
+    setCurrentPath('/');
   };
 
   return (
@@ -142,6 +147,11 @@ export function NotesSidebar() {
                           setActiveNoteId(note.id);
                           // Navigate to the folder containing this note
                           setCurrentPath(note.path);
+                          
+                          // Also update view mode if needed
+                          if (note.clusterId && note.clusterId !== 'default-cluster') {
+                            setViewMode('clusters');
+                          }
                         }}
                       >
                         <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
@@ -163,7 +173,7 @@ export function NotesSidebar() {
             
             <ScrollArea className="flex-1">
               <div className="py-2">
-                <FolderTree parentId={null} path="/" level={0} />
+                <FolderTree parentId={null} path="/" level={0} viewMode="folders" />
               </div>
             </ScrollArea>
           </TabsContent>
