@@ -76,7 +76,9 @@ export function NoteEditor() {
     });
     
     return () => {
-      unsubscribe?.(); // Fixed the unsubscribe check
+      if (unsubscribe) {
+        unsubscribe();
+      }
       saveChanges.cancel();
     };
   }, [editor, activeNote, setActiveNote, saveChanges]);

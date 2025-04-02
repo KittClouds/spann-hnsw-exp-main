@@ -40,17 +40,33 @@ export function NoteItem({
       
       {/* Show actions when hovered or dropdown is open */}
       {(hoveredNoteId === noteId || movePopoverOpenForNoteId === noteId) && (
-        <div className="flex items-center">
+        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
           <Trash2Icon 
             className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive cursor-pointer ml-1"
             onClick={(e) => handleDeleteNote(noteId, e)}
           />
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu open={movePopoverOpenForNoteId === noteId} onOpenChange={(open) => {
+            if (open) {
+              setHoveredNoteId(noteId); // Keep hover state when opened
+            }
+            // Toggle the move popover
+            if (open !== (movePopoverOpenForNoteId === noteId)) {
+              toggleMovePopover(noteId, new MouseEvent('click') as any);
+            }
+          }}>
+            <DropdownMenuTrigger asChild onClick={(e) => {
+              e.stopPropagation();
+              toggleMovePopover(noteId, e);
+            }}>
               <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground cursor-pointer ml-1" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="right">
+            <DropdownMenuContent 
+              align="end" 
+              side="right"
+              onClick={(e) => e.stopPropagation()}
+              className="z-50"
+            >
               {allFolders.map((folder: Folder) => (
                 <DropdownMenuItem 
                   key={folder.id}
