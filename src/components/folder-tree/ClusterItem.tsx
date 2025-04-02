@@ -111,7 +111,6 @@ export function ClusterItem({
                 path="/" 
                 level={0} 
                 clusterId={cluster.id} 
-                viewMode="clusters"
               />
             </div>
           )}
