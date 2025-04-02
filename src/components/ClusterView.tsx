@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
 import { Cluster, clustersAtom, createCluster, deleteCluster, renameCluster, createFolder, createNote, notesAtom, foldersAtom, currentClusterIdAtom } from '@/lib/store';
@@ -14,9 +15,11 @@ export function ClusterView() {
   const [folders, setFolders] = useAtom(foldersAtom);
   const [currentClusterId, setCurrentClusterId] = useAtom(currentClusterIdAtom);
   
+  // UI state
   const [expandedClusters, setExpandedClusters] = useState<Record<string, boolean>>({});
   const [hoveredClusterId, setHoveredClusterId] = useState<string | null>(null);
   
+  // Dialog state
   const [isNewClusterDialogOpen, setIsNewClusterDialogOpen] = useState(false);
   const [newClusterName, setNewClusterName] = useState('');
   
@@ -42,6 +45,7 @@ export function ClusterView() {
     setCurrentClusterId(clusterId);
   };
 
+  // New cluster dialog functions
   const openNewClusterDialog = () => {
     setNewClusterName('');
     setIsNewClusterDialogOpen(true);
@@ -57,10 +61,21 @@ export function ClusterView() {
       return;
     }
 
+    // Check if cluster name already exists
+    const clusterExists = clusters.some(
+      cluster => cluster.name.toLowerCase() === newClusterName.toLowerCase()
+    );
+
+    if (clusterExists) {
+      toast.error('A cluster with this name already exists');
+      return;
+    }
+
     const { id, cluster } = createCluster(newClusterName);
     setClusters([...clusters, cluster]);
     setIsNewClusterDialogOpen(false);
     
+    // Auto-expand the new cluster
     setExpandedClusters(prev => ({
       ...prev,
       [id]: true
@@ -69,6 +84,7 @@ export function ClusterView() {
     toast.success('Cluster created successfully');
   };
 
+  // Rename cluster dialog functions
   const openRenameClusterDialog = (cluster: Cluster, e: React.MouseEvent) => {
     e.stopPropagation();
     setClusterToRename(cluster);
@@ -89,6 +105,14 @@ export function ClusterView() {
       return;
     }
     
+    // Check if the new name is the same as the old one
+    if (clusterToRename.name === newRenameClusterName) {
+      setIsRenameClusterDialogOpen(false);
+      setClusterToRename(null);
+      return;
+    }
+    
+    // Check if cluster name already exists
     const clusterExists = clusters.some(
       cluster => 
         cluster.id !== clusterToRename.id &&
@@ -113,6 +137,7 @@ export function ClusterView() {
     toast.success('Cluster renamed successfully');
   };
 
+  // Delete cluster dialog functions
   const handleDeleteClick = (cluster: Cluster, e: React.MouseEvent) => {
     e.stopPropagation();
     setClusterToDelete(cluster);
@@ -127,6 +152,7 @@ export function ClusterView() {
   const confirmDelete = () => {
     if (!clusterToDelete) return;
     
+    // Check if we can delete the cluster
     const { canDelete, clusters: updatedClusters } = deleteCluster(
       clusters,
       folders,
@@ -141,7 +167,9 @@ export function ClusterView() {
       return;
     }
     
+    // Update current cluster ID if we're deleting the current cluster
     if (currentClusterId === clusterToDelete.id) {
+      // Switch to default cluster or first available cluster
       const defaultCluster = clusters.find(c => c.id === 'default-cluster');
       const firstCluster = clusters.find(c => c.id !== clusterToDelete.id);
       setCurrentClusterId(defaultCluster?.id || firstCluster?.id || 'default-cluster');
@@ -154,23 +182,27 @@ export function ClusterView() {
     toast.success('Cluster deleted successfully');
   };
 
+  // Create folder in cluster
   const handleCreateFolder = (clusterId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
     const { folder } = createFolder('New Folder', '/', null, clusterId);
     setFolders([...folders, folder]);
     
+    // Set as current cluster
     setCurrentClusterId(clusterId);
     
     toast.success('Folder created successfully');
   };
 
+  // Create note in cluster
   const handleCreateNote = (clusterId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
     const { id, note } = createNote('/', clusterId);
     setNotes([...notes, note]);
     
+    // Set as current cluster
     setCurrentClusterId(clusterId);
     
     toast.success('Note created successfully');
@@ -206,6 +238,7 @@ export function ClusterView() {
         </Button>
       </div>
       
+      {/* Dialog for creating new clusters */}
       <FolderForm
         isOpen={isNewClusterDialogOpen}
         title="Create new cluster"
@@ -215,6 +248,7 @@ export function ClusterView() {
         onSubmit={handleCreateCluster}
       />
       
+      {/* Dialog for renaming clusters */}
       <FolderForm
         isOpen={isRenameClusterDialogOpen}
         title="Rename cluster"
@@ -224,6 +258,7 @@ export function ClusterView() {
         onSubmit={handleRenameCluster}
       />
       
+      {/* Alert dialog for confirming cluster deletion */}
       <DeleteFolderDialog
         isOpen={isDeleteDialogOpen}
         onClose={cancelDelete}

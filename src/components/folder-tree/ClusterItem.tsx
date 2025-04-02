@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { ChevronRight, Edit, Layers, Plus, Trash2 } from 'lucide-react';
+import React from 'react';
+import { ChevronRight, FolderIcon, Edit, Trash2, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { 
@@ -9,10 +9,8 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-import { FolderTree } from './FolderTree';
-import { useAtom } from 'jotai';
-import { currentFolderPathAtom } from '@/lib/store';
 import { ClusterItemProps } from './types';
+import { FolderTree } from './FolderTree';
 
 export function ClusterItem({
   cluster,
@@ -27,12 +25,10 @@ export function ClusterItem({
   handleCreateNote,
   setHoveredClusterId
 }: ClusterItemProps) {
-  const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
-
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <div className="flex flex-col">
+        <div className="py-1">
           <div 
             className={cn(
               "flex items-center py-1 px-2 rounded-md text-sm cursor-pointer transition-colors group",
@@ -59,11 +55,11 @@ export function ClusterItem({
             </button>
             
             <button 
-              className="flex items-center gap-2 flex-1"
+              className="flex gap-2 items-center flex-1"
               onClick={() => handleClusterClick(cluster.id)}
             >
-              <Layers className="h-4 w-4 text-muted-foreground" />
-              <span>{cluster.name}</span>
+              <FolderIcon className="h-4 w-4 text-muted-foreground" />
+              <span className="font-semibold">{cluster.name}</span>
             </button>
 
             {hoveredClusterId === cluster.id && (
@@ -75,7 +71,7 @@ export function ClusterItem({
                   className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                   title="New folder"
                 >
-                  <Plus className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
+                  <FolderIcon className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
                 </Button>
                 <Button
                   variant="ghost"
@@ -114,8 +110,7 @@ export function ClusterItem({
                 parentId={null} 
                 path="/" 
                 level={0} 
-                clusterId={cluster.id}
-                viewMode="clusters" 
+                clusterId={cluster.id} 
               />
             </div>
           )}
@@ -132,7 +127,9 @@ export function ClusterItem({
         <ContextMenuItem onClick={(e) => openRenameClusterDialog(cluster, e as React.MouseEvent)}>
           Rename Cluster
         </ContextMenuItem>
-        <ContextMenuItem onClick={(e) => handleDeleteClick(cluster, e as React.MouseEvent)}>
+        <ContextMenuItem onClick={() => {
+          handleDeleteClick(cluster, {} as React.MouseEvent);
+        }}>
           Delete Cluster
         </ContextMenuItem>
       </ContextMenuContent>

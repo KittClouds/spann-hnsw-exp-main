@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
 import { Plus } from 'lucide-react';
@@ -51,8 +52,8 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode }: Folde
     const matchesParent = folder.parentId === parentId && (parentId !== null || folder.id !== 'root');
     
     if (viewMode === 'folders') {
-      // In folders view, only show folders that belong to the default cluster
-      return matchesParent && folder.clusterId === 'default-cluster';
+      // In folders view, only show folders with no clusterId or default clusterId
+      return matchesParent && (!folder.clusterId || folder.clusterId === 'default-cluster');
     } else if (viewMode === 'clusters' && clusterId) {
       // In clusters view, only show folders that belong to the current cluster
       return matchesParent && folder.clusterId === clusterId;
@@ -66,8 +67,8 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode }: Folde
     const matchesPath = note.path === path;
     
     if (viewMode === 'folders') {
-      // In folders view, only show notes that belong to the default cluster
-      return matchesPath && note.clusterId === 'default-cluster';
+      // In folders view, only show notes with no clusterId or default clusterId
+      return matchesPath && (!note.clusterId || note.clusterId === 'default-cluster');
     } else if (viewMode === 'clusters' && clusterId) {
       // In clusters view, only show notes that belong to the current cluster
       return matchesPath && note.clusterId === clusterId;
@@ -84,7 +85,7 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode }: Folde
     if (viewMode === 'folders') {
       availableFolders = folders.filter(f => 
         f.id !== 'root' && 
-        f.clusterId === 'default-cluster'
+        (!f.clusterId || f.clusterId === 'default-cluster')
       );
     } else if (viewMode === 'clusters' && clusterId) {
       availableFolders = folders.filter(f => 
@@ -125,7 +126,7 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode }: Folde
     if (viewMode === 'clusters' && clusterId) {
       setClusterIdForNewFolder(clusterId);
     } else {
-      // For folders view, use default cluster
+      // For folders view, use default cluster or none
       setClusterIdForNewFolder('default-cluster');
     }
     
@@ -156,7 +157,7 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode }: Folde
       newFolderName, 
       folderPathForNewFolder, 
       folderPathForNewFolder === '/' ? null : folders.find(f => f.path === folderPathForNewFolder)?.id || null,
-      clusterIdForNewFolder || 'default-cluster'
+      clusterIdForNewFolder
     );
     
     setFolders([...folders, folder]);
@@ -402,12 +403,14 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode }: Folde
             <>
               {/* Render notes inside this folder */}
               {notes
-                .filter(note => 
-                  note.path === folder.path && 
-                  (viewMode === 'folders' 
-                    ? note.clusterId === 'default-cluster'
-                    : note.clusterId === clusterId)
-                )
+                .filter(note => {
+                  if (viewMode === 'folders') {
+                    return note.path === folder.path && (!note.clusterId || note.clusterId === 'default-cluster');
+                  } else if (viewMode === 'clusters') {
+                    return note.path === folder.path && note.clusterId === clusterId;
+                  }
+                  return false;
+                })
                 .map(note => (
                   <NoteItem
                     key={note.id}
