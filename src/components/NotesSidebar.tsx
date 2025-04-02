@@ -16,7 +16,7 @@ import {
   currentClusterIdAtom,
 } from '@/lib/store';
 import { Input } from '@/components/ui/input';
-import { FolderTree } from './folder-tree';
+import { FolderTree } from './FolderTree';
 import { ClusterView } from './ClusterView';
 import { toast } from 'sonner';
 import { useCallback, useState } from 'react';
@@ -28,13 +28,11 @@ export function NotesSidebar() {
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
   const [viewMode, setViewMode] = useAtom(viewModeAtom);
-  const [currentClusterId, setCurrentClusterId] = useAtom(currentClusterIdAtom);
+  const [currentClusterId] = useAtom(currentClusterIdAtom);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleNewNote = useCallback(() => {
-    // Create note with the appropriate cluster ID based on view mode
-    const targetClusterId = viewMode === 'clusters' ? currentClusterId : 'default-cluster';
-    const { id, note } = createNote(currentPath, targetClusterId);
+    const { id, note } = createNote(currentPath, currentClusterId);
     
     // Add the new note to the notes array
     setNotes(prevNotes => [...prevNotes, note]);
@@ -45,7 +43,7 @@ export function NotesSidebar() {
     toast("New note created", {
       description: "Start typing to edit your note",
     });
-  }, [setNotes, setActiveNoteId, currentPath, currentClusterId, viewMode]);
+  }, [setNotes, setActiveNoteId, currentPath, currentClusterId]);
 
   // Get breadcrumbs for the current folder
   const breadcrumbs = getBreadcrumbsFromPath(currentPath, folders);
@@ -144,11 +142,6 @@ export function NotesSidebar() {
                           setActiveNoteId(note.id);
                           // Navigate to the folder containing this note
                           setCurrentPath(note.path);
-                          
-                          // When in clusters view, also set the current cluster
-                          if (viewMode === 'clusters') {
-                            setCurrentClusterId(note.clusterId);
-                          }
                         }}
                       >
                         <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
@@ -170,7 +163,6 @@ export function NotesSidebar() {
             
             <ScrollArea className="flex-1">
               <div className="py-2">
-                {/* In folders mode, don't pass clusterId */}
                 <FolderTree parentId={null} path="/" level={0} />
               </div>
             </ScrollArea>
