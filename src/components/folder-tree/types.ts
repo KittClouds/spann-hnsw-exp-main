@@ -1,3 +1,4 @@
+
 import { Folder, Cluster } from '@/lib/store';
 
 export interface FolderTreeProps {
@@ -5,7 +6,6 @@ export interface FolderTreeProps {
   path: string;
   level: number;
   clusterId?: string;
-  viewMode?: 'folders' | 'clusters'; // Add viewMode prop
 }
 
 export interface FolderItemProps {
