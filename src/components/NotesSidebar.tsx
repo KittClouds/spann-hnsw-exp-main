@@ -1,4 +1,3 @@
-
 import { useAtom } from 'jotai';
 import { Plus, Search, Tag, FolderIcon, FileIcon, Layers } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -34,21 +33,15 @@ export function NotesSidebar() {
   const handleNewNote = useCallback(() => {
     const { id, note } = createNote(currentPath, currentClusterId);
     
-    // Add the new note to the notes array
     setNotes(prevNotes => [...prevNotes, note]);
-    
-    // Set the new note as active
     setActiveNoteId(id);
-    
     toast("New note created", {
       description: "Start typing to edit your note",
     });
   }, [setNotes, setActiveNoteId, currentPath, currentClusterId]);
 
-  // Get breadcrumbs for the current folder
   const breadcrumbs = getBreadcrumbsFromPath(currentPath, folders);
-  
-  // Apply search filtering if there's a search query
+
   const filteredNotes = searchQuery.trim() 
     ? notes.filter(note => 
         note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -60,7 +53,6 @@ export function NotesSidebar() {
     setSearchQuery(e.target.value);
   };
 
-  // Handle changing view mode
   const handleViewModeChange = (value: string) => {
     setViewMode(value as 'folders' | 'clusters');
   };
@@ -92,7 +84,6 @@ export function NotesSidebar() {
       
       <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" />
 
-      {/* View mode selector */}
       <div className="px-4 py-2">
         <Tabs value={viewMode} onValueChange={handleViewModeChange} className="w-full">
           <TabsList className="w-full">
@@ -107,7 +98,6 @@ export function NotesSidebar() {
           </TabsList>
 
           <div className="space-y-2 mt-2">
-            {/* Display current folder path in folders view */}
             {viewMode === 'folders' && breadcrumbs.length > 1 && (
               <div className="px-0 py-2">
                 <div className="flex flex-wrap gap-1 items-center">
@@ -126,7 +116,6 @@ export function NotesSidebar() {
               </div>
             )}
 
-            {/* Show search results if search is active */}
             {searchQuery.trim() !== '' && (
               <div className="px-0 py-2">
                 <div className="text-xs font-medium text-muted-foreground py-1">
@@ -140,7 +129,6 @@ export function NotesSidebar() {
                         className="flex items-center py-1 px-2 text-sm cursor-pointer hover:bg-accent rounded-md"
                         onClick={() => {
                           setActiveNoteId(note.id);
-                          // Navigate to the folder containing this note
                           setCurrentPath(note.path);
                         }}
                       >
@@ -163,7 +151,7 @@ export function NotesSidebar() {
             
             <ScrollArea className="flex-1">
               <div className="py-2">
-                <FolderTree parentId={null} path="/" level={0} />
+                <FolderTree parentId={null} path="/" level={0} viewMode="folders" />
               </div>
             </ScrollArea>
           </TabsContent>
