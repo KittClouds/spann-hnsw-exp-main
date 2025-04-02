@@ -1,8 +1,9 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAtom } from 'jotai';
-import { BlockNoteEditor, createBlockNoteEditor } from "@blocknote/core";
+import { BlockNoteEditor } from "@blocknote/core";
 import { BlockNoteView } from "@blocknote/mantine";
+import { useCreateBlockNote } from "@blocknote/react";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { activeNoteAtom, activeNoteIdAtom, notesAtom } from '@/lib/store';
@@ -54,20 +55,8 @@ export function NoteEditor({}: NoteEditorProps) {
   const [selectedTag, setSelectedTag] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Create the editor
-  const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
-  
-  useEffect(() => {
-    // Initialize the editor
-    const newEditor = createBlockNoteEditor({
-      readOnly: false,
-    });
-    setEditor(newEditor);
-    
-    return () => {
-      // Clean up if needed
-    };
-  }, []);
+  // Create the editor using the hook from @blocknote/react
+  const editor = useCreateBlockNote();
   
   // Update editor content when active note changes
   useEffect(() => {
@@ -77,15 +66,17 @@ export function NoteEditor({}: NoteEditorProps) {
       // Convert the content stored in the note to the format expected by the editor
       const contentToLoad = activeNote.content;
       if (contentToLoad) {
-        editor.replaceBlocks(editor.document, contentToLoad);
+        editor.replaceBlocks(editor.topLevelBlocks, contentToLoad);
       } else {
-        editor.clear();
+        // If no content, we'll just leave the editor with default blocks
+        editor.replaceBlocks(editor.topLevelBlocks, []);
       }
       
       setNoteTitle(activeNote.title);
     } catch (error) {
       console.error("Error loading note content:", error);
-      editor.clear();
+      // Reset to empty state on error
+      editor.replaceBlocks(editor.topLevelBlocks, []);
     }
   }, [activeNote, editor]);
   
@@ -102,7 +93,7 @@ export function NoteEditor({}: NoteEditorProps) {
     
     const saveContent = () => {
       try {
-        const currentBlocks = editor.document;
+        const currentBlocks = editor.topLevelBlocks;
         setActiveNote({ content: currentBlocks });
       } catch (error) {
         console.error("Error saving note content:", error);
@@ -110,7 +101,7 @@ export function NoteEditor({}: NoteEditorProps) {
     };
     
     // Set up a callback for content changes
-    const unsubscribe = editor.onEditorContentChange(() => {
+    const unsubscribe = editor.onChange(() => {
       saveContent();
     });
     
@@ -127,16 +118,14 @@ export function NoteEditor({}: NoteEditorProps) {
     if (!activeNote) return;
     
     if (!newTag.trim()) {
-      toast({
-        title: "No tag provided",
+      toast.error("No tag provided", {
         description: "Please enter a tag name",
       });
       return;
     }
     
     if (activeNote.tags.includes(newTag)) {
-      toast({
-        title: "Tag already exists",
+      toast.error("Tag already exists", {
         description: "This tag is already added to the note",
       });
       return;
@@ -146,8 +135,7 @@ export function NoteEditor({}: NoteEditorProps) {
     setNewTag('');
     setIsDialogOpen(false);
     
-    toast({
-      title: "Tag added",
+    toast.success("Tag added", {
       description: "The tag has been added to the note",
     });
   };
@@ -157,8 +145,7 @@ export function NoteEditor({}: NoteEditorProps) {
     
     setActiveNote({ tags: activeNote.tags.filter(tag => tag !== tagToRemove) });
     
-    toast({
-      title: "Tag removed",
+    toast.success("Tag removed", {
       description: "The tag has been removed from the note",
     });
   };
