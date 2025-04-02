@@ -1,4 +1,3 @@
-
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
@@ -144,16 +143,12 @@ export const currentFolderNotesAtom = atom(
     const currentClusterId = get(currentClusterIdAtom);
     const viewMode = get(viewModeAtom);
     
-    // Filter by path first
-    const pathFilteredNotes = notes.filter(note => note.path === currentPath);
-    
-    // Then apply cluster filtering based on view mode
     if (viewMode === 'folders') {
-      // In folders view, only show notes from the default cluster
-      return pathFilteredNotes.filter(note => note.clusterId === 'default-cluster');
+      return notes.filter(note => note.path === currentPath);
     } else {
-      // In clusters view, only show notes from the current cluster
-      return pathFilteredNotes.filter(note => note.clusterId === currentClusterId);
+      return notes.filter(note => 
+        note.path === currentPath && note.clusterId === currentClusterId
+      );
     }
   }
 );
@@ -169,12 +164,8 @@ export const currentFolderChildrenAtom = atom(
     // For root path ("/"), we want folders with parentId null
     if (currentPath === '/') {
       if (viewMode === 'folders') {
-        // In folders mode, only show root folders from the default cluster
-        return folders.filter(folder => 
-          folder.parentId === null && 
-          folder.id !== 'root' && 
-          folder.clusterId === 'default-cluster'
-        );
+        // In folders mode, show all root folders from all clusters
+        return folders.filter(folder => folder.parentId === null && folder.id !== 'root');
       } else {
         // In clusters mode, only show root folders from the current cluster
         return folders.filter(folder => 
@@ -192,10 +183,7 @@ export const currentFolderChildrenAtom = atom(
     
     // Return folders that have this folder as parent
     if (viewMode === 'folders') {
-      return folders.filter(folder => 
-        folder.parentId === currentFolder.id &&
-        folder.clusterId === 'default-cluster'
-      );
+      return folders.filter(folder => folder.parentId === currentFolder.id);
     } else {
       return folders.filter(folder => 
         folder.parentId === currentFolder.id && 
