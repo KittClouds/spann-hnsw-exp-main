@@ -4,7 +4,7 @@ export interface FolderTreeProps {
   path: string;
   level: number;
   clusterId?: string;
-  viewMode?: 'folders' | 'clusters';
+  viewMode: 'folders' | 'clusters';
 }
 
 export interface FolderItemProps {

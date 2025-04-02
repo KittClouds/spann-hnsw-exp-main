@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
 import { Plus } from 'lucide-react';
@@ -22,13 +23,16 @@ import { NoteItem } from './NoteItem';
 import { FolderForm } from './FolderForm';
 import { DeleteFolderDialog } from './DeleteFolderDialog';
 
-export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps) {
+export function FolderTree({ parentId, path, level, clusterId, viewMode }: FolderTreeProps) {
   const [folders, setFolders] = useAtom(foldersAtom);
   const [notes, setNotes] = useAtom(notesAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
   const [currentClusterId, setCurrentClusterId] = useAtom(currentClusterIdAtom);
-  const [viewMode] = useAtom(viewModeAtom);
+  const [globalViewMode] = useAtom(viewModeAtom);
+  
+  // Use provided viewMode or fall back to global viewMode
+  const effectiveViewMode = viewMode || globalViewMode;
   
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
@@ -52,10 +56,10 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
   const childFolders = folders.filter(folder => {
     const matchesParent = folder.parentId === parentId && (parentId !== null || folder.id !== 'root');
     
-    if (viewMode === 'folders') {
+    if (effectiveViewMode === 'folders') {
       // In folders view, only show folders that belong to the default cluster
       return matchesParent && folder.clusterId === 'default-cluster';
-    } else if (viewMode === 'clusters' && clusterId) {
+    } else if (effectiveViewMode === 'clusters' && clusterId) {
       // In clusters view, only show folders that belong to the current cluster
       return matchesParent && folder.clusterId === clusterId;
     }
@@ -67,10 +71,10 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
   const folderNotes = notes.filter(note => {
     const matchesPath = note.path === path;
     
-    if (viewMode === 'folders') {
+    if (effectiveViewMode === 'folders') {
       // In folders view, only show notes with default clusterId
       return matchesPath && note.clusterId === 'default-cluster';
-    } else if (viewMode === 'clusters' && clusterId) {
+    } else if (effectiveViewMode === 'clusters' && clusterId) {
       // In clusters view, only show notes that belong to the current cluster
       return matchesPath && note.clusterId === clusterId;
     }
@@ -83,12 +87,12 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
     const rootFolder = { id: 'root', name: 'Home', path: '/', clusterId: clusterId || 'default-cluster' };
     
     let availableFolders;
-    if (viewMode === 'folders') {
+    if (effectiveViewMode === 'folders') {
       availableFolders = folders.filter(f => 
         f.id !== 'root' && 
         f.clusterId === 'default-cluster'
       );
-    } else if (viewMode === 'clusters' && clusterId) {
+    } else if (effectiveViewMode === 'clusters' && clusterId) {
       availableFolders = folders.filter(f => 
         f.id !== 'root' && 
         f.clusterId === clusterId
@@ -98,7 +102,7 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
     }
     
     return [rootFolder, ...availableFolders];
-  }, [folders, clusterId, viewMode]);
+  }, [folders, clusterId, effectiveViewMode]);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => ({
@@ -124,7 +128,7 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
     setNewFolderName('');
     
     // Set the appropriate clusterId for the new folder
-    if (viewMode === 'clusters' && clusterId) {
+    if (effectiveViewMode === 'clusters' && clusterId) {
       setClusterIdForNewFolder(clusterId);
     } else {
       // For folders view, use default cluster
@@ -289,7 +293,7 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
     
     // Determine the correct clusterId based on the view mode
     const effectiveClusterId = 
-      viewMode === 'clusters' && clusterId ? 
+      effectiveViewMode === 'clusters' && clusterId ? 
         clusterId : 
         'default-cluster';
     
@@ -299,7 +303,7 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
     setActiveNoteId(id);
     
     // Update current cluster ID if we're in clusters mode
-    if (viewMode === 'clusters' && clusterId) {
+    if (effectiveViewMode === 'clusters' && clusterId) {
       setCurrentClusterId(clusterId);
     }
     
@@ -365,7 +369,7 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
     
     // Determine the correct clusterId based on the view mode
     const effectiveTargetClusterId = 
-      viewMode === 'clusters' ? 
+      effectiveViewMode === 'clusters' ? 
         clusterId || targetClusterId : 
         'default-cluster';
     
@@ -402,9 +406,9 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
               {/* Render notes inside this folder */}
               {notes
                 .filter(note => {
-                  if (viewMode === 'folders') {
+                  if (effectiveViewMode === 'folders') {
                     return note.path === folder.path && note.clusterId === 'default-cluster';
-                  } else if (viewMode === 'clusters') {
+                  } else if (effectiveViewMode === 'clusters') {
                     return note.path === folder.path && note.clusterId === clusterId;
                   }
                   return false;
@@ -435,7 +439,7 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
                 path={folder.path} 
                 level={level + 1} 
                 clusterId={clusterId}
-                viewMode={viewMode}
+                viewMode={effectiveViewMode}
               />
             </>
           )}

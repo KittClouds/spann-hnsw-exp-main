@@ -1,3 +1,4 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
@@ -135,7 +136,7 @@ export const syncKnowledgeGraphAtom = atom(
   }
 );
 
-// Derived atom for notes in current folder
+// Derived atom for notes in current folder - UPDATED to strictly enforce clusterId filtering
 export const currentFolderNotesAtom = atom(
   (get) => {
     const notes = get(notesAtom);
@@ -144,16 +145,22 @@ export const currentFolderNotesAtom = atom(
     const viewMode = get(viewModeAtom);
     
     if (viewMode === 'folders') {
-      return notes.filter(note => note.path === currentPath);
-    } else {
+      // In folders view, only show notes from the default cluster
       return notes.filter(note => 
-        note.path === currentPath && note.clusterId === currentClusterId
+        note.path === currentPath && 
+        note.clusterId === 'default-cluster'
+      );
+    } else {
+      // In clusters view, only show notes from the current cluster
+      return notes.filter(note => 
+        note.path === currentPath && 
+        note.clusterId === currentClusterId
       );
     }
   }
 );
 
-// Derived atom for folders in current folder
+// Derived atom for folders in current folder - UPDATED to strictly enforce clusterId filtering
 export const currentFolderChildrenAtom = atom(
   (get) => {
     const folders = get(foldersAtom);
@@ -164,8 +171,12 @@ export const currentFolderChildrenAtom = atom(
     // For root path ("/"), we want folders with parentId null
     if (currentPath === '/') {
       if (viewMode === 'folders') {
-        // In folders mode, show all root folders from all clusters
-        return folders.filter(folder => folder.parentId === null && folder.id !== 'root');
+        // In folders mode, ONLY show root folders from default cluster
+        return folders.filter(folder => 
+          folder.parentId === null && 
+          folder.id !== 'root' &&
+          folder.clusterId === 'default-cluster'
+        );
       } else {
         // In clusters mode, only show root folders from the current cluster
         return folders.filter(folder => 
@@ -181,9 +192,12 @@ export const currentFolderChildrenAtom = atom(
     
     if (!currentFolder) return [];
     
-    // Return folders that have this folder as parent
+    // Return folders that have this folder as parent with the correct clusterId
     if (viewMode === 'folders') {
-      return folders.filter(folder => folder.parentId === currentFolder.id);
+      return folders.filter(folder => 
+        folder.parentId === currentFolder.id &&
+        folder.clusterId === 'default-cluster'
+      );
     } else {
       return folders.filter(folder => 
         folder.parentId === currentFolder.id && 
