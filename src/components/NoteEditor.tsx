@@ -1,13 +1,14 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useAtom } from 'jotai';
-import { useCreateBlockNote, BlockNoteView } from '@blocknote/react';
+import { useCreateBlockNote } from '@blocknote/react';
+import { BlockNoteView } from '@blocknote/mantine';
 import { activeNoteAtom, notesAtom } from '@/lib/store';
 import { debounce } from 'lodash';
 import '@blocknote/core/fonts/inter.css';
 
 // Import the required styles
-import '@blocknote/react/style.css';
+import '@blocknote/mantine/style.css';
 
 export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
@@ -26,7 +27,8 @@ export function NoteEditor() {
     if (!activeNote) return;
     
     try {
-      const content = await editor.blocksToPartialBlocks(editor.document);
+      // Using JSON.stringify/parse to create a deep copy of the blocks
+      const content = JSON.parse(JSON.stringify(editor.document));
       setActiveNote({ content });
     } catch (error) {
       console.error('Error saving note:', error);
