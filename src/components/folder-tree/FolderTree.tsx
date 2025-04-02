@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
 import { Plus } from 'lucide-react';
@@ -14,7 +15,6 @@ import {
   moveNote,
   renameFolder as renameFolderUtil,
   currentClusterIdAtom,
-  viewModeAtom
 } from '@/lib/store';
 import { FolderTreeProps } from './types';
 import { FolderItem } from './FolderItem';
@@ -22,15 +22,12 @@ import { NoteItem } from './NoteItem';
 import { FolderForm } from './FolderForm';
 import { DeleteFolderDialog } from './DeleteFolderDialog';
 
-export function FolderTree({ parentId, path, level, clusterId, viewMode: propViewMode }: FolderTreeProps) {
+export function FolderTree({ parentId, path, level, clusterId, viewMode }: FolderTreeProps) {
   const [folders, setFolders] = useAtom(foldersAtom);
   const [notes, setNotes] = useAtom(notesAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
   const [currentClusterId, setCurrentClusterId] = useAtom(currentClusterIdAtom);
-  const [viewMode] = useAtom(viewModeAtom);
-  
-  const currentViewMode = propViewMode || viewMode;
   
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
@@ -41,7 +38,7 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
   const [newFolderName, setNewFolderName] = useState('');
   const [parentForNewFolder, setParentForNewFolder] = useState<string | null>(null);
   const [folderPathForNewFolder, setFolderPathForNewFolder] = useState<string>("/");
-  const [clusterIdForNewFolder, setClusterIdForNewFolder] = useState<string>('default-cluster');
+  const [clusterIdForNewFolder, setClusterIdForNewFolder] = useState<string | undefined>(undefined);
   
   const [isRenameFolderDialogOpen, setIsRenameFolderDialogOpen] = useState(false);
   const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
@@ -50,44 +47,57 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
 
+  // Filter child folders based on viewMode and clusterId
   const childFolders = folders.filter(folder => {
     const matchesParent = folder.parentId === parentId && (parentId !== null || folder.id !== 'root');
     
-    if (currentViewMode === 'folders') {
+    if (viewMode === 'folders') {
+      // In folders view, only show folders with no clusterId or default clusterId
       return matchesParent && (!folder.clusterId || folder.clusterId === 'default-cluster');
-    } else if (currentViewMode === 'clusters') {
-      return matchesParent && clusterId && folder.clusterId === clusterId;
+    } else if (viewMode === 'clusters' && clusterId) {
+      // In clusters view, only show folders that belong to the current cluster
+      return matchesParent && folder.clusterId === clusterId;
     }
     
     return false;
   });
 
+  // Filter notes based on viewMode and clusterId
   const folderNotes = notes.filter(note => {
     const matchesPath = note.path === path;
     
-    if (currentViewMode === 'folders') {
+    if (viewMode === 'folders') {
+      // In folders view, only show notes with no clusterId or default clusterId
       return matchesPath && (!note.clusterId || note.clusterId === 'default-cluster');
-    } else if (currentViewMode === 'clusters') {
-      return matchesPath && clusterId && note.clusterId === clusterId;
+    } else if (viewMode === 'clusters' && clusterId) {
+      // In clusters view, only show notes that belong to the current cluster
+      return matchesPath && note.clusterId === clusterId;
     }
     
     return false;
   });
   
+  // Build list of available folders for move operations
   const allFolders = React.useMemo(() => {
-    const rootFolder = { id: 'root', name: 'Home', path: '/', clusterId: clusterId || 'default-cluster' };
+    const rootFolder = { id: 'root', name: 'Home', path: '/', clusterId: clusterId };
     
     let availableFolders;
-    if (currentViewMode === 'folders') {
-      availableFolders = folders.filter(f => f.id !== 'root' && (!f.clusterId || f.clusterId === 'default-cluster'));
-    } else if (currentViewMode === 'clusters' && clusterId) {
-      availableFolders = folders.filter(f => f.id !== 'root' && f.clusterId === clusterId);
+    if (viewMode === 'folders') {
+      availableFolders = folders.filter(f => 
+        f.id !== 'root' && 
+        (!f.clusterId || f.clusterId === 'default-cluster')
+      );
+    } else if (viewMode === 'clusters' && clusterId) {
+      availableFolders = folders.filter(f => 
+        f.id !== 'root' && 
+        f.clusterId === clusterId
+      );
     } else {
       availableFolders = [];
     }
     
     return [rootFolder, ...availableFolders];
-  }, [folders, clusterId, currentViewMode]);
+  }, [folders, clusterId, viewMode]);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => ({
@@ -112,9 +122,11 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
     setFolderPathForNewFolder(folderPath);
     setNewFolderName('');
     
-    if (currentViewMode === 'clusters' && clusterId) {
+    // Set the appropriate clusterId for the new folder
+    if (viewMode === 'clusters' && clusterId) {
       setClusterIdForNewFolder(clusterId);
     } else {
+      // For folders view, use default cluster or none
       setClusterIdForNewFolder('default-cluster');
     }
     
@@ -127,6 +139,7 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
       return;
     }
 
+    // Check if folder exists in the same parent with the same name and cluster context
     const folderExists = folders.some(
       folder => 
         folder.parentId === parentForNewFolder && 
@@ -139,6 +152,7 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
       return;
     }
 
+    // Create the new folder with the correct clusterId
     const { folder } = createFolder(
       newFolderName, 
       folderPathForNewFolder, 
@@ -178,6 +192,7 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
       return;
     }
     
+    // Check if folder with new name already exists in the same parent and cluster context
     const folderExists = folders.some(
       folder => 
         folder.parentId === folderToRename.parentId && 
@@ -228,7 +243,10 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
   const confirmDelete = () => {
     if (!folderToDelete) return;
 
-    const hasSubFolders = folders.some(folder => folder.parentId === folderToDelete.id);
+    // Check for subfolders
+    const hasSubFolders = folders.some(
+      folder => folder.parentId === folderToDelete.id
+    );
     
     if (hasSubFolders) {
       toast.error('Cannot delete a folder that contains subfolders');
@@ -237,7 +255,13 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
       return;
     }
 
-    const hasNotes = notes.some(note => note.path === folderToDelete.path);
+    // Check for notes
+    const hasNotes = notes.some(
+      note => note.path === folderToDelete.path && 
+      (viewMode === 'folders' 
+        ? (!note.clusterId || note.clusterId === 'default-cluster')
+        : note.clusterId === clusterId)
+    );
     
     if (hasNotes) {
       toast.error('Cannot delete a folder that contains notes');
@@ -265,17 +289,23 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
   const handleCreateNote = (folderPath: string, e: React.MouseEvent, noteClusterId?: string) => {
     e.stopPropagation();
     
+    // Determine the correct clusterId based on the view mode
     const effectiveClusterId = 
-      currentViewMode === 'clusters' && clusterId ? 
+      viewMode === 'clusters' && clusterId ? 
         clusterId : 
-        (noteClusterId || 'default-cluster');
+        'default-cluster';
     
     const { id, note } = createNote(folderPath, effectiveClusterId);
     
     setNotes(prevNotes => [...prevNotes, note]);
     setActiveNoteId(id);
-    setCurrentClusterId(effectiveClusterId);
     
+    // Update current cluster ID if we're in clusters mode
+    if (viewMode === 'clusters' && clusterId) {
+      setCurrentClusterId(clusterId);
+    }
+    
+    // Expand the parent folder if the note is not in root
     if (folderPath !== '/') {
       const folderObj = folders.find(f => f.path === folderPath);
       if (folderObj) {
@@ -335,10 +365,11 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
   const handleMoveNote = (noteId: string, targetFolderPath: string, e: React.MouseEvent, targetClusterId?: string) => {
     e.stopPropagation();
     
+    // Determine the correct clusterId based on the view mode
     const effectiveTargetClusterId = 
-      currentViewMode === 'clusters' ? 
-        (clusterId || targetClusterId) : 
-        ('default-cluster');
+      viewMode === 'clusters' ? 
+        clusterId || targetClusterId : 
+        'default-cluster';
     
     setNotes(moveNote(notes, noteId, targetFolderPath, effectiveTargetClusterId));
     
@@ -351,6 +382,7 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
 
   return (
     <div className="pl-3">
+      {/* Render child folders */}
       {childFolders.map((folder) => (
         <div key={folder.id} className="flex flex-col">
           <FolderItem 
@@ -369,11 +401,12 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
           
           {isExpanded(folder.id) && (
             <>
+              {/* Render notes inside this folder */}
               {notes
                 .filter(note => {
-                  if (currentViewMode === 'folders') {
+                  if (viewMode === 'folders') {
                     return note.path === folder.path && (!note.clusterId || note.clusterId === 'default-cluster');
-                  } else if (currentViewMode === 'clusters') {
+                  } else if (viewMode === 'clusters') {
                     return note.path === folder.path && note.clusterId === clusterId;
                   }
                   return false;
@@ -398,18 +431,20 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
                 ))
               }
               
+              {/* Recursively render subfolders */}
               <FolderTree 
                 parentId={folder.id} 
                 path={folder.path} 
                 level={level + 1} 
                 clusterId={clusterId}
-                viewMode={currentViewMode}
+                viewMode={viewMode}
               />
             </>
           )}
         </div>
       ))}
       
+      {/* Render root-level notes */}
       {path === '/' && 
         folderNotes.map(note => (
           <NoteItem
@@ -431,6 +466,7 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
         ))
       }
       
+      {/* New Folder button for root level only */}
       {path === '/' && (
         <div className="flex items-center py-1 px-2 mt-1">
           <Button 
@@ -444,6 +480,7 @@ export function FolderTree({ parentId, path, level, clusterId, viewMode: propVie
         </div>
       )}
 
+      {/* Folder dialogs */}
       <FolderForm
         isOpen={isNewFolderDialogOpen}
         title="Create new folder"
