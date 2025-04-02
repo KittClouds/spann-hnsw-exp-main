@@ -163,7 +163,8 @@ export function NotesSidebar() {
             
             <ScrollArea className="flex-1">
               <div className="py-2">
-                <FolderTree parentId={null} path="/" level={0} />
+                {/* Pass clusterId as undefined to show all folders in folders view */}
+                <FolderTree parentId={null} path="/" level={0} clusterId={undefined} />
               </div>
             </ScrollArea>
           </TabsContent>
