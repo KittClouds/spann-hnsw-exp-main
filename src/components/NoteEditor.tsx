@@ -1,8 +1,10 @@
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAtom } from 'jotai';
-import { BlockNoteEditor, useBlockNote } from "@blocknote/core";
-import { BlockNoteView } from "@blocknote/react";
-import "@blocknote/core/style.css";
+import { BlockNoteEditor, createBlockNoteEditor } from "@blocknote/core";
+import { BlockNoteView } from "@blocknote/mantine";
+import "@blocknote/core/fonts/inter.css";
+import "@blocknote/mantine/style.css";
 import { activeNoteAtom, activeNoteIdAtom, notesAtom } from '@/lib/store';
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -52,25 +54,40 @@ export function NoteEditor({}: NoteEditorProps) {
   const [selectedTag, setSelectedTag] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
-  const editor: BlockNoteEditor = useBlockNote({
-    readOnly: false,
-  });
-  
-  const editorRef = useRef(editor);
+  // Create the editor
+  const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
   
   useEffect(() => {
-    editorRef.current = editor;
-  }, [editor]);
+    // Initialize the editor
+    const newEditor = createBlockNoteEditor({
+      readOnly: false,
+    });
+    setEditor(newEditor);
+    
+    return () => {
+      // Clean up if needed
+    };
+  }, []);
   
+  // Update editor content when active note changes
   useEffect(() => {
-    if (activeNote) {
-      editorRef.current.blocks = activeNote.content;
+    if (!editor || !activeNote) return;
+    
+    try {
+      // Convert the content stored in the note to the format expected by the editor
+      const contentToLoad = activeNote.content;
+      if (contentToLoad) {
+        editor.replaceBlocks(editor.document, contentToLoad);
+      } else {
+        editor.clear();
+      }
+      
       setNoteTitle(activeNote.title);
-    } else {
-      editorRef.current.blocks = [];
-      setNoteTitle('');
+    } catch (error) {
+      console.error("Error loading note content:", error);
+      editor.clear();
     }
-  }, [activeNote, setNoteTitle, editorRef]);
+  }, [activeNote, editor]);
   
   // Update the note title in the store when it changes
   useEffect(() => {
@@ -79,12 +96,28 @@ export function NoteEditor({}: NoteEditorProps) {
     }
   }, [noteTitle, activeNote, setActiveNote]);
   
-  // Update the note content in the store when it changes
+  // Save changes when the editor content changes
   useEffect(() => {
-    if (activeNote) {
-      setActiveNote({ content: editorRef.current.blocks });
-    }
-  }, [editorRef.current.blocks, activeNote, setActiveNote]);
+    if (!editor || !activeNote) return;
+    
+    const saveContent = () => {
+      try {
+        const currentBlocks = editor.document;
+        setActiveNote({ content: currentBlocks });
+      } catch (error) {
+        console.error("Error saving note content:", error);
+      }
+    };
+    
+    // Set up a callback for content changes
+    const unsubscribe = editor.onEditorContentChange(() => {
+      saveContent();
+    });
+    
+    return () => {
+      unsubscribe();
+    };
+  }, [editor, activeNote, setActiveNote]);
   
   const handleTagSelection = (tag: string) => {
     setSelectedTag(tag);
@@ -222,7 +255,7 @@ export function NoteEditor({}: NoteEditorProps) {
       </div>
       
       <div className="flex-1">
-        <BlockNoteView editor={editor} />
+        {editor && <BlockNoteView editor={editor} />}
       </div>
     </div>
   );
