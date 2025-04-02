@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
 import { Plus } from 'lucide-react';
@@ -13,8 +14,7 @@ import {
   createNote,
   moveNote,
   renameFolder as renameFolderUtil,
-  currentClusterIdAtom,
-  viewModeAtom
+  currentClusterIdAtom
 } from '@/lib/store';
 import { FolderTreeProps } from './types';
 import { FolderItem } from './FolderItem';
@@ -28,7 +28,6 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
   const [currentClusterId, setCurrentClusterId] = useAtom(currentClusterIdAtom);
-  const [viewMode] = useAtom(viewModeAtom);
   
   // State for UI interactions
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
@@ -55,22 +54,14 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
   // Find children of the current folder, filtered by clusterId if provided
   const childFolders = folders.filter(folder => {
     const matchesParent = folder.parentId === parentId && (parentId !== null || folder.id !== 'root');
-    
-    // In folders view, show all folders regardless of cluster
-    // In clusters view, only show folders from the specific cluster
-    const matchesCluster = viewMode === 'folders' ? true : (clusterId ? folder.clusterId === clusterId : true);
-    
+    const matchesCluster = clusterId ? folder.clusterId === clusterId : true;
     return matchesParent && matchesCluster;
   });
 
   // Find notes in the current folder, filtered by clusterId if provided
   const folderNotes = notes.filter(note => {
     const matchesPath = note.path === path;
-    
-    // In folders view, show all notes regardless of cluster
-    // In clusters view, only show notes from the specific cluster
-    const matchesCluster = viewMode === 'folders' ? true : (clusterId ? note.clusterId === clusterId : true);
-    
+    const matchesCluster = clusterId ? note.clusterId === clusterId : true;
     return matchesPath && matchesCluster;
   });
   
@@ -80,14 +71,12 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
     // Start with the root folder
     const rootFolder = { id: 'root', name: 'Home', path: '/', clusterId: clusterId || 'default-cluster' };
     
-    // In clusters view, only show folders from the specific cluster
-    // In folders view, show all folders
-    if (viewMode === 'clusters' && clusterId) {
+    if (clusterId) {
       return [rootFolder, ...folders.filter(f => f.id !== 'root' && f.clusterId === clusterId)];
     }
     
     return [rootFolder, ...folders.filter(f => f.id !== 'root')];
-  }, [folders, clusterId, viewMode]);
+  }, [folders, clusterId]);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => ({
@@ -397,14 +386,10 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
             <>
               {/* Notes for this folder */}
               {notes
-                .filter(note => {
-                  const matchesPath = note.path === folder.path;
-                  // In folders view, show all notes regardless of cluster
-                  // In clusters view, only show notes from the specific cluster
-                  const matchesCluster = viewMode === 'folders' ? true : 
-                    (clusterId ? note.clusterId === clusterId : true);
-                  return matchesPath && matchesCluster;
-                })
+                .filter(note => 
+                  note.path === folder.path && 
+                  (clusterId ? note.clusterId === clusterId : true)
+                )
                 .map(note => (
                   <NoteItem
                     key={note.id}
@@ -429,7 +414,7 @@ export function FolderTree({ parentId, path, level, clusterId }: FolderTreeProps
                 parentId={folder.id} 
                 path={folder.path} 
                 level={level + 1} 
-                clusterId={viewMode === 'clusters' ? clusterId : undefined}
+                clusterId={clusterId}
               />
             </>
           )}
