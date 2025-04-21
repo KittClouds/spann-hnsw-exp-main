@@ -11,9 +11,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@blocknote/core": "^0.26.0",
-    "@blocknote/mantine": "^0.26.0",
-    "@blocknote/react": "^0.26.0",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -48,10 +45,8 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
-    "graphology": "^0.26.0",
     "input-otp": "^1.2.4",
     "jotai": "^2.12.2",
-    "lodash": "^4.17.21",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
     "react": "^18.3.1",

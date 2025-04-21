@@ -1,198 +1,85 @@
 
 import { useAtom } from 'jotai';
-import { Plus, Search, Tag, FolderIcon, FileIcon, Layers } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  createNote, 
-  notesAtom,
-  activeNoteIdAtom,
-  currentFolderPathAtom,
-  foldersAtom,
-  getBreadcrumbsFromPath,
-  viewModeAtom,
-  currentClusterIdAtom,
-} from '@/lib/store';
-import { Input } from '@/components/ui/input';
-import { FolderTree } from './FolderTree';
-import { ClusterView } from './ClusterView';
-import { toast } from 'sonner';
-import { useCallback, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { activeNoteIdAtom, createNote, deleteNote, notesAtom } from '@/lib/store';
+import { cn } from '@/lib/utils';
+import { toast } from "sonner";
 
 export function NotesSidebar() {
   const [notes, setNotes] = useAtom(notesAtom);
-  const [folders] = useAtom(foldersAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
-  const [currentPath, setCurrentPath] = useAtom(currentFolderPathAtom);
-  const [viewMode, setViewMode] = useAtom(viewModeAtom);
-  const [currentClusterId] = useAtom(currentClusterIdAtom);
-  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleNewNote = useCallback(() => {
-    const { id, note } = createNote(currentPath, currentClusterId);
-    
-    // Add the new note to the notes array
-    setNotes(prevNotes => [...prevNotes, note]);
-    
-    // Set the new note as active
-    setActiveNoteId(id);
-    
+  const handleNewNote = () => {
+    const newNoteId = createNote(setNotes);
+    setActiveNoteId(newNoteId);
     toast("New note created", {
       description: "Start typing to edit your note",
     });
-  }, [setNotes, setActiveNoteId, currentPath, currentClusterId]);
-
-  // Get breadcrumbs for the current folder
-  const breadcrumbs = getBreadcrumbsFromPath(currentPath, folders);
-  
-  // Apply search filtering if there's a search query
-  const filteredNotes = searchQuery.trim() 
-    ? notes.filter(note => 
-        note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        note.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    : [];
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
   };
-
-  // Handle changing view mode
-  const handleViewModeChange = (value: string) => {
-    setViewMode(value as 'folders' | 'clusters');
+  
+  const handleDeleteNote = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteNote(setNotes, id);
+    
+    // If we deleted the active note, select the first available note
+    if (id === activeNoteId) {
+      // Get the notes array safely
+      const notesArray = Array.isArray(notes) ? notes : [];
+      // Filter out the deleted note
+      const remainingNotes = notesArray.filter(note => note.id !== id);
+      
+      if (remainingNotes.length > 0) {
+        setActiveNoteId(remainingNotes[0].id);
+      }
+    }
+    
+    toast("Note deleted", {
+      description: "Your note has been removed",
+    });
   };
 
   return (
-    <div className="w-64 dark:cosmic-sidebar-dark light:cosmic-sidebar-light h-full flex flex-col">
-      <div className="p-4">
-        <div className="relative">
-          <Input
-            placeholder="Search notes..."
-            className="pl-8 dark:bg-galaxy-dark-accent dark:border-galaxy-dark-purple dark:border-opacity-30 light:bg-white"
-            value={searchQuery}
-            onChange={handleSearch}
-          />
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        </div>
-      </div>
-      
-      <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" />
-      
+    <div className="w-64 border-r border-border dark:bg-[#141824] light:bg-white h-full flex flex-col">
       <div className="p-4">
         <Button 
           onClick={handleNewNote} 
-          className="w-full dark:cosmic-button-dark light:cosmic-button-light group"
+          className="w-full dark:bg-[#7c5bf1] dark:hover:bg-[#6b4ad5] light:bg-[#614ac2] light:hover:bg-[#563db0] text-white group transition-all duration-200"
         >
           <Plus className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" /> New Note
         </Button>
       </div>
       
-      <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200" />
-
-      {/* View mode selector */}
-      <div className="px-4 py-2">
-        <Tabs value={viewMode} onValueChange={handleViewModeChange} className="w-full">
-          <TabsList className="w-full">
-            <TabsTrigger value="folders" className="flex-1">
-              <FolderIcon className="h-3.5 w-3.5 mr-1" />
-              Folders
-            </TabsTrigger>
-            <TabsTrigger value="clusters" className="flex-1">
-              <Layers className="h-3.5 w-3.5 mr-1" />
-              Clusters
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="space-y-2 mt-2">
-            {/* Display current folder path in folders view */}
-            {viewMode === 'folders' && breadcrumbs.length > 1 && (
-              <div className="px-0 py-2">
-                <div className="flex flex-wrap gap-1 items-center">
-                  {breadcrumbs.map((crumb, index) => (
-                    <Badge 
-                      key={index} 
-                      variant="outline" 
-                      className="cursor-pointer hover:bg-accent truncate max-w-[100px]"
-                      onClick={() => setCurrentPath(crumb.path)}
-                    >
-                      {index === 0 ? <FolderIcon className="h-3 w-3 mr-1" /> : null}
-                      {crumb.name}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Show search results if search is active */}
-            {searchQuery.trim() !== '' && (
-              <div className="px-0 py-2">
-                <div className="text-xs font-medium text-muted-foreground py-1">
-                  Search Results ({filteredNotes.length})
-                </div>
-                <ScrollArea className="max-h-40">
-                  {filteredNotes.length > 0 ? (
-                    filteredNotes.map(note => (
-                      <div 
-                        key={note.id}
-                        className="flex items-center py-1 px-2 text-sm cursor-pointer hover:bg-accent rounded-md"
-                        onClick={() => {
-                          setActiveNoteId(note.id);
-                          // Navigate to the folder containing this note
-                          setCurrentPath(note.path);
-                        }}
-                      >
-                        <FileIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                        <span className="truncate">{note.title}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-xs text-muted-foreground p-2">No results found</div>
-                  )}
-                </ScrollArea>
-              </div>
-            )}
-          </div>
-          
-          <TabsContent value="folders" className="flex-1 flex flex-col">
-            <div className="px-2 py-1">
-              <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">FOLDERS</div>
-            </div>
-            
-            <ScrollArea className="flex-1">
-              <div className="py-2">
-                <FolderTree parentId={null} path="/" level={0} />
-              </div>
-            </ScrollArea>
-          </TabsContent>
-          
-          <TabsContent value="clusters" className="flex-1 flex flex-col">
-            <div className="px-2 py-1">
-              <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">CLUSTERS</div>
-            </div>
-            
-            <ScrollArea className="flex-1">
-              <div className="py-2">
-                <ClusterView />
-              </div>
-            </ScrollArea>
-          </TabsContent>
-        </Tabs>
-      </div>
+      <Separator className="dark:bg-[#222533] light:bg-[#f0f2f5]" />
       
-      <Separator className="dark:bg-galaxy-dark-purple dark:bg-opacity-30 light:bg-gray-200 mt-auto" />
-      
-      <div className="p-3">
-        <Button 
-          variant="outline" 
-          className="w-full flex items-center dark:border-galaxy-dark-purple dark:border-opacity-30 dark:bg-galaxy-dark-accent dark:hover:bg-galaxy-dark-purple dark:hover:bg-opacity-50 light:border-gray-200 light:bg-white light:hover:bg-gray-100" 
-          size="sm"
-        >
-          <Tag className="mr-2 h-3 w-3" /> Manage Tags
-        </Button>
-      </div>
+      <ScrollArea className="flex-1">
+        <div className="py-2">
+          {Array.isArray(notes) ? notes.map((note) => (
+            <div 
+              key={note.id}
+              onClick={() => setActiveNoteId(note.id)}
+              className={cn(
+                "px-4 py-3 cursor-pointer dark:hover:bg-[#1c1f2e] light:hover:bg-[#f5f7fa] transition-all duration-200 flex justify-between items-center group",
+                activeNoteId === note.id 
+                  ? "dark:sidebar-note-active-dark light:sidebar-note-active-light" 
+                  : ""
+              )}
+            >
+              <div className="font-medium truncate">{note.title}</div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => handleDeleteNote(note.id, e)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7"
+              >
+                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
+              </Button>
+            </div>
+          )) : <div className="px-4 py-2">Loading notes...</div>}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

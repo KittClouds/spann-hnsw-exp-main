@@ -2,60 +2,17 @@
 import { ThemeToggle } from "./ThemeToggle";
 import { NotesSidebar } from "./NotesSidebar";
 import { NoteEditor } from "./NoteEditor";
-import { useEffect } from 'react';
-import { useAtom, useSetAtom } from 'jotai';
-import { syncKnowledgeGraphAtom, migrateToClusterSystem, notesAtom, foldersAtom } from '@/lib/store';
-import { ToolsService } from '@/lib/tools/toolsService';
 
 export function GalaxyNotes() {
-  const syncGraph = useSetAtom(syncKnowledgeGraphAtom);
-  const [notes, setNotes] = useAtom(notesAtom);
-  const [folders, setFolders] = useAtom(foldersAtom);
-  
-  // Initialize knowledge graph and migrate data when app loads
-  useEffect(() => {
-    // Only perform migration if notes or folders don't already have clusterId
-    const needsMigration = notes.some(note => !note.clusterId) || 
-                          folders.some(folder => !folder.clusterId);
-    
-    if (needsMigration) {
-      // Migrate existing data to use the cluster system
-      const { notes: migratedNotes, folders: migratedFolders } = migrateToClusterSystem(
-        notes, 
-        folders, 
-        'default-cluster'
-      );
-      
-      // Update the notes and folders with the migrated data
-      setNotes(migratedNotes);
-      setFolders(migratedFolders);
-    }
-    
-    // Initialize the knowledge graph
-    syncGraph();
-    
-    // Initialize the tools service (just for demonstration)
-    try {
-      const toolsService = new ToolsService(notes, folders);
-      console.log('Tools service initialized', toolsService.getStats());
-    } catch (error) {
-      console.error('Error initializing tools service:', error);
-    }
-  }, [syncGraph, setNotes, setFolders, notes, folders]);
-
   return (
-    <div className="flex flex-col h-screen dark:cosmic-bg-dark light:cosmic-bg-light text-foreground">
-      <header className="dark:cosmic-header-dark light:cosmic-header-light p-4 flex items-center justify-between z-10">
+    <div className="flex flex-col h-screen bg-gradient-to-b dark:from-[#0f1117] dark:to-[#141824] light:from-white light:to-[#f5f7fa] text-foreground">
+      <header className="border-b border-border p-4 flex items-center justify-between bg-opacity-95 backdrop-blur-sm">
         <div className="flex-1">
           {/* Empty space for layout */}
         </div>
         <div className="text-center flex-1">
-          <h1 className="text-2xl font-bold dark:cosmic-text-gradient-dark light:cosmic-text-gradient-light">
-            Galaxy Notes
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Multi-note block editor with automatic saving
-          </p>
+          <h1 className="text-2xl font-bold text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]">Galaxy Notes</h1>
+          <p className="text-sm text-muted-foreground">Multi-note block editor with automatic saving</p>
         </div>
         <div className="flex-1 flex justify-end">
           <ThemeToggle />

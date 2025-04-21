@@ -54,26 +54,21 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				sidebar: {
-					DEFAULT: 'hsl(var(--sidebar))',
+					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
+					primary: 'hsl(var(--sidebar-primary))',
+					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
 					accent: 'hsl(var(--sidebar-accent))',
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				galaxy: {
-					'dark': '#121212', // Darker charcoal
-					'dark-accent': '#1e1e1e', // Slightly lighter charcoal
-					'dark-purple': '#403E43', // Dark charcoal with slight purple
-					'editor': '#171717', // Nearly black for editor
-					'purple': '#6E4DA7', // Darker purple
-					'deep-purple': '#4A3B76', // Even darker purple
-					'highlight': '#8A62CC', // Highlighted purple
-					'light-purple': '#e5deff',
+					'dark': '#0f1524',
+					'editor': '#202327',
+					'purple': '#7c5bf1',
 					'text': '#e0e0e0',
-					'light': '#ffffff',
-					'light-accent': '#f8f6ff',
-					'light-editor': '#f5f5f8', // Light editor background
+					'sidebar': '#141a2a'
 				}
 			},
 			borderRadius: {
@@ -105,30 +100,12 @@ export default {
 					to: {
 						opacity: '1'
 					}
-				},
-				'pulse-glow': {
-					'0%, 100%': {
-						opacity: '0.6'
-					},
-					'50%': {
-						opacity: '1'
-					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				'fade-in': 'fade-in 0.3s ease-out',
-				'pulse-glow': 'pulse-glow 3s ease-in-out infinite'
-			},
-			boxShadow: {
-				'cosmic': '0 4px 20px -2px rgba(0, 0, 0, 0.2)',
-				'cosmic-dark': '0 4px 20px rgba(90, 60, 160, 0.1)',
-				'cosmic-glow': '0 0 15px rgba(138, 98, 204, 0.3)',
-				'inner-glow': 'inset 0 0 15px rgba(138, 98, 204, 0.1)'
-			},
-			backgroundImage: {
-				'purple-glow': 'radial-gradient(circle, rgba(138, 98, 204, 0.15) 0%, rgba(138, 98, 204, 0) 70%)'
+				'fade-in': 'fade-in 0.3s ease-out'
 			}
 		}
 	},
