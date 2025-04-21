@@ -64,11 +64,15 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				galaxy: {
-					'dark': '#0f1524',
-					'editor': '#202327',
+					'dark': '#0d0e18',
+					'dark-accent': '#1c1f2e',
+					'editor': '#12141f',
 					'purple': '#7c5bf1',
+					'light-purple': '#e5deff',
 					'text': '#e0e0e0',
-					'sidebar': '#141a2a'
+					'sidebar': '#12141f',
+					'light': '#ffffff',
+					'light-accent': '#f8f6ff',
 				}
 			},
 			borderRadius: {
