@@ -2,12 +2,15 @@
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface Cluster {
   id: string;
   title: string;
   createdAt: string;
   updatedAt: string;
+  parentId: string | null; // For folder hierarchy
+  type: 'cluster' | 'folder'; // Similar to notes
 }
 
 export interface Note {
@@ -24,31 +27,33 @@ export interface Note {
 // Helper function to get current date in ISO format
 const getCurrentDate = () => new Date().toISOString();
 
-// Generate a unique ID
-const generateId = () => `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+// Generate a unique ID using UUID v4
+const generateId = () => uuidv4();
 
 // Create a default cluster
 const defaultCluster: Cluster = {
-  id: 'default-cluster',
+  id: uuidv4(),
   title: 'Personal Notes',
   createdAt: getCurrentDate(),
-  updatedAt: getCurrentDate()
+  updatedAt: getCurrentDate(),
+  parentId: null,
+  type: 'cluster'
 };
 
 // Create initial notes with proper structure
 const initialNotes: Note[] = [
   {
-    id: 'folder-1',
+    id: uuidv4(),
     title: 'Getting Started',
     content: [],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
     parentId: null,
     type: 'folder',
-    clusterId: 'default-cluster'
+    clusterId: defaultCluster.id
   },
   { 
-    id: generateId(),
+    id: uuidv4(),
     title: 'Welcome Note',
     content: [{ 
       type: 'paragraph',
@@ -56,12 +61,12 @@ const initialNotes: Note[] = [
     }],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
-    parentId: 'folder-1',
+    parentId: initialNotes?.[0]?.id || null, // Reference to the "Getting Started" folder
     type: 'note',
-    clusterId: 'default-cluster'
+    clusterId: defaultCluster.id
   },
   { 
-    id: generateId(),
+    id: uuidv4(),
     title: 'How to Use',
     content: [{ 
       type: 'paragraph',
@@ -69,11 +74,15 @@ const initialNotes: Note[] = [
     }],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
-    parentId: 'folder-1',
+    parentId: initialNotes?.[0]?.id || null, // Reference to the "Getting Started" folder
     type: 'note',
-    clusterId: 'default-cluster'
+    clusterId: defaultCluster.id
   },
 ];
+
+// Fix the circular reference by setting the parentId after declaration
+initialNotes[1].parentId = initialNotes[0].id;
+initialNotes[2].parentId = initialNotes[0].id;
 
 // Main clusters atom with localStorage persistence
 export const clustersAtom = atomWithStorage<Cluster[]>('galaxy-clusters', [defaultCluster]);
@@ -121,6 +130,33 @@ export const clusterNotesAtom = atom(
   }
 );
 
+// Derived atom for root clusters
+export const rootClustersAtom = atom(
+  (get) => {
+    const clusters = get(clustersAtom);
+    return clusters.filter(cluster => cluster.parentId === null);
+  }
+);
+
+// Derived atom for cluster hierarchy
+export const clusterHierarchyAtom = atom(
+  (get) => {
+    const clusters = get(clustersAtom);
+    const rootClusters = clusters.filter(cluster => cluster.parentId === null);
+    
+    const buildHierarchy = (parentId: string | null) => {
+      return clusters
+        .filter(cluster => cluster.parentId === parentId)
+        .map(cluster => ({
+          ...cluster,
+          children: buildHierarchy(cluster.id)
+        }));
+    };
+    
+    return buildHierarchy(null);
+  }
+);
+
 // Derived atom for the currently active note
 export const activeNoteAtom = atom(
   (get) => {
@@ -152,7 +188,7 @@ export const activeNoteAtom = atom(
 
 // Create a new cluster
 export const createCluster = () => {
-  const newId = `cluster-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  const newId = uuidv4();
   const now = getCurrentDate();
   
   const newCluster: Cluster = {
@@ -160,14 +196,33 @@ export const createCluster = () => {
     title: 'New Cluster',
     createdAt: now,
     updatedAt: now,
+    parentId: null,
+    type: 'cluster',
   };
   
   return newCluster;
 };
 
+// Create a new cluster folder
+export const createClusterFolder = (parentId: string | null = null) => {
+  const newId = uuidv4();
+  const now = getCurrentDate();
+  
+  const newClusterFolder: Cluster = {
+    id: newId,
+    title: 'New Folder',
+    createdAt: now,
+    updatedAt: now,
+    parentId,
+    type: 'folder',
+  };
+  
+  return { id: newId, cluster: newClusterFolder };
+};
+
 // Create a new note
 export const createNote = (parentId: string | null = null, clusterId: string) => {
-  const newId = generateId();
+  const newId = uuidv4();
   const now = getCurrentDate();
   
   const newNote: Note = {
@@ -186,7 +241,7 @@ export const createNote = (parentId: string | null = null, clusterId: string) =>
 
 // Create a new folder
 export const createFolder = (parentId: string | null = null, clusterId: string) => {
-  const newId = generateId();
+  const newId = uuidv4();
   const now = getCurrentDate();
   
   const newFolder: Note = {
@@ -224,16 +279,35 @@ export const deleteCluster = (clusters: Cluster[], notes: Note[], id: string): {
     return { clusters, notes };
   }
 
-  // Remove the cluster
-  const updatedClusters = clusters.filter(cluster => cluster.id !== id);
+  // Get all cluster IDs to be removed (including child folders)
+  const clusterToDelete = clusters.find(cluster => cluster.id === id);
+  if (!clusterToDelete) return { clusters, notes };
+  
+  const clusterIds = getAllClusterChildrenIds(clusters, id);
+  clusterIds.push(id); // Add the cluster itself
+  
+  // Remove the clusters
+  const updatedClusters = clusters.filter(cluster => !clusterIds.includes(cluster.id));
 
-  // Remove all notes associated with the cluster
-  const updatedNotes = notes.filter(note => note.clusterId !== id);
+  // Remove all notes associated with the deleted clusters
+  const updatedNotes = notes.filter(note => !clusterIds.includes(note.clusterId));
 
   return { 
     clusters: updatedClusters, 
     notes: updatedNotes 
   };
+};
+
+// Delete a cluster folder by ID
+export const deleteClusterFolder = (clusters: Cluster[], id: string): Cluster[] => {
+  const folderToDelete = clusters.find(cluster => cluster.id === id);
+  if (!folderToDelete) return clusters;
+  
+  // Get all child folders
+  const childrenIds = getAllClusterChildrenIds(clusters, id);
+  
+  // Remove the folder and all its children
+  return clusters.filter(cluster => !childrenIds.includes(cluster.id) && cluster.id !== id);
 };
 
 // Helper to get all children IDs of a folder (recursive)
@@ -243,6 +317,18 @@ const getAllChildrenIds = (notes: Note[], folderId: string): string[] => {
   
   const folderChildren = children.filter(child => child.type === 'folder');
   const grandChildrenIds = folderChildren.flatMap(folder => getAllChildrenIds(notes, folder.id));
+  
+  return [...childrenIds, ...grandChildrenIds];
+};
+
+// Helper to get all children IDs of a cluster folder (recursive)
+const getAllClusterChildrenIds = (clusters: Cluster[], folderId: string): string[] => {
+  const children = clusters.filter(cluster => cluster.parentId === folderId);
+  const childrenIds = children.map(child => child.id);
+  
+  const folderChildren = children.filter(child => child.type === 'folder');
+  const grandChildrenIds = folderChildren.flatMap(folder => 
+    getAllClusterChildrenIds(clusters, folder.id));
   
   return [...childrenIds, ...grandChildrenIds];
 };
