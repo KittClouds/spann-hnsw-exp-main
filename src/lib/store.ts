@@ -1,4 +1,3 @@
-
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
@@ -40,10 +39,13 @@ const defaultCluster: Cluster = {
   type: 'cluster'
 };
 
-// Create initial notes with proper structure
+// First, create IDs for our initial structure
+const folderID = uuidv4();
+
+// Create initial notes with proper structure - avoiding circular reference
 const initialNotes: Note[] = [
   {
-    id: uuidv4(),
+    id: folderID,
     title: 'Getting Started',
     content: [],
     createdAt: getCurrentDate(),
@@ -61,7 +63,7 @@ const initialNotes: Note[] = [
     }],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
-    parentId: initialNotes?.[0]?.id || null, // Reference to the "Getting Started" folder
+    parentId: folderID, // Reference to the "Getting Started" folder using the pre-defined ID
     type: 'note',
     clusterId: defaultCluster.id
   },
@@ -74,15 +76,11 @@ const initialNotes: Note[] = [
     }],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
-    parentId: initialNotes?.[0]?.id || null, // Reference to the "Getting Started" folder
+    parentId: folderID, // Reference to the "Getting Started" folder using the pre-defined ID
     type: 'note',
     clusterId: defaultCluster.id
   },
 ];
-
-// Fix the circular reference by setting the parentId after declaration
-initialNotes[1].parentId = initialNotes[0].id;
-initialNotes[2].parentId = initialNotes[0].id;
 
 // Main clusters atom with localStorage persistence
 export const clustersAtom = atomWithStorage<Cluster[]>('galaxy-clusters', [defaultCluster]);
