@@ -31,6 +31,14 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   // Initialize the graph with existing notes and clusters
   useEffect(() => {
     if (!initialized) {
+      console.log("Initializing graph with notes and clusters", { notes, clusters });
+      
+      // Make sure the default cluster exists
+      if (!clusters.some(c => c.id === 'default-cluster')) {
+        console.warn("Default cluster missing from store during initialization");
+      }
+      
+      // Initialize the graph
       graphService.importFromStore(notes, clusters);
       setInitialized(true);
     }

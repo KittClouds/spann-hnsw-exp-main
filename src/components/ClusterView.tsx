@@ -7,11 +7,13 @@ import { Input } from './ui/input';
 import { useState, useEffect } from 'react';
 import { clustersAtom, createCluster } from '@/lib/store';
 import { toast } from 'sonner';
+import { useGraph } from '@/contexts/GraphContext';
 
 export function ClusterView() {
   const [clusters, setClusters] = useAtom(clustersAtom);
   const [isOpen, setIsOpen] = useState(false);
   const [newClusterTitle, setNewClusterTitle] = useState('');
+  const { addCluster } = useGraph();
   
   // Ensure default cluster exists
   useEffect(() => {
@@ -23,8 +25,13 @@ export function ClusterView() {
         updatedAt: new Date().toISOString()
       };
       setClusters(prev => [...prev, defaultCluster]);
+      
+      // Also add it to the graph service
+      setTimeout(() => {
+        addCluster(defaultCluster);
+      }, 0);
     }
-  }, [clusters, setClusters]);
+  }, [clusters, setClusters, addCluster]);
 
   const handleCreateCluster = () => {
     if (!newClusterTitle.trim()) {
@@ -34,6 +41,7 @@ export function ClusterView() {
 
     const { cluster } = createCluster(newClusterTitle);
     setClusters(prev => [...prev, cluster]);
+    addCluster(cluster);
     setNewClusterTitle('');
     setIsOpen(false);
     toast.success('Cluster created successfully');

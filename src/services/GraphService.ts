@@ -1,4 +1,3 @@
-
 import cytoscape, {
   Core,
   CollectionReturnValue,
@@ -206,6 +205,8 @@ export class GraphService {
     
     if (clusterId && this.clusterExists.has(clusterId)) {
       this.moveNodeToCluster(nodeId, clusterId);
+    } else if (clusterId) {
+      node.data('cluster', clusterId);
     }
     
     return node;
@@ -258,6 +259,7 @@ export class GraphService {
     updatedAt?: string;
   }): NodeSingular {
     const clusterId = id && id.length >= 15 ? id : newNodeId();
+    
     if (this.cy.getElementById(clusterId).nonempty())
       return this.cy.getElementById(clusterId) as NodeSingular;
 
@@ -278,7 +280,40 @@ export class GraphService {
     this.cy.add(el);
     this.clusterExists.add(clusterId);
     this.queueNotify([el]);
+    
+    this.cy.nodes().forEach(node => {
+      if (node.data('cluster') === clusterId) {
+        this.createClusterEdge(node.id(), clusterId);
+      }
+    });
+    
     return this.cy.getElementById(clusterId) as NodeSingular;
+  }
+
+  private createClusterEdge(nodeId: string, clusterId: string): EdgeSingular | undefined {
+    const edgeId = `${EdgeType.IN_CLUSTER}_${nodeId}_${clusterId}`;
+    
+    if (this.cy.getElementById(nodeId).empty() || this.cy.getElementById(clusterId).empty()) {
+      return undefined;
+    }
+    
+    if (this.edgeExists(nodeId, clusterId, EdgeType.IN_CLUSTER)) {
+      return this.cy.$(`edge[source = "${nodeId}"][target = "${clusterId}"][label = "${EdgeType.IN_CLUSTER}"]`).first() as EdgeSingular;
+    }
+    
+    const edgeDef: ElementDefinition = {
+      group: 'edges',
+      data: {
+        id: edgeId,
+        source: nodeId,
+        target: clusterId,
+        label: EdgeType.IN_CLUSTER
+      }
+    };
+    
+    this.cy.add(edgeDef);
+    this.queueNotify([edgeDef]);
+    return this.cy.getElementById(edgeDef.data!.id as string) as EdgeSingular;
   }
 
   public updateCluster(id: string, updates: Record<string, any>): boolean {
@@ -351,6 +386,8 @@ export class GraphService {
     
     if (clusterId && this.clusterExists.has(clusterId)) {
       this.moveNodeToCluster(folderId, clusterId);
+    } else if (clusterId) {
+      this.cy.getElementById(folderId).data('cluster', clusterId);
     }
     
     return this.cy.getElementById(folderId) as NodeSingular;
@@ -714,24 +751,16 @@ export class GraphService {
 
     // Create a map to track processed clusters for quick lookup
     const processedClusterIds = new Set<string>();
-
+    
+    // First phase: Create all clusters before processing any notes
     this.cy.batch(() => {
-      // First, create all clusters to ensure they exist before creating notes
-      clusters.forEach(cluster => {
-        const clusterNode = this.addCluster({
-          id: cluster.id,
-          title: cluster.title,
-          createdAt: cluster.createdAt,
-          updatedAt: cluster.updatedAt
-        });
-        processedClusterIds.add(cluster.id);
-      });
-      
-      // Special handling for the default cluster if it doesn't exist but is referenced
-      const hasDefaultCluster = processedClusterIds.has('default-cluster');
-      const needsDefaultCluster = notes.some(note => note.clusterId === 'default-cluster');
-      
-      if (needsDefaultCluster && !hasDefaultCluster) {
+      // First, ensure default cluster exists if needed
+      const needsDefaultCluster = 
+        notes.some(note => note.clusterId === 'default-cluster') && 
+        !clusters.some(c => c.id === 'default-cluster');
+
+      if (needsDefaultCluster) {
+        console.log("Creating default cluster because it's needed but not in clusters array");
         const defaultCluster = this.addCluster({
           id: 'default-cluster',
           title: 'Main Cluster',
@@ -739,8 +768,28 @@ export class GraphService {
           updatedAt: new Date().toISOString()
         });
         processedClusterIds.add('default-cluster');
+        this.clusterExists.add('default-cluster');
       }
       
+      // Then add all other clusters from the array
+      clusters.forEach(cluster => {
+        if (processedClusterIds.has(cluster.id)) return; // Skip if already processed
+        
+        const clusterNode = this.addCluster({
+          id: cluster.id,
+          title: cluster.title,
+          createdAt: cluster.createdAt,
+          updatedAt: cluster.updatedAt
+        });
+        processedClusterIds.add(cluster.id);
+        this.clusterExists.add(cluster.id);
+        console.log(`Added cluster: ${cluster.id}`);
+      });
+    });
+    
+    // Second phase: Process folders and notes
+    this.cy.batch(() => {
+      // First process folders
       const folderNotes = notes.filter(note => note.type === 'folder');
       folderNotes.forEach(folder => {
         this.addFolder({
@@ -752,6 +801,7 @@ export class GraphService {
         }, folder.parentId);
       });
 
+      // Then process regular notes
       const regularNotes = notes.filter(note => note.type !== 'folder');
       regularNotes.forEach(note => {
         const node = this.addNote({
@@ -763,8 +813,9 @@ export class GraphService {
           path: note.path
         }, note.parentId);
         
-        if (note.clusterId && processedClusterIds.has(note.clusterId)) {
-          this.moveNodeToCluster(note.id, note.clusterId);
+        // Set cluster without creating the edge yet - we'll create edges later
+        if (note.clusterId) {
+          node.data('cluster', note.clusterId);
         }
         
         note.tags?.forEach((tag: string) => {
@@ -773,6 +824,14 @@ export class GraphService {
         
         if (note.content) {
           this.updateNoteRelations(note.id, JSON.stringify(note.content));
+        }
+      });
+      
+      // Finally, create cluster edges for all nodes that need them
+      this.cy.nodes().forEach(node => {
+        const nodeClusterId = node.data('cluster');
+        if (nodeClusterId && processedClusterIds.has(nodeClusterId)) {
+          this.createClusterEdge(node.id(), nodeClusterId);
         }
       });
     });
