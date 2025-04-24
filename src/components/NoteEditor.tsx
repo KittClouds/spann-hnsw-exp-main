@@ -1,6 +1,6 @@
 
 import { useAtom } from 'jotai';
-import { activeNoteAtom, activeNoteIdAtom, notesAtom, createNote, deleteNote } from '@/lib/store';
+import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/store';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback } from 'react';
 import { useBlockNote } from "@blocknote/react";
@@ -10,14 +10,8 @@ import "@blocknote/mantine/style.css";
 import { PartialBlock } from '@blocknote/core';
 import { debounce } from 'lodash';
 import { Button } from './ui/button';
-import { Plus, ChevronDown } from 'lucide-react';
+import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
@@ -32,7 +26,6 @@ export function NoteEditor() {
   
   const editor = useBlockNote({
     initialContent: activeNote?.content as PartialBlock[] || [],
-    // Removing the onError property as it's not supported
   });
 
   useEffect(() => {
@@ -98,17 +91,7 @@ export function NoteEditor() {
     }
   };
 
-  const handleNewNote = useCallback(() => {
-    const { id, note } = createNote();
-    setNotes(prevNotes => [...prevNotes, note]);
-    setActiveNoteId(id);
-    
-    toast("New note created", {
-      description: "Start typing to edit your note",
-    });
-  }, [setNotes, setActiveNoteId]);
-
-  const handleDeleteNote = useCallback((id: string) => {
+  const handleDeleteNote = useCallback(() => {
     if (notes.length <= 1) {
       toast("Cannot delete", {
         description: "You must keep at least one note",
@@ -116,18 +99,15 @@ export function NoteEditor() {
       return;
     }
     
-    const noteIndex = notes.findIndex(note => note.id === id);
-    const isActiveNote = id === activeNoteId;
+    const noteIndex = notes.findIndex(note => note.id === activeNoteId);
     
-    setNotes(prevNotes => deleteNote(prevNotes, id));
+    setNotes(prevNotes => deleteNote(prevNotes, activeNoteId));
     
-    if (isActiveNote) {
-      const nextNoteIndex = noteIndex < notes.length - 1 ? noteIndex : noteIndex - 1;
-      const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
-      
-      if (nextNoteId) {
-        setActiveNoteId(nextNoteId);
-      }
+    const nextNoteIndex = noteIndex < notes.length - 1 ? noteIndex : noteIndex - 1;
+    const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
+    
+    if (nextNoteId) {
+      setActiveNoteId(nextNoteId);
     }
     
     toast("Note deleted", {
@@ -154,31 +134,14 @@ export function NoteEditor() {
             placeholder="Note Title"
           />
         </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={handleNewNote}
-            className="dark:bg-[#7c5bf1] dark:hover:bg-[#6b4ad5] light:bg-[#614ac2] light:hover:bg-[#563db0] text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" /> New Note
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                Switch Note <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {notes.map((note) => (
-                <DropdownMenuItem
-                  key={note.id}
-                  onClick={() => setActiveNoteId(note.id)}
-                >
-                  {note.title}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <Button 
+          onClick={handleDeleteNote} 
+          variant="outline" 
+          size="icon" 
+          className="ml-2 text-destructive hover:bg-destructive/10"
+        >
+          <Trash className="h-4 w-4" />
+        </Button>
       </div>
       
       <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
