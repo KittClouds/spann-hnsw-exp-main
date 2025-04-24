@@ -69,15 +69,16 @@ export function NoteEditor() {
   useEffect(() => {
     if (!editor) return;
     
-    const unsubscribe = editor.onEditorContentChange(() => {
+    // Store the return value correctly
+    const unsubscribeFunction = editor.onEditorContentChange(() => {
       saveChanges();
     });
     
     return () => {
       saveChanges.cancel();
-      // Fixed: Only call unsubscribe if it's a function
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
+      // Call the unsubscribe function safely
+      if (unsubscribeFunction) {
+        unsubscribeFunction();
       }
     };
   }, [editor, saveChanges, activeNote]);
