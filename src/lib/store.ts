@@ -25,7 +25,7 @@ const initialNotes: Note[] = [
     content: [{ 
       type: 'paragraph', 
       content: 'Welcome to Galaxy Notes! Start typing here...',
-      styles: {} 
+      // Removed styles property as it's not compatible with PartialBlock
     }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate()
@@ -36,7 +36,7 @@ const initialNotes: Note[] = [
     content: [{ 
       type: 'paragraph', 
       content: 'Click on a note title to edit it. Create new notes with the + button.',
-      styles: {} 
+      // Removed styles property as it's not compatible with PartialBlock
     }], 
     createdAt: getCurrentDate(), 
     updatedAt: getCurrentDate()
@@ -86,7 +86,7 @@ export const createNote = () => {
   const newNote: Note = {
     id: newId,
     title: 'Untitled Note',
-    content: [{ type: 'paragraph', content: '', styles: {} }],
+    content: [{ type: 'paragraph', content: '' }], // Removed styles property
     createdAt: now,
     updatedAt: now
   };

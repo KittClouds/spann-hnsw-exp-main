@@ -32,9 +32,7 @@ export function NoteEditor() {
   
   const editor = useBlockNote({
     initialContent: activeNote?.content as PartialBlock[] || [],
-    onError: (error) => {
-      console.error("BlockNote error:", error);
-    }
+    // Removing the onError property as it's not supported
   });
 
   useEffect(() => {
@@ -77,6 +75,7 @@ export function NoteEditor() {
     
     return () => {
       saveChanges.cancel();
+      // Fixed: Only call unsubscribe if it's a function
       if (typeof unsubscribe === 'function') {
         unsubscribe();
       }
