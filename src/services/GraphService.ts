@@ -201,7 +201,7 @@ export class GraphService {
     this.titleIndex.set(slugTitle, nodeId);
     this.queueNotify([el]);
     
-    if (clusterId) {
+    if (clusterId && this.cy.getElementById(clusterId).nonempty()) {
       this.moveNodeToCluster(nodeId, clusterId);
     }
     
@@ -345,7 +345,7 @@ export class GraphService {
     this.cy.add(el);
     this.queueNotify([el]);
     
-    if (clusterId) {
+    if (clusterId && this.cy.getElementById(clusterId).nonempty()) {
       this.moveNodeToCluster(folderId, clusterId);
     }
     
@@ -551,6 +551,11 @@ export class GraphService {
   public moveNodeToCluster(nodeId: string, clusterId?: string): boolean {
     const node = this.cy.getElementById(nodeId);
     if (node.empty()) return false;
+    
+    if (clusterId && this.cy.getElementById(clusterId).empty()) {
+      console.warn(`Cannot move node ${nodeId} to non-existent cluster ${clusterId}`);
+      return false;
+    }
 
     const edgeSel = `edge[label = "${EdgeType.IN_CLUSTER}"][source = "${nodeId}"]`;
     const existingEdge = this.cy.$(edgeSel).first();
@@ -700,11 +705,19 @@ export class GraphService {
       : this.cy.collection();
   }
 
-  public importFromStore(notes: any[], folders: any[] = []) {
+  public importFromStore(notes: any[], clusters: any[] = []) {
     this.initializeGraph();
 
     this.cy.batch(() => {
-      // Add folders (which are actually notes with type 'folder')
+      clusters.forEach(cluster => {
+        this.addCluster({
+          id: cluster.id,
+          title: cluster.title,
+          createdAt: cluster.createdAt,
+          updatedAt: cluster.updatedAt
+        });
+      });
+      
       const folderNotes = notes.filter(note => note.type === 'folder');
       folderNotes.forEach(folder => {
         this.addFolder({
@@ -716,7 +729,6 @@ export class GraphService {
         }, folder.parentId);
       });
 
-      // Add regular notes
       const regularNotes = notes.filter(note => note.type !== 'folder');
       regularNotes.forEach(note => {
         const node = this.addNote({
@@ -726,14 +738,16 @@ export class GraphService {
           createdAt: note.createdAt,
           updatedAt: note.updatedAt,
           path: note.path
-        }, note.parentId, note.clusterId);
+        }, note.parentId);
         
-        // Process tags if available
+        if (note.clusterId && this.cy.getElementById(note.clusterId).nonempty()) {
+          this.moveNodeToCluster(note.id, note.clusterId);
+        }
+        
         note.tags?.forEach((tag: string) => {
           this.tagNote(note.id, tag);
         });
         
-        // Process content for relationships
         if (note.content) {
           this.updateNoteRelations(note.id, JSON.stringify(note.content));
         }

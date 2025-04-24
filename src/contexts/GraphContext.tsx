@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { graphService, NodeType } from '../services/GraphService';
 import { useAtom } from 'jotai';
@@ -30,14 +31,14 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   // Initialize the graph with existing notes and clusters
   useEffect(() => {
     if (!initialized) {
-      graphService.importFromStore(notes, []);
+      graphService.importFromStore(notes, clusters);
       setInitialized(true);
     }
   }, [notes, clusters, initialized, setInitialized]);
 
   const value: GraphContextType = {
     importNotes: () => {
-      graphService.importFromStore(notes, []);
+      graphService.importFromStore(notes, clusters);
     },
     
     exportNotes: () => {
@@ -46,11 +47,14 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     },
     
     addNote: (note) => {
+      // First ensure the cluster exists if clusterId is provided
+      let clusterId = note.clusterId || undefined;
+      
       const node = graphService.addNote({
         title: note.title || 'Untitled Note',
         content: note.content || [],
         ...note
-      }, note.parentId, note.clusterId || undefined);
+      }, note.parentId, clusterId);
       
       return node.id();
     },
