@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { graphService, NodeType } from '../services/GraphService';
 import { useAtom } from 'jotai';
@@ -42,7 +41,8 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     },
     
     exportNotes: () => {
-      return graphService.exportToStore();
+      const { notes, clusters } = graphService.exportToStore();
+      return { notes, clusters };
     },
     
     addNote: (note) => {

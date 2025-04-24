@@ -1,4 +1,3 @@
-
 import cytoscape, {
   Core,
   CollectionReturnValue,
@@ -8,7 +7,7 @@ import cytoscape, {
   EdgeCollection,
   ElementDefinition,
 } from 'cytoscape';
-import { Note, Folder, Cluster } from '@/lib/store';
+import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
 import { newNodeId } from '@/lib/utils/id';
 
@@ -705,22 +704,21 @@ export class GraphService {
     this.initializeGraph();
 
     this.cy.batch(() => {
-      // Add folders first
-      folders.forEach(folder => {
+      // Add folders (which are actually notes with type 'folder')
+      const folderNotes = notes.filter(note => note.type === 'folder');
+      folderNotes.forEach(folder => {
         this.addFolder({
           id: folder.id,
-          title: folder.name || folder.title,
+          title: folder.title || folder.name,
           path: folder.path,
           createdAt: folder.createdAt,
           updatedAt: folder.updatedAt
         }, folder.parentId);
       });
 
-      // Add notes
-      notes.forEach(note => {
-        const folderPath = note.path;
-        const parentFolder = folders.find(f => f.path === folderPath);
-        
+      // Add regular notes
+      const regularNotes = notes.filter(note => note.type !== 'folder');
+      regularNotes.forEach(note => {
         const node = this.addNote({
           id: note.id,
           title: note.title,
@@ -728,7 +726,7 @@ export class GraphService {
           createdAt: note.createdAt,
           updatedAt: note.updatedAt,
           path: note.path
-        }, parentFolder?.id, note.clusterId);
+        }, note.parentId, note.clusterId);
         
         // Process tags if available
         note.tags?.forEach((tag: string) => {
@@ -747,16 +745,19 @@ export class GraphService {
 
   public exportToStore() {
     const notes: any[] = [];
-    const folders: any[] = [];
+    const clusters: any[] = [];
 
     this.cy.$(`node[type = "${NodeType.FOLDER}"]`).forEach(folder => {
-      folders.push({
+      notes.push({
         id: folder.id(),
-        name: folder.data('title'),
+        title: folder.data('title'),
+        content: [],
+        createdAt: folder.data('createdAt'),
+        updatedAt: folder.data('updatedAt'),
         path: folder.data('path'),
         parentId: folder.data('parent') || null,
-        createdAt: folder.data('createdAt'),
-        updatedAt: folder.data('updatedAt')
+        type: 'folder',
+        clusterId: folder.data('cluster') || null
       });
     });
 
@@ -775,7 +776,16 @@ export class GraphService {
       });
     });
 
-    return { notes, folders };
+    this.cy.$(`node[type = "${NodeType.CLUSTER_DEFINITION}"]`).forEach(node => {
+      clusters.push({
+        id: node.id(),
+        title: node.data('title'),
+        createdAt: node.data('createdAt'),
+        updatedAt: node.data('updatedAt')
+      });
+    });
+
+    return { notes, clusters };
   }
 
   private getNoteTags(noteId: string): string[] {
