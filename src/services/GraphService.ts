@@ -1,5 +1,12 @@
 
-import cytoscape, { Core, NodeSingular, EdgeSingular } from 'cytoscape';
+import cytoscape, { 
+  Core, 
+  NodeSingular, 
+  EdgeSingular, 
+  NodeCollection, 
+  EdgeCollection, 
+  ElementDefinition 
+} from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
 
