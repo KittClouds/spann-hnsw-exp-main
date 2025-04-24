@@ -1,9 +1,10 @@
 
 import * as React from "react";
-import { ChevronRight, File, Folder, Plus } from "lucide-react";
+import { ChevronRight, File, Folder, Plus, Database } from "lucide-react";
 import { useAtom } from "jotai";
-import { notesAtom, activeNoteIdAtom, createNote, createFolder, Note } from "@/lib/store";
+import { notesAtom, activeNoteIdAtom, createNote, createFolder, Note, clustersAtom, activeClusterIdAtom } from "@/lib/store";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import {
   Collapsible,
@@ -31,17 +32,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ClusterView } from "./ClusterView";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [notes, setNotes] = useAtom(notesAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
+  const [activeClusterId] = useAtom(activeClusterIdAtom);
   
-  const rootNotes = notes.filter(note => note.parentId === null);
+  const rootNotes = notes.filter(note => note.parentId === null && note.clusterId === activeClusterId);
 
-  // Handle creating a new note at root level
   const handleNewItem = React.useCallback((type: 'note' | 'folder', parentId: string | null = null) => {
     const creator = type === 'note' ? createNote : createFolder;
-    const { id, note } = creator(parentId);
+    const { id, note } = creator(parentId, activeClusterId);
     setNotes(prevNotes => [...prevNotes, note]);
     if (type === 'note') {
       setActiveNoteId(id);
@@ -50,45 +52,56 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     toast(`New ${type} created`, {
       description: type === 'note' ? "Start typing to edit your note" : "You can add notes inside this folder",
     });
-  }, [setNotes, setActiveNoteId]);
+  }, [setNotes, setActiveNoteId, activeClusterId]);
 
   return (
     <Sidebar {...props}>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Notes</SidebarGroupLabel>
-          <SidebarGroupAction>
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Plus className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleNewItem('note')}>
-                  <File className="mr-2 h-4 w-4" />
-                  New Note
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleNewItem('folder')}>
-                  <Folder className="mr-2 h-4 w-4" />
-                  New Folder
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarGroupAction>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {rootNotes.map((note) => (
-                <NoteTree 
-                  key={note.id} 
-                  note={note} 
-                  notes={notes}
-                  activeNoteId={activeNoteId}
-                  onSelect={setActiveNoteId}
-                  onNewItem={handleNewItem}
-                />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <Tabs defaultValue="folders" className="w-full">
+          <TabsList className="w-full grid grid-cols-2">
+            <TabsTrigger value="folders">Folders</TabsTrigger>
+            <TabsTrigger value="clusters">Clusters</TabsTrigger>
+          </TabsList>
+          <TabsContent value="folders" className="mt-0">
+            <SidebarGroup>
+              <SidebarGroupLabel>Notes</SidebarGroupLabel>
+              <SidebarGroupAction>
+                <DropdownMenu>
+                  <DropdownMenuTrigger>
+                    <Plus className="h-4 w-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleNewItem('note')}>
+                      <File className="mr-2 h-4 w-4" />
+                      New Note
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNewItem('folder')}>
+                      <Folder className="mr-2 h-4 w-4" />
+                      New Folder
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarGroupAction>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {rootNotes.map((note) => (
+                    <NoteTree 
+                      key={note.id} 
+                      note={note} 
+                      notes={notes}
+                      activeNoteId={activeNoteId}
+                      onSelect={setActiveNoteId}
+                      onNewItem={handleNewItem}
+                    />
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </TabsContent>
+          <TabsContent value="clusters" className="mt-0">
+            <ClusterView />
+          </TabsContent>
+        </Tabs>
       </SidebarContent>
       <SidebarFooter className="p-4">
         <DropdownMenu>
