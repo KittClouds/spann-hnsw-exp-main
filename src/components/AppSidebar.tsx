@@ -1,8 +1,16 @@
 
 import * as React from "react";
-import { ChevronRight, File, Folder, Plus } from "lucide-react";
+import { ChevronRight, File, Folder, Plus, Layers } from "lucide-react";
 import { useAtom } from "jotai";
-import { notesAtom, activeNoteIdAtom, createNote, createFolder, Note } from "@/lib/store";
+import { 
+  notesAtom, 
+  activeNoteIdAtom, 
+  createNote, 
+  createFolder, 
+  Note, 
+  clusterNotesAtom,
+  activeClusterIdAtom 
+} from "@/lib/store";
 import { toast } from "sonner";
 
 import {
@@ -31,17 +39,27 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { ClusterSelector } from "./ClusterSelector";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [notes, setNotes] = useAtom(notesAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
+  const [clusterNotes] = useAtom(clusterNotesAtom);
+  const [activeClusterId] = useAtom(activeClusterIdAtom);
   
-  const rootNotes = notes.filter(note => note.parentId === null);
+  // Get root notes from the current active cluster
+  const rootNotes = clusterNotes.filter(note => note.parentId === null);
 
   // Handle creating a new note at root level
   const handleNewItem = React.useCallback((type: 'note' | 'folder', parentId: string | null = null) => {
     const creator = type === 'note' ? createNote : createFolder;
-    const { id, note } = creator(parentId);
+    const { id, note } = creator(parentId, activeClusterId);
     setNotes(prevNotes => [...prevNotes, note]);
     if (type === 'note') {
       setActiveNoteId(id);
@@ -50,44 +68,73 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     toast(`New ${type} created`, {
       description: type === 'note' ? "Start typing to edit your note" : "You can add notes inside this folder",
     });
-  }, [setNotes, setActiveNoteId]);
+  }, [setNotes, setActiveNoteId, activeClusterId]);
 
   return (
     <Sidebar {...props}>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Notes</SidebarGroupLabel>
-          <SidebarGroupAction>
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Plus className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleNewItem('note')}>
-                  <File className="mr-2 h-4 w-4" />
-                  New Note
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleNewItem('folder')}>
-                  <Folder className="mr-2 h-4 w-4" />
-                  New Folder
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarGroupAction>
+          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {rootNotes.map((note) => (
-                <NoteTree 
-                  key={note.id} 
-                  note={note} 
-                  notes={notes}
-                  activeNoteId={activeNoteId}
-                  onSelect={setActiveNoteId}
-                  onNewItem={handleNewItem}
-                />
-              ))}
-            </SidebarMenu>
+            <ClusterSelector />
           </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <Tabs defaultValue="folders" className="w-full">
+            <TabsList className="grid grid-cols-2 mb-2">
+              <TabsTrigger value="folders">Folders</TabsTrigger>
+              <TabsTrigger value="clusters">Clusters</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="folders" className="space-y-4">
+              <SidebarGroupLabel>Notes</SidebarGroupLabel>
+              <SidebarGroupAction>
+                <DropdownMenu>
+                  <DropdownMenuTrigger>
+                    <Plus className="h-4 w-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleNewItem('note')}>
+                      <File className="mr-2 h-4 w-4" />
+                      New Note
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNewItem('folder')}>
+                      <Folder className="mr-2 h-4 w-4" />
+                      New Folder
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarGroupAction>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {rootNotes.map((note) => (
+                    <NoteTree 
+                      key={note.id} 
+                      note={note} 
+                      notes={clusterNotes}
+                      activeNoteId={activeNoteId}
+                      onSelect={setActiveNoteId}
+                      onNewItem={handleNewItem}
+                    />
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </TabsContent>
+            
+            <TabsContent value="clusters" className="space-y-4">
+              <div className="text-center py-6">
+                <Layers className="mx-auto h-12 w-12 text-muted-foreground mb-2 opacity-50" />
+                <h3 className="font-medium text-lg">Clusters View</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Organize your notes in separate workspaces
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Use the selector above to switch between clusters
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4">

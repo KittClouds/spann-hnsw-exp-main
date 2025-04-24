@@ -1,6 +1,6 @@
 
 import { useAtom } from 'jotai';
-import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/store';
+import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote, clusterNotesAtom } from '@/lib/store';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback } from 'react';
 import { useBlockNote } from "@blocknote/react";
@@ -17,6 +17,7 @@ export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [notes, setNotes] = useAtom(notesAtom);
+  const [clusterNotes] = useAtom(clusterNotesAtom);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -92,28 +93,34 @@ export function NoteEditor() {
   };
 
   const handleDeleteNote = useCallback(() => {
-    if (notes.length <= 1) {
+    if (clusterNotes.length <= 1) {
       toast("Cannot delete", {
         description: "You must keep at least one note",
       });
       return;
     }
     
-    const noteIndex = notes.findIndex(note => note.id === activeNoteId);
+    const noteIndex = clusterNotes.findIndex(note => note.id === activeNoteId);
     
     setNotes(prevNotes => deleteNote(prevNotes, activeNoteId));
     
-    const nextNoteIndex = noteIndex < notes.length - 1 ? noteIndex : noteIndex - 1;
-    const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
+    // Try to select another note in the same cluster
+    const nextNoteIndex = noteIndex < clusterNotes.length - 1 ? noteIndex : noteIndex - 1;
+    const nextNote = clusterNotes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex];
     
-    if (nextNoteId) {
-      setActiveNoteId(nextNoteId);
+    if (nextNote) {
+      setActiveNoteId(nextNote.id);
+    } else if (clusterNotes.length > 1) {
+      // If we couldn't find a next note, just pick the first one
+      setActiveNoteId(clusterNotes[0].id);
+    } else {
+      setActiveNoteId(null);
     }
     
     toast("Note deleted", {
       description: "Your note has been removed",
     });
-  }, [notes, activeNoteId, setNotes, setActiveNoteId]);
+  }, [clusterNotes, activeNoteId, setNotes, setActiveNoteId]);
 
   if (!activeNote) {
     return (

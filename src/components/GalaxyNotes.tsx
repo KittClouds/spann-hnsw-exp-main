@@ -11,14 +11,16 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
+  BreadcrumbSeparator,
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { useAtom } from 'jotai';
-import { activeNoteAtom } from '@/lib/store';
+import { activeNoteAtom, activeClusterAtom } from '@/lib/store';
 
 export function GalaxyNotes() {
   const [activeNote] = useAtom(activeNoteAtom);
+  const [activeCluster] = useAtom(activeClusterAtom);
 
   return (
     <SidebarProvider>
@@ -32,8 +34,18 @@ export function GalaxyNotes() {
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem>
-                    <BreadcrumbPage>{activeNote?.title || "Select a note"}</BreadcrumbPage>
+                    {activeCluster && (
+                      <BreadcrumbPage>{activeCluster.title}</BreadcrumbPage>
+                    )}
                   </BreadcrumbItem>
+                  {activeNote && (
+                    <>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage>{activeNote.title || "Untitled Note"}</BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </>
+                  )}
                 </BreadcrumbList>
               </Breadcrumb>
             </div>
