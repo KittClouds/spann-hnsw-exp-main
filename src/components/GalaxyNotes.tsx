@@ -13,45 +13,14 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
   BreadcrumbPage,
-  BreadcrumbLink,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { useAtom } from 'jotai';
-import { activeNoteAtom, activeClusterAtom, clustersAtom, activeClusterIdAtom } from '@/lib/store';
-import { useMemo } from "react";
+import { activeNoteAtom, activeClusterAtom } from '@/lib/store';
 
 export function GalaxyNotes() {
   const [activeNote] = useAtom(activeNoteAtom);
   const [activeCluster] = useAtom(activeClusterAtom);
-  const [clusters] = useAtom(clustersAtom);
-  const [activeClusterId, setActiveClusterId] = useAtom(activeClusterIdAtom);
-
-  // Generate breadcrumb trail for clusters
-  const clusterTrail = useMemo(() => {
-    if (!activeCluster) return [];
-    
-    const trail = [];
-    let currentId = activeCluster.id;
-    let current = activeCluster;
-    
-    // Add the current cluster
-    trail.unshift(current);
-    
-    // Add all parent clusters
-    while (current.parentId) {
-      const parent = clusters.find(c => c.id === current.parentId);
-      if (!parent) break;
-      
-      trail.unshift(parent);
-      current = parent;
-    }
-    
-    return trail;
-  }, [activeCluster, clusters]);
-
-  const handleBreadcrumbClick = (clusterId: string) => {
-    setActiveClusterId(clusterId);
-  };
 
   return (
     <SidebarProvider>
@@ -64,20 +33,11 @@ export function GalaxyNotes() {
               <Separator orientation="vertical" className="h-6 mx-2" />
               <Breadcrumb>
                 <BreadcrumbList>
-                  {clusterTrail.length > 0 && clusterTrail.map((cluster, index) => (
-                    <BreadcrumbItem key={cluster.id}>
-                      {index < clusterTrail.length - 1 ? (
-                        <>
-                          <BreadcrumbLink onClick={() => handleBreadcrumbClick(cluster.id)}>
-                            {cluster.title}
-                          </BreadcrumbLink>
-                          <BreadcrumbSeparator />
-                        </>
-                      ) : (
-                        <BreadcrumbPage>{cluster.title}</BreadcrumbPage>
-                      )}
-                    </BreadcrumbItem>
-                  ))}
+                  <BreadcrumbItem>
+                    {activeCluster && (
+                      <BreadcrumbPage>{activeCluster.title}</BreadcrumbPage>
+                    )}
+                  </BreadcrumbItem>
                   {activeNote && (
                     <>
                       <BreadcrumbSeparator />
