@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { graphService } from '../services/GraphService';
+import { graphService, NodeType } from '../services/GraphService';
 import { useAtom } from 'jotai';
 import { notesAtom, clustersAtom, Note, Cluster, graphInitializedAtom } from '@/lib/store';
 
@@ -17,6 +17,8 @@ interface GraphContextType {
   searchNotes: (query: string) => any[];
   getRelatedNotes: (noteId: string) => any[];
   getBacklinks: (noteId: string) => any[];
+  tagNote: (noteId: string, tagName: string) => boolean;
+  getConnections: (noteId: string) => Record<'tag' | 'concept' | 'mention', any[]>;
 }
 
 const GraphContext = createContext<GraphContextType | undefined>(undefined);
@@ -26,50 +28,88 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   const [clusters] = useAtom(clustersAtom);
   const [initialized, setInitialized] = useAtom(graphInitializedAtom);
 
+  // Initialize the graph with existing notes and clusters
   useEffect(() => {
     if (!initialized) {
-      graphService.importFromStore(notes, clusters);
+      graphService.importFromStore(notes, []);
       setInitialized(true);
     }
   }, [notes, clusters, initialized, setInitialized]);
 
   const value: GraphContextType = {
     importNotes: () => {
-      graphService.importFromStore(notes, clusters);
+      graphService.importFromStore(notes, []);
     },
+    
     exportNotes: () => {
       return graphService.exportToStore();
     },
+    
     addNote: (note) => {
-      const parentCluster = clusters.find(c => c.id === note.clusterId);
-      return graphService.addNote(note, parentCluster?.id).id();
+      const node = graphService.addNote({
+        title: note.title || 'Untitled Note',
+        content: note.content || [],
+        ...note
+      }, note.parentId, note.clusterId || undefined);
+      
+      return node.id();
     },
+    
     updateNote: (id, updates) => {
       return graphService.updateNote(id, updates);
     },
+    
     deleteNote: (id) => {
       return graphService.deleteNote(id);
     },
+    
     addCluster: (cluster) => {
-      return graphService.addCluster(cluster).id();
+      return graphService.addCluster({
+        title: cluster.title || 'Untitled Cluster',
+        ...cluster
+      }).id();
     },
+    
     updateCluster: (id, updates) => {
       return graphService.updateCluster(id, updates);
     },
+    
     deleteCluster: (id) => {
       return graphService.deleteCluster(id);
     },
+    
     moveNode: (nodeId, newParentId) => {
-      return graphService.moveNode(nodeId, newParentId);
+      const result = graphService.moveNode(nodeId, newParentId);
+      return !!result;
     },
+    
     searchNotes: (query) => {
-      return graphService.searchNodes(query);
+      return graphService.searchNodes(query, [NodeType.NOTE]).map(node => ({
+        id: node.id(),
+        title: node.data('title'),
+        type: node.data('type')
+      }));
     },
+    
     getRelatedNotes: (noteId) => {
-      return graphService.getRelatedNotes(noteId);
+      return graphService.getRelatedNotes(noteId).map(node => ({
+        id: node.id(),
+        title: node.data('title'),
+        type: node.data('type')
+      }));
     },
+    
     getBacklinks: (noteId) => {
       return graphService.getBacklinks(noteId);
+    },
+    
+    tagNote: (noteId, tagName) => {
+      const result = graphService.tagNote(noteId, tagName);
+      return !!result;
+    },
+    
+    getConnections: (noteId) => {
+      return graphService.getConnections(noteId);
     }
   };
 
