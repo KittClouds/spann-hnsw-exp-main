@@ -1,3 +1,4 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
@@ -34,7 +35,7 @@ const initialCluster: Cluster = {
   updatedAt: getCurrentDate(),
 };
 
-// Update initialNotes with clusterId
+// Define initial notes with clusterId already set
 const initialNotes: Note[] = [
   {
     id: 'folder-1',
@@ -52,7 +53,7 @@ const initialNotes: Note[] = [
     content: [{ 
       type: 'paragraph',
       content: 'Welcome to Galaxy Notes! Start typing here...',
-    }],
+    }] as PartialBlock[],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
     parentId: 'folder-1',
@@ -65,14 +66,14 @@ const initialNotes: Note[] = [
     content: [{ 
       type: 'paragraph',
       content: 'Click on a note title to edit it. Create new notes with the + button.',
-    }],
+    }] as PartialBlock[],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
     parentId: 'folder-1',
     type: 'note',
     clusterId: 'default-cluster'
   },
-].map(note => ({ ...note, clusterId: 'default-cluster' }));
+];
 
 // Clusters atom
 export const clustersAtom = atomWithStorage<Cluster[]>('galaxy-notes-clusters', [initialCluster]);
@@ -121,7 +122,7 @@ export const createNote = (parentId: string | null = null, clusterId: string | n
   const newNote: Note = {
     id: newId,
     title: 'Untitled Note',
-    content: [{ type: 'paragraph', content: '' }],
+    content: [{ type: 'paragraph', content: '' }] as PartialBlock[],
     createdAt: now,
     updatedAt: now,
     parentId,
