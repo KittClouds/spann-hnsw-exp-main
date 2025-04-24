@@ -1,6 +1,5 @@
 
 import { ThemeToggle } from "./ThemeToggle";
-import { NotesSidebar } from "./NotesSidebar";
 import { NoteEditor } from "./NoteEditor";
 
 export function GalaxyNotes() {
@@ -19,8 +18,7 @@ export function GalaxyNotes() {
         </div>
       </header>
       
-      <main className="flex flex-1 overflow-hidden">
-        <NotesSidebar />
+      <main className="flex-1 overflow-hidden">
         <NoteEditor />
       </main>
     </div>
