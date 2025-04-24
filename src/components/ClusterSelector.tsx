@@ -31,7 +31,7 @@ export function ClusterSelector() {
     cluster.type === 'cluster' && cluster.parentId === null
   ) || [];
   
-  const activeCluster = clusters.find(cluster => cluster.id === activeClusterId) || clusters[0];
+  const activeCluster = clusters.find(cluster => cluster.id === activeClusterId) || clusters[0] || { title: "No Cluster Selected" };
 
   const handleCreateCluster = () => {
     const newCluster = createCluster();
@@ -78,7 +78,7 @@ export function ClusterSelector() {
             aria-expanded={open}
             className="w-full justify-between"
           >
-            {activeCluster?.title}
+            {activeCluster?.title || "Select Cluster"}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -87,27 +87,31 @@ export function ClusterSelector() {
             <CommandInput placeholder="Search clusters..." />
             <CommandEmpty>No clusters found.</CommandEmpty>
             <CommandGroup>
-              {rootClusters.map((cluster) => (
-                <CommandItem
-                  key={cluster.id}
-                  value={cluster.title}
-                  onSelect={() => {
-                    setActiveClusterId(cluster.id);
-                    setOpen(false);
-                  }}
-                  className="flex justify-between"
-                >
-                  <span>{cluster.title}</span>
-                  <div className="flex items-center gap-2">
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        activeClusterId === cluster.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                  </div>
-                </CommandItem>
-              ))}
+              {rootClusters.length > 0 ? (
+                rootClusters.map((cluster) => (
+                  <CommandItem
+                    key={cluster.id}
+                    value={cluster.title || ""}
+                    onSelect={() => {
+                      setActiveClusterId(cluster.id);
+                      setOpen(false);
+                    }}
+                    className="flex justify-between"
+                  >
+                    <span>{cluster.title}</span>
+                    <div className="flex items-center gap-2">
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          activeClusterId === cluster.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                    </div>
+                  </CommandItem>
+                ))
+              ) : (
+                <CommandItem disabled>No clusters available</CommandItem>
+              )}
             </CommandGroup>
             <div className="p-2 border-t">
               <Button 
