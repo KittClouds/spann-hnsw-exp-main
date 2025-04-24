@@ -62,6 +62,22 @@ export class GraphService {
     });
   }
 
+  public updateCluster(id: string, updates: Partial<Cluster>): boolean {
+    const node = this.cy.$id(id);
+    if (node.empty()) return false;
+    
+    node.data(updates);
+    return true;
+  }
+
+  public deleteCluster(id: string): boolean {
+    const node = this.cy.$id(id);
+    if (node.empty()) return false;
+    
+    node.remove();
+    return true;
+  }
+
   public updateNote(id: string, updates: Partial<Note>): boolean {
     const node = this.cy.$id(id);
     if (node.empty()) return false;

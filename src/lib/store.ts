@@ -1,3 +1,4 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
@@ -183,15 +184,3 @@ const getAllChildrenIds = (notes: Note[], folderId: string): string[] => {
 
 export const graphInitializedAtom = atom<boolean>(false);
 export const graphLayoutAtom = atom<string>('dagre');
-
-export {
-  clustersAtom,
-  activeClusterIdAtom,
-  notesAtom,
-  activeNoteIdAtom,
-  activeNoteAtom,
-  createNote,
-  createFolder,
-  createCluster,
-  deleteNote
-};
