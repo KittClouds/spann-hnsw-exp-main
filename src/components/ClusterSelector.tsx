@@ -29,7 +29,7 @@ export function ClusterSelector() {
   // Filter only actual clusters (not folders) that are at the root level
   const rootClusters = clusters.filter(cluster => 
     cluster.type === 'cluster' && cluster.parentId === null
-  );
+  ) || [];
   
   const activeCluster = clusters.find(cluster => cluster.id === activeClusterId) || clusters[0];
 
