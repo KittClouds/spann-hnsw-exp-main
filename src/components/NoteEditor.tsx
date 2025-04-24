@@ -69,17 +69,14 @@ export function NoteEditor() {
   useEffect(() => {
     if (!editor) return;
     
-    // Store the return value correctly
-    const unsubscribeFunction = editor.onEditorContentChange(() => {
+    // Subscribe to editor content changes
+    editor.onEditorContentChange(() => {
       saveChanges();
     });
     
     return () => {
       saveChanges.cancel();
-      // Call the unsubscribe function safely
-      if (unsubscribeFunction) {
-        unsubscribeFunction();
-      }
+      // No need to manually unsubscribe - BlockNote handles this internally
     };
   }, [editor, saveChanges, activeNote]);
 
