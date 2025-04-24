@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Plus, Database } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { clustersAtom, createCluster } from '@/lib/store';
 import { toast } from 'sonner';
 
@@ -12,6 +12,19 @@ export function ClusterView() {
   const [clusters, setClusters] = useAtom(clustersAtom);
   const [isOpen, setIsOpen] = useState(false);
   const [newClusterTitle, setNewClusterTitle] = useState('');
+  
+  // Ensure default cluster exists
+  useEffect(() => {
+    if (!clusters.some(c => c.id === 'default-cluster')) {
+      const defaultCluster = {
+        id: 'default-cluster',
+        title: 'Main Cluster',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setClusters(prev => [...prev, defaultCluster]);
+    }
+  }, [clusters, setClusters]);
 
   const handleCreateCluster = () => {
     if (!newClusterTitle.trim()) {

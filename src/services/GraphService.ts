@@ -1,3 +1,4 @@
+
 import cytoscape, {
   Core,
   CollectionReturnValue,
@@ -39,6 +40,7 @@ export class GraphService {
   private notifyScheduled = false;
   private pendingChanges: ElementDefinition[] = [];
   private changeListeners: Array<(elements: ElementDefinition[]) => void> = [];
+  private clusterExists = new Set<string>();
 
   constructor() {
     this.cy = cytoscape({ headless: true });
@@ -49,6 +51,7 @@ export class GraphService {
     // Clear existing elements
     this.cy.elements().remove();
     this.titleIndex.clear();
+    this.clusterExists.clear();
     
     if (this.cy.$(`node[type = "${NodeType.STANDARD_ROOT}"]`).empty()) {
       this.cy.add({
@@ -201,7 +204,7 @@ export class GraphService {
     this.titleIndex.set(slugTitle, nodeId);
     this.queueNotify([el]);
     
-    if (clusterId && this.cy.getElementById(clusterId).nonempty()) {
+    if (clusterId && this.clusterExists.has(clusterId)) {
       this.moveNodeToCluster(nodeId, clusterId);
     }
     
@@ -273,6 +276,7 @@ export class GraphService {
     };
 
     this.cy.add(el);
+    this.clusterExists.add(clusterId);
     this.queueNotify([el]);
     return this.cy.getElementById(clusterId) as NodeSingular;
   }
@@ -345,7 +349,7 @@ export class GraphService {
     this.cy.add(el);
     this.queueNotify([el]);
     
-    if (clusterId && this.cy.getElementById(clusterId).nonempty()) {
+    if (clusterId && this.clusterExists.has(clusterId)) {
       this.moveNodeToCluster(folderId, clusterId);
     }
     
@@ -552,7 +556,7 @@ export class GraphService {
     const node = this.cy.getElementById(nodeId);
     if (node.empty()) return false;
     
-    if (clusterId && this.cy.getElementById(clusterId).empty()) {
+    if (clusterId && !this.clusterExists.has(clusterId)) {
       console.warn(`Cannot move node ${nodeId} to non-existent cluster ${clusterId}`);
       return false;
     }
@@ -708,15 +712,34 @@ export class GraphService {
   public importFromStore(notes: any[], clusters: any[] = []) {
     this.initializeGraph();
 
+    // Create a map to track processed clusters for quick lookup
+    const processedClusterIds = new Set<string>();
+
     this.cy.batch(() => {
+      // First, create all clusters to ensure they exist before creating notes
       clusters.forEach(cluster => {
-        this.addCluster({
+        const clusterNode = this.addCluster({
           id: cluster.id,
           title: cluster.title,
           createdAt: cluster.createdAt,
           updatedAt: cluster.updatedAt
         });
+        processedClusterIds.add(cluster.id);
       });
+      
+      // Special handling for the default cluster if it doesn't exist but is referenced
+      const hasDefaultCluster = processedClusterIds.has('default-cluster');
+      const needsDefaultCluster = notes.some(note => note.clusterId === 'default-cluster');
+      
+      if (needsDefaultCluster && !hasDefaultCluster) {
+        const defaultCluster = this.addCluster({
+          id: 'default-cluster',
+          title: 'Main Cluster',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        processedClusterIds.add('default-cluster');
+      }
       
       const folderNotes = notes.filter(note => note.type === 'folder');
       folderNotes.forEach(folder => {
@@ -740,7 +763,7 @@ export class GraphService {
           path: note.path
         }, note.parentId);
         
-        if (note.clusterId && this.cy.getElementById(note.clusterId).nonempty()) {
+        if (note.clusterId && processedClusterIds.has(note.clusterId)) {
           this.moveNodeToCluster(note.id, note.clusterId);
         }
         
