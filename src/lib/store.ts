@@ -9,6 +9,8 @@ export interface Note {
   content: PartialBlock[];
   createdAt: string;
   updatedAt: string;
+  parentId: string | null; // For folder hierarchy
+  type: 'note' | 'folder';
 }
 
 // Helper function to get current date in ISO format
@@ -19,27 +21,38 @@ const generateId = () => `note-${Date.now()}-${Math.random().toString(36).substr
 
 // Create initial notes with proper structure
 const initialNotes: Note[] = [
-  { 
-    id: generateId(), 
-    title: 'Welcome Note', 
-    content: [{ 
-      type: 'paragraph', 
-      content: 'Welcome to Galaxy Notes! Start typing here...',
-      // Removed styles property as it's not compatible with PartialBlock
-    }], 
-    createdAt: getCurrentDate(), 
-    updatedAt: getCurrentDate()
+  {
+    id: 'folder-1',
+    title: 'Getting Started',
+    content: [],
+    createdAt: getCurrentDate(),
+    updatedAt: getCurrentDate(),
+    parentId: null,
+    type: 'folder'
   },
   { 
-    id: generateId(), 
-    title: 'Getting Started', 
+    id: generateId(),
+    title: 'Welcome Note',
     content: [{ 
-      type: 'paragraph', 
+      type: 'paragraph',
+      content: 'Welcome to Galaxy Notes! Start typing here...',
+    }],
+    createdAt: getCurrentDate(),
+    updatedAt: getCurrentDate(),
+    parentId: 'folder-1',
+    type: 'note'
+  },
+  { 
+    id: generateId(),
+    title: 'How to Use',
+    content: [{ 
+      type: 'paragraph',
       content: 'Click on a note title to edit it. Create new notes with the + button.',
-      // Removed styles property as it's not compatible with PartialBlock
-    }], 
-    createdAt: getCurrentDate(), 
-    updatedAt: getCurrentDate()
+    }],
+    createdAt: getCurrentDate(),
+    updatedAt: getCurrentDate(),
+    parentId: 'folder-1',
+    type: 'note'
   },
 ];
 
@@ -47,7 +60,7 @@ const initialNotes: Note[] = [
 export const notesAtom = atomWithStorage<Note[]>('galaxy-notes', initialNotes);
 
 // Active note ID atom
-export const activeNoteIdAtom = atom<string | null>(initialNotes[0].id);
+export const activeNoteIdAtom = atom<string | null>(initialNotes[1].id);
 
 // Derived atom for the currently active note
 export const activeNoteAtom = atom(
@@ -79,22 +92,63 @@ export const activeNoteAtom = atom(
 );
 
 // Create a new note
-export const createNote = () => {
+export const createNote = (parentId: string | null = null) => {
   const newId = generateId();
   const now = getCurrentDate();
   
   const newNote: Note = {
     id: newId,
     title: 'Untitled Note',
-    content: [{ type: 'paragraph', content: '' }], // Removed styles property
+    content: [{ type: 'paragraph', content: '' }],
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    parentId,
+    type: 'note'
   };
   
   return { id: newId, note: newNote };
 };
 
+// Create a new folder
+export const createFolder = (parentId: string | null = null) => {
+  const newId = generateId();
+  const now = getCurrentDate();
+  
+  const newFolder: Note = {
+    id: newId,
+    title: 'New Folder',
+    content: [],
+    createdAt: now,
+    updatedAt: now,
+    parentId,
+    type: 'folder'
+  };
+  
+  return { id: newId, note: newFolder };
+};
+
 // Delete a note by ID
 export const deleteNote = (notes: Note[], id: string): Note[] => {
+  const noteToDelete = notes.find(note => note.id === id);
+  if (!noteToDelete) return notes;
+
+  // If it's a folder, also delete all children
+  if (noteToDelete.type === 'folder') {
+    const childrenIds = getAllChildrenIds(notes, id);
+    return notes.filter(note => !childrenIds.includes(note.id) && note.id !== id);
+  }
+
   return notes.filter(note => note.id !== id);
 };
+
+// Helper to get all children IDs of a folder (recursive)
+const getAllChildrenIds = (notes: Note[], folderId: string): string[] => {
+  const children = notes.filter(note => note.parentId === folderId);
+  const childrenIds = children.map(child => child.id);
+  
+  const folderChildren = children.filter(child => child.type === 'folder');
+  const grandChildrenIds = folderChildren.flatMap(folder => getAllChildrenIds(notes, folder.id));
+  
+  return [...childrenIds, ...grandChildrenIds];
+};
+
