@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
-import { useNoteOperations } from '@/hooks/useNoteOperations';
+import { useNoteOperations, BlockType } from '@/hooks/useNoteOperations';
 import { BlockNoteEditor } from '@blocknote/core';
 import { 
   Tooltip,
@@ -108,7 +108,7 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("heading")}
+                onClick={() => operations.changeBlockType("heading" as BlockType)}
               >
                 <Heading1 size={16} />
               </Button>
@@ -121,7 +121,7 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("heading-2")}
+                onClick={() => operations.changeBlockType("heading-2" as BlockType)}
               >
                 <Heading2 size={16} />
               </Button>
@@ -134,7 +134,7 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("heading-3")}
+                onClick={() => operations.changeBlockType("heading-3" as BlockType)}
               >
                 <Heading3 size={16} />
               </Button>
@@ -151,7 +151,7 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("bulletList")}
+                onClick={() => operations.changeBlockType("bulletList" as BlockType)}
               >
                 <List size={16} />
               </Button>
@@ -164,7 +164,7 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("numberedList")}
+                onClick={() => operations.changeBlockType("numberedList" as BlockType)}
               >
                 <ListOrdered size={16} />
               </Button>
@@ -177,7 +177,7 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("quote")}
+                onClick={() => operations.changeBlockType("quote" as BlockType)}
               >
                 <Quote size={16} />
               </Button>

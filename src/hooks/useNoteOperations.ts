@@ -3,6 +3,21 @@ import { useState } from 'react';
 import { BlockNoteEditor, Block, PartialBlock } from '@blocknote/core';
 import { toast } from 'sonner';
 
+// Define valid BlockNote block types to ensure type safety
+export type BlockType = 
+  | "paragraph"
+  | "heading"
+  | "heading-2"
+  | "heading-3"
+  | "bulletList"
+  | "numberedList"
+  | "codeBlock"
+  | "quote"
+  | "table"
+  | "image"
+  | "video"
+  | "audio";
+
 export const useNoteOperations = (editor: BlockNoteEditor | null) => {
   const [selectedBlocks, setSelectedBlocks] = useState<Block[]>([]);
   
@@ -56,7 +71,7 @@ export const useNoteOperations = (editor: BlockNoteEditor | null) => {
     }
   };
   
-  const changeBlockType = (type: string) => {
+  const changeBlockType = (type: BlockType) => {
     if (!editor) return false;
     return updateCurrentBlock({ type });
   };
