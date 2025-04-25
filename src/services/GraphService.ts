@@ -9,7 +9,7 @@ import cytoscape, {
 } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
-import { newNodeId } from '@/lib/utils/id';
+import { generateNodeId, NodeId } from '@/lib/utils/ids';
 
 // Node and Edge type enums
 export enum NodeType {
@@ -140,7 +140,7 @@ export class GraphService {
       const elements = graphData.elements.map((e: any) => {
         if (e && e.data) {
           if (!e.data.id || e.data.id.length < 15) {
-            e.data.id = newNodeId();
+            e.data.id = generateNodeId();
           }
         }
         return e;
@@ -177,7 +177,7 @@ export class GraphService {
     updatedAt?: string;
     path?: string;
   }, folderId?: string, clusterId?: string): NodeSingular {
-    const nodeId = id && id.length >= 15 ? id : newNodeId();
+    const nodeId = id && id.length >= 15 ? id : generateNodeId();
     if (this.cy.getElementById(nodeId).nonempty())
       return this.cy.getElementById(nodeId) as NodeSingular;
 
@@ -258,7 +258,7 @@ export class GraphService {
     createdAt?: string;
     updatedAt?: string;
   }): NodeSingular {
-    const clusterId = id && id.length >= 15 ? id : newNodeId();
+    const clusterId = id && id.length >= 15 ? id : generateNodeId();
     
     if (this.cy.getElementById(clusterId).nonempty())
       return this.cy.getElementById(clusterId) as NodeSingular;
@@ -362,7 +362,7 @@ export class GraphService {
     createdAt?: string;
     updatedAt?: string;
   }, parentId?: string, clusterId?: string): NodeSingular {
-    const folderId = id && id.length >= 15 ? id : newNodeId();
+    const folderId = id && id.length >= 15 ? id : generateNodeId();
     if (this.cy.getElementById(folderId).nonempty())
       return this.cy.getElementById(folderId) as NodeSingular;
 

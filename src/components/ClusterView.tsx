@@ -1,4 +1,3 @@
-
 import { useAtom } from 'jotai';
 import { Button } from './ui/button';
 import { Plus, Database, MoreVertical, PenLine, Trash2 } from 'lucide-react';
@@ -10,6 +9,7 @@ import { toast } from 'sonner';
 import { useGraph } from '@/contexts/GraphContext';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { ClusterNoteTree } from './ClusterNoteTree';
+import { ClusterId } from '@/lib/utils/ids';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,11 +27,13 @@ export function ClusterView() {
   const [editTitle, setEditTitle] = useState('');
   const { addCluster, deleteCluster, updateCluster } = useGraph();
   
+  const DEFAULT_CLUSTER_ID = 'cluster-default' as ClusterId;
+  
   // Ensure default cluster exists
   useEffect(() => {
-    if (!clusters.some(c => c.id === 'default-cluster')) {
+    if (!clusters.some(c => c.id === DEFAULT_CLUSTER_ID)) {
       const defaultCluster = {
-        id: 'default-cluster',
+        id: DEFAULT_CLUSTER_ID,
         title: 'Main Cluster',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -84,13 +86,13 @@ export function ClusterView() {
   };
 
   const handleDeleteCluster = (clusterId: string) => {
-    if (clusterId === 'default-cluster') {
+    if (clusterId === DEFAULT_CLUSTER_ID) {
       toast.error("Cannot delete the main cluster");
       return;
     }
     
     if (clusterId === activeClusterId) {
-      setActiveClusterId('default-cluster');
+      setActiveClusterId(DEFAULT_CLUSTER_ID);
     }
     
     setClusters(prevClusters => prevClusters.filter(c => c.id !== clusterId));
@@ -227,8 +229,8 @@ export function ClusterView() {
                       
                       <DropdownMenuItem 
                         onClick={() => handleDeleteCluster(cluster.id)}
-                        className={cluster.id === 'default-cluster' ? 'text-muted-foreground' : 'text-red-600 focus:text-red-600 dark:focus:text-red-400'}
-                        disabled={cluster.id === 'default-cluster'}
+                        className={cluster.id === DEFAULT_CLUSTER_ID ? 'text-muted-foreground' : 'text-red-600 focus:text-red-600 dark:focus:text-red-400'}
+                        disabled={cluster.id === DEFAULT_CLUSTER_ID}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
