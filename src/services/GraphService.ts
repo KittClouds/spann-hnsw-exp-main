@@ -12,16 +12,14 @@ import cytoscape, {
   Position,
   SingularElementArgument,
   StylesheetJson,
-  // Import CytoscapeOptions for better typing of cy.json() results
   CytoscapeOptions,
-  // Import Stylesheet for better typing of cy.style() results
   Style
 } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
-import { generateNodeId, NodeId, ClusterId } from '@/lib/utils/ids';
+import { generateNodeId, generateClusterId, NodeId, ClusterId } from '@/lib/utils/ids';
 import { GraphAPI } from './GraphAPI';
 
 // Register plugins
@@ -181,7 +179,7 @@ export class GraphService implements GraphAPI {
     return this.cy;
   }
 
-  public exportGraph(opts: {includeStyle?: boolean} = {}): GraphJSON {
+  public exportGraph(opts: { includeStyle?: boolean } = {}): GraphJSON {
     // Get the JSON representation of the Cytoscape instance
     const cyJson = this.cy.json() as unknown as CytoscapeOptions;
     
@@ -406,7 +404,8 @@ export class GraphService implements GraphAPI {
     const existingEdges = this.cy.edges(edgeSelector); // Get all matching edges
 
     // Fix: Use the correct interface for undo-redo action
-    this.ur.action('moveNodeToCluster',
+    this.ur.action(
+        'moveNodeToCluster',
         (args: { nodeId: string; oldClusterId: string | undefined; newClusterId?: string }) => {
             const currentNode = this.cy.getElementById(args.nodeId);
             if (currentNode.empty()) return;
@@ -477,11 +476,6 @@ export class GraphService implements GraphAPI {
 
             // Update node data back
             currentNode.data('clusterId', originalClusterId);
-        },
-        {
-            nodeId,
-            oldClusterId: node.data('clusterId'),
-            newClusterId: clusterId
         }
     );
 
@@ -551,12 +545,13 @@ export class GraphService implements GraphAPI {
 
     // Apply changes via undo-redo if there are tracked changes
     if (changeOps.length > 0) {
-        this.ur.action('updateNoteData', { changes: changeOps },
-            (args) => { // DO
+        this.ur.action(
+            'updateNoteData',
+            (args: { changes: typeof changeOps }) => { // DO
                 args.changes.forEach(op => op.ele.data(op.name, op.newValue));
                 return args; // Pass args to undo
             },
-            (undoArgs) => { // UNDO
+            (undoArgs: { changes: typeof changeOps }) => { // UNDO
                 undoArgs.changes.forEach(op => op.ele.data(op.name, op.oldValue));
             }
         );
@@ -679,12 +674,13 @@ export class GraphService implements GraphAPI {
      node.data('updatedAt', newData.updatedAt); // Apply directly
 
     if (changeOps.length > 0) {
-        this.ur.action('updateClusterData', { changes: changeOps },
-            (args) => { // DO
+        this.ur.action(
+            'updateClusterData',
+            (args: { changes: typeof changeOps }) => { // DO
                 args.changes.forEach(op => op.ele.data(op.name, op.newValue));
                 return args;
             },
-            (undoArgs) => { // UNDO
+            (undoArgs: { changes: typeof changeOps }) => { // UNDO
                 undoArgs.changes.forEach(op => op.ele.data(op.name, op.oldValue));
             }
         );
@@ -714,7 +710,8 @@ export class GraphService implements GraphAPI {
     const removedJson = node.json() as unknown as ElementDefinition;
 
     // Fix: Use the proper interface for undo-redo action
-    this.ur.action('deleteClusterAndMembers',
+    this.ur.action(
+        'deleteClusterAndMembers',
         (args: { clusterId: string; memberNodeIds: string[] }) => {
             const clusterNode = this.cy.getElementById(args.clusterId);
             const removedElements: ElementDefinition[] = [];
@@ -723,8 +720,10 @@ export class GraphService implements GraphAPI {
             if (clusterNode.nonempty()) {
                 removedClusterJson = clusterNode.json() as unknown as ElementDefinition;
                 const removedCol = this.cy.remove(clusterNode);
-                const elementsArray = removedCol.map(ele => ele.json()) as unknown as ElementDefinition[];
-                removedElements.push(...elementsArray);
+                if (removedCol) {
+                    const elementsArray = removedCol.map(ele => ele.json()) as unknown as ElementDefinition[];
+                    removedElements.push(...elementsArray);
+                }
             }
 
             // Update member nodes: set their clusterId to undefined
@@ -769,8 +768,7 @@ export class GraphService implements GraphAPI {
                     }
                 }
             });
-        },
-        { clusterId: id, memberNodeIds }
+        }
     );
 
     // Update internal set
@@ -812,15 +810,16 @@ export class GraphService implements GraphAPI {
     const oldParentId = node.parent().id(); // Get current compound parent ID
 
     // Use undo-redo for the move operation
-    this.ur.action('moveNodeCompound', { nodeId: nodeId, oldParentId: oldParentId, newParentId: newParentId || null }, // Store null for root
-        (args) => { // DO action
+    this.ur.action(
+        'moveNodeCompound',
+        (args: { nodeId: string; oldParentId: string; newParentId: string | null }) => { // DO action
             const nodeToMove = this.cy.getElementById(args.nodeId);
             if (nodeToMove.nonempty()) {
                 nodeToMove.move({ parent: args.newParentId }); // Move to new parent (or null for root)
             }
             return args; // Pass data for undo
         },
-        (undoArgs) => { // UNDO action
+        (undoArgs: { nodeId: string; oldParentId: string; newParentId: string | null }) => { // UNDO action
             const nodeToMove = this.cy.getElementById(undoArgs.nodeId);
              if (nodeToMove.nonempty()) {
                  nodeToMove.move({ parent: undoArgs.oldParentId }); // Move back to original parent
@@ -881,11 +880,12 @@ export class GraphService implements GraphAPI {
     // sources() gets the source nodes of those incoming edges
     const backlinkingNodes = node.incomers('edge').sources();
 
+    // Convert to array of objects with required properties
     return backlinkingNodes.map(sourceNode => ({
       id: sourceNode.id(),
       title: sourceNode.data('title') || 'Untitled',
       type: sourceNode.data('type') || undefined 
-    }));
+    })).toArray(); // Convert Collection to Array
   }
 
   public tagNote(noteId: string, tagName: string): boolean {
@@ -903,7 +903,8 @@ export class GraphService implements GraphAPI {
     }
 
     // Fix: Use the proper interface for undo-redo action
-    this.ur.action('tagNote',
+    this.ur.action(
+        'tagNote',
         (args: { noteId: string; tagId: string; tagName: string }) => {
             let currentTagNode = this.cy.getElementById(args.tagId);
             let addedElementDefs: ElementDefinition[] = [];
@@ -953,8 +954,7 @@ export class GraphService implements GraphAPI {
                 const idsToRemove = undoArgs.addedElements.map(def => def.data.id);
                 this.cy.remove(this.cy.elements().filter(el => idsToRemove.includes(el.id())));
             }
-        },
-        { noteId, tagId, tagName }
+        }
     );
 
     // --- Notify listeners ---
@@ -994,7 +994,7 @@ export class GraphService implements GraphAPI {
         id: target.id(),
         title: target.data('title') || 'Untitled',
         type: target.data('type') || undefined
-      }));
+      })).toArray(); // Convert Collection to Array
     };
 
     // Helper function to get nodes connected via incoming edges (assuming node is the target)
@@ -1005,7 +1005,7 @@ export class GraphService implements GraphAPI {
         id: source.id(),
         title: source.data('title') || 'Untitled',
         type: source.data('type') || undefined
-      }));
+      })).toArray(); // Convert Collection to Array
     };
 
     return {
@@ -1026,7 +1026,7 @@ export class GraphService implements GraphAPI {
       clusters.forEach(cluster => {
         if (!cluster.id) {
             console.warn("Cluster missing ID during import from store:", cluster);
-            cluster.id = generateNodeId(); // Assign an ID if missing
+            cluster.id = generateClusterId(); // Assign an ID if missing
         }
         this.clusterExists.add(cluster.id);
         elements.push({
@@ -1044,7 +1044,7 @@ export class GraphService implements GraphAPI {
       notes.forEach(note => {
         if (!note.id) {
              console.warn("Note missing ID during import from store:", note);
-             note.id = generateNodeId(); // Assign an ID if missing
+             note.id = generateNodeId() as any; // Cast to correct type 
         }
         const slugTitle = slug(note.title || '');
         elements.push({
