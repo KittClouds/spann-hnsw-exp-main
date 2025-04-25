@@ -12,7 +12,6 @@ import { debounce } from 'lodash';
 import { Button } from './ui/button';
 import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
-import { NoteToolbar } from './NoteToolbar';
 
 export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
@@ -143,11 +142,6 @@ export function NoteEditor() {
         >
           <Trash className="h-4 w-4" />
         </Button>
-      </div>
-      
-      {/* Add the Note Toolbar here */}
-      <div className="mb-4">
-        <NoteToolbar editor={editor} />
       </div>
       
       <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
