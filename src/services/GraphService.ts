@@ -9,9 +9,12 @@ import cytoscape, {
   ElementGroup,
   ElementsDefinition,
 } from 'cytoscape';
+import automove from 'cytoscape-automove';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
 import { generateNodeId, NodeId, ClusterId } from '@/lib/utils/ids';
+
+cytoscape.use(automove);
 
 // Node and Edge type enums
 export enum NodeType {
@@ -45,6 +48,14 @@ export class GraphService {
 
   constructor() {
     this.cy = cytoscape({ headless: true });
+    
+    // Configure automove to keep notes connected to their folders
+    this.cy.automove({
+      nodesMatching: 'node[type = "note"]',
+      reposition: 'drag',
+      dragWith: 'node[type = "folder"]'
+    });
+    
     this.initializeGraph();
   }
 
