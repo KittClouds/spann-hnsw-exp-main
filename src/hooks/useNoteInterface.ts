@@ -75,7 +75,11 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     },
     
     insertText: (text) => {
-      editor.insertText(text);
+      // Using transact method to insert text at the current cursor position
+      // since insertText method doesn't exist directly on BlockNoteEditor
+      editor.transact((tr) => {
+        tr.insertText(text);
+      });
     },
     
     createLink: (url, text) => {

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useBlockNote } from "@blocknote/react";
+import { BlockNoteView } from "@blocknote/mantine"; // Add this import
 import { useNoteInterface } from '../hooks/useNoteInterface';
 import { Button } from './ui/button';
 
