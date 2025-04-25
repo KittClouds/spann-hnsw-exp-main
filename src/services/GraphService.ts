@@ -1,4 +1,3 @@
-
 import cytoscape, {
   Core,
   CollectionReturnValue,
@@ -8,10 +7,11 @@ import cytoscape, {
   EdgeCollection,
   ElementDefinition,
   ElementGroup,
+  ElementsDefinition,
 } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
-import { generateNodeId, NodeId } from '@/lib/utils/ids';
+import { generateNodeId, NodeId, ClusterId } from '@/lib/utils/ids';
 
 // Node and Edge type enums
 export enum NodeType {
@@ -81,7 +81,7 @@ export class GraphService {
     }
   }
 
-  private queueNotify(defs: ElementDefinition[]) {
+  private queueNotify(defs: ElementDefinition[]): void {
     this.pendingChanges.push(...defs);
 
     const MAX_BUFFER = 200;
@@ -99,13 +99,13 @@ export class GraphService {
     });
   }
 
-  private flushNotify() {
+  private flushNotify(): void {
     const changes = this.pendingChanges;
     this.pendingChanges = [];
     this.changeListeners.forEach(l => l(changes));
   }
 
-  private edgeExists(src: string, tgt: string, label: EdgeType) {
+  private edgeExists(src: string, tgt: string, label: EdgeType): boolean {
     const s = this.cy.getElementById(src);
     const t = this.cy.getElementById(tgt);
     if (s.empty() || t.empty()) return false;
@@ -156,11 +156,14 @@ export class GraphService {
       });
     });
 
-    this.queueNotify(this.cy.elements().jsons() as ElementDefinition[]);
+    // Fix: Ensure we're using ElementDefinition[] by explicitly casting
+    const elementDefs = this.cy.elements().jsons() as unknown as ElementDefinition[];
+    this.queueNotify(elementDefs);
   }
 
   public clearGraph(): void {
-    const removed = this.cy.elements().jsons() as ElementDefinition[];
+    // Fix: Ensure we're using ElementDefinition[] by explicitly casting
+    const removed = this.cy.elements().jsons() as unknown as ElementDefinition[];
     this.cy.elements().remove();
     this.titleIndex.clear();
     this.queueNotify(removed);
@@ -228,13 +231,15 @@ export class GraphService {
     
     if (existingEdge.nonempty()) {
       if (!clusterId) {
-        const rm = existingEdge.json() as ElementDefinition;
+        // Fix: Ensure we're using ElementDefinition by explicitly casting
+        const rm = existingEdge.json() as unknown as ElementDefinition;
         existingEdge.remove();
         this.queueNotify([rm]);
       } else {
         existingEdge.move({ target: clusterId });
         existingEdge.data('target', clusterId);
-        this.queueNotify([existingEdge.json() as ElementDefinition]);
+        // Fix: Ensure we're using ElementDefinition by explicitly casting
+        this.queueNotify([existingEdge.json() as unknown as ElementDefinition]);
       }
     }
     
@@ -253,7 +258,8 @@ export class GraphService {
     }
     
     node.data('cluster', clusterId);
-    this.queueNotify([node.json() as ElementDefinition]);
+    // Fix: Ensure we're using ElementDefinition by explicitly casting
+    this.queueNotify([node.json() as unknown as ElementDefinition]);
     return true;
   }
 
@@ -343,7 +349,7 @@ export class GraphService {
       });
     });
 
-    this.queueNotify(this.cy.elements().jsons() as ElementDefinition[]);
+    this.queueNotify(this.cy.elements().jsons() as unknown as ElementDefinition[]);
   }
 
   public exportToStore() {
@@ -375,7 +381,8 @@ export class GraphService {
     this.titleIndex.delete(slug(oldTitle));
     this.titleIndex.set(slugTitle, id);
 
-    this.queueNotify([node.json() as ElementDefinition]);
+    // Fix: Ensure we're using ElementDefinition by explicitly casting
+    this.queueNotify([node.json() as unknown as ElementDefinition]);
     return true;
   }
 
@@ -383,7 +390,8 @@ export class GraphService {
     const node = this.cy.getElementById(id);
     if (node.empty()) return false;
 
-    const removed = node.remove().jsons() as ElementDefinition[];
+    // Fix: Ensure we're using ElementDefinition[] by explicitly casting
+    const removed = node.remove().jsons() as unknown as ElementDefinition[];
     this.titleIndex.delete(node.data('slugTitle'));
     this.queueNotify(removed);
     return true;
@@ -423,7 +431,8 @@ export class GraphService {
     };
 
     node.data(updatedData);
-    this.queueNotify([node.json() as ElementDefinition]);
+    // Fix: Ensure we're using ElementDefinition by explicitly casting
+    this.queueNotify([node.json() as unknown as ElementDefinition]);
     return true;
   }
 
@@ -432,7 +441,8 @@ export class GraphService {
     if (node.empty()) return false;
 
     this.clusterExists.delete(id);
-    const removed = node.remove().jsons() as ElementDefinition[];
+    // Fix: Ensure we're using ElementDefinition[] by explicitly casting
+    const removed = node.remove().jsons() as unknown as ElementDefinition[];
     this.queueNotify(removed);
     return true;
   }
@@ -446,13 +456,15 @@ export class GraphService {
 
     if (existingEdge.nonempty()) {
       if (!newParentId) {
-        const rm = existingEdge.json() as ElementDefinition;
+        // Fix: Ensure we're using ElementDefinition by explicitly casting
+        const rm = existingEdge.json() as unknown as ElementDefinition;
         existingEdge.remove();
         this.queueNotify([rm]);
       } else {
         existingEdge.move({ target: newParentId });
         existingEdge.data('target', newParentId);
-        this.queueNotify([existingEdge.json() as ElementDefinition]);
+        // Fix: Ensure we're using ElementDefinition by explicitly casting
+        this.queueNotify([existingEdge.json() as unknown as ElementDefinition]);
       }
     }
 
@@ -471,7 +483,8 @@ export class GraphService {
     }
 
     node.data('parent', newParentId);
-    this.queueNotify([node.json() as ElementDefinition]);
+    // Fix: Ensure we're using ElementDefinition by explicitly casting
+    this.queueNotify([node.json() as unknown as ElementDefinition]);
     return true;
   }
 
