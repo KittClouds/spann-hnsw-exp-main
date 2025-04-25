@@ -5,7 +5,6 @@ import { BlockNoteView } from "@blocknote/mantine";
 import { useNoteInterface } from '../hooks/useNoteInterface';
 import { Button } from './ui/button';
 import { useGraph } from '../contexts/GraphContext';
-import { GraphAPIDemo } from './GraphAPIDemo';
 
 export const NoteInterfaceExample = () => {
   const editor = useBlockNote({
@@ -42,37 +41,30 @@ export const NoteInterfaceExample = () => {
   };
   
   const handleExportGraph = () => {
-    // Using the GraphAPI interface through the context
-    const exportedGraph = graph.exportGraph({ includeStyle: true });
+    const exportedGraph = graph.exportGraphJSON(true);
     setGraphJson(JSON.stringify(exportedGraph, null, 2));
   };
   
   return (
-    <div className="space-y-8">
-      <div className="space-y-4">
-        <div className="flex gap-2 flex-wrap">
-          <Button onClick={handleAddBlock}>Add Block</Button>
-          <Button onClick={handleBoldSelection}>Bold Selection</Button>
-          <Button onClick={handleInsertText}>Insert Text</Button>
-          <Button onClick={handleExportGraph} variant="outline">Export Graph</Button>
-        </div>
-        <div className="p-4 border rounded-lg">
-          <BlockNoteView editor={editor} theme="light" />
-        </div>
-        
-        {graphJson && (
-          <div className="p-4 border rounded-lg mt-4 bg-gray-50">
-            <h3 className="text-sm font-medium mb-2">Graph Export (JSON)</h3>
-            <div className="max-h-40 overflow-auto text-xs">
-              <pre>{graphJson}</pre>
-            </div>
-          </div>
-        )}
+    <div className="space-y-4">
+      <div className="flex gap-2 flex-wrap">
+        <Button onClick={handleAddBlock}>Add Block</Button>
+        <Button onClick={handleBoldSelection}>Bold Selection</Button>
+        <Button onClick={handleInsertText}>Insert Text</Button>
+        <Button onClick={handleExportGraph} variant="outline">Export Graph</Button>
+      </div>
+      <div className="p-4 border rounded-lg">
+        <BlockNoteView editor={editor} theme="light" />
       </div>
       
-      <div className="border-t pt-4">
-        <GraphAPIDemo />
-      </div>
+      {graphJson && (
+        <div className="p-4 border rounded-lg mt-4 bg-gray-50">
+          <h3 className="text-sm font-medium mb-2">Graph Export (JSON)</h3>
+          <div className="max-h-40 overflow-auto text-xs">
+            <pre>{graphJson}</pre>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -12,15 +12,16 @@ import cytoscape, {
   Position,
   SingularElementArgument,
   StylesheetJson,
+  // Import CytoscapeOptions for better typing of cy.json() results
   CytoscapeOptions,
-  Style
+  // Import Stylesheet for better typing of cy.style() results
+  Stylesheet
 } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
-import { generateNodeId, generateClusterId, NodeId, ClusterId } from '@/lib/utils/ids';
-import { GraphAPI } from './GraphAPI';
+import { generateNodeId, NodeId, ClusterId } from '@/lib/utils/ids';
 
 // Register plugins
 cytoscape.use(automove);
@@ -68,7 +69,7 @@ export interface GraphJSON {
   elements: CyElementJSON[]; // Keep this using CyElementJSON for the external interface
 }
 
-export class GraphService implements GraphAPI {
+export class GraphService {
   private cy: Core;
   private ur: ReturnType<Core['undoRedo']>;
   private titleIndex = new Map<string, string>();
@@ -148,11 +149,12 @@ export class GraphService implements GraphAPI {
   private flushNotify(): void {
     // Ensure we only notify if there are actual changes
     if (this.pendingChanges.length > 0) {
-      const changes = [...this.pendingChanges]; // Clone to avoid issues if listeners modify things
-      this.pendingChanges = [];
-      this.changeListeners.forEach(l => l(changes));
+        const changes = [...this.pendingChanges]; // Clone to avoid issues if listeners modify things
+        this.pendingChanges = [];
+        this.changeListeners.forEach(l => l(changes));
     }
   }
+
 
   private edgeExists(srcId: string, tgtId: string, label: EdgeType): boolean {
     const src = this.cy.getElementById(srcId);
@@ -179,29 +181,29 @@ export class GraphService implements GraphAPI {
     return this.cy;
   }
 
-  public exportGraph(opts: { includeStyle?: boolean } = {}): GraphJSON {
-    // Get the JSON representation of the Cytoscape instance
-    const cyJson = this.cy.json() as unknown as CytoscapeOptions;
-    
-    // Fix: Handle the style properly by casting as needed
-    const style = opts.includeStyle 
-      ? (this.cy.style() as unknown as { json(): StylesheetJson[] }).json()
-      : undefined;
-    
-    // Fix: Get elements using the correct method with proper type casting
-    const elements = this.cy.elements().jsons() as unknown as CyElementJSON[];
-    
+  // ---------- EXPORT WHOLE GRAPH ----------
+  public exportGraph(opts: {includeStyle?: boolean} = {}): GraphJSON {
+    // Fix: Cast the result of cy.json() to CytoscapeOptions for proper typing
+    const cyJson = this.cy.json() as CytoscapeOptions;
     const g: GraphJSON = {
       meta: { app: 'BlockNote Graph', version: 2, exportedAt: new Date().toISOString() },
       data: this.cy.data(),
-      layout: cyJson.layout as unknown as LayoutOptions,
-      style: style,
+      // Fix: Access layout from the typed cyJson object
+      layout: cyJson.layout,
+      // Fix: Ensure cy.style() returns Stylesheet and call .json() on it
+      style: opts.includeStyle ? (this.cy.style() as Stylesheet).json() : undefined,
       viewport: { zoom: this.cy.zoom(), pan: this.cy.pan() },
-      elements: elements
+      // Fix: Use cy.elements().jsons() for a direct array of ElementDefinition.
+      // Cast to CyElementJSON[] using 'unknown' as requested by the error message context,
+      // although cy.elements().jsons() directly returning ElementDefinition[] which CyElementJSON extends is usually sufficient.
+      elements: this.cy.elements().jsons() as unknown as CyElementJSON[]
+      // Alternative based on original code & error message:
+      // elements: (cyJson.elements || []) as unknown as CyElementJSON[]
     };
     return g;
   }
 
+  // ---------- IMPORT WHOLE GRAPH ----------
   public importGraph(g: GraphJSON): void {
     if (!g || !g.elements || !Array.isArray(g.elements)) {
       console.error("Invalid graph data format", g);
@@ -233,17 +235,15 @@ export class GraphService implements GraphAPI {
       }).filter(e => e !== null) as ElementDefinition[]; // Filter out any nulls from invalid definitions
 
       // Fix: Pass the elements object correctly typed for cy.json update
-      this.cy.json({ elements: elements } as unknown as CytoscapeOptions);
+      // Cast the partial update object to CytoscapeOptions to satisfy the type checker.
+      this.cy.json({ elements: elements } as CytoscapeOptions);
 
-      if (g.layout) this.cy.json({ layout: g.layout } as unknown as CytoscapeOptions);
-      
-      // Fix: Ensure style is properly updated if provided
+      if (g.layout) this.cy.json({ layout: g.layout } as CytoscapeOptions);
+       // Fix: Ensure cy.style() returns Stylesheet before chaining methods.
+       // Also ensure g.style is valid StylesheetJson[]
       if (g.style && Array.isArray(g.style)) {
-        (this.cy.style() as unknown as { fromJson(json: StylesheetJson[]): { update(): void } })
-          .fromJson(g.style)
-          .update();
+        (this.cy.style() as Stylesheet).fromJson(g.style).update(); // .update() takes 0 args
       }
-      
       if (g.data) this.cy.data(g.data);
       if (g.viewport) {
         this.cy.zoom(g.viewport.zoom);
@@ -268,21 +268,26 @@ export class GraphService implements GraphAPI {
 
     } catch (error) {
         console.error("Error during graph import:", error);
+        // Optionally re-throw or handle more gracefully
     }
     finally {
       this.cy.endBatch();
     }
 
     // Use jsons() which returns ElementDefinition[] directly.
+    // Cast with 'unknown' as per error message context/requirement.
     const elementDefs = this.cy.elements().jsons() as unknown as ElementDefinition[];
     this.queueNotify(elementDefs);
   }
 
+  // ---------- EXPORT ONE ELEMENT ----------
   public exportElement(ele: SingularElementArgument): CyElementJSON {
-     // Fix: Cast to ElementDefinition
-    return ele.json() as unknown as CyElementJSON;
+     // ele is already SingularElementArgument, which has .json() method
+    // The return type ElementDefinition is compatible with CyElementJSON
+    return ele.json();
   }
 
+  // ---------- IMPORT / PATCH ONE ELEMENT ----------
   public importElement(json: CyElementJSON): void {
     // Ensure json and json.data exist and json.data.id is valid
     if (!json || !json.data || !json.data.id) {
@@ -323,6 +328,7 @@ export class GraphService implements GraphAPI {
     this.initializeGraph(); // Re-add root nodes
   }
 
+
   public getNodesByType(type: NodeType): NodeCollection {
     return this.cy.$(`node[type = "${type}"]`);
   }
@@ -330,14 +336,15 @@ export class GraphService implements GraphAPI {
   public addNote({ id, title, content = [], createdAt, updatedAt, path }: {
     id?: string;
     title: string;
-    content?: any[];
+    content?: any[]; // Consider defining a stricter type for content if possible
     createdAt?: string;
     updatedAt?: string;
     path?: string;
   }, folderId?: string, clusterId?: string): NodeSingular {
-    const nodeId = id && String(id).length >= 15 ? id : generateNodeId();
+    const nodeId = id && String(id).length >= 15 ? id : generateNodeId(); // Ensure id is treated as string for length check
     const existingNode = this.cy.getElementById(nodeId);
     if (existingNode.nonempty()) {
+      // Optionally update existing node here if needed, or just return it
       console.warn(`Note with ID ${nodeId} already exists. Returning existing node.`);
       return existingNode as NodeSingular;
     }
@@ -352,39 +359,48 @@ export class GraphService implements GraphAPI {
         type: NodeType.NOTE,
         title,
         slugTitle,
-        content,
-        path: path || '/',
+        content, // Assuming content is serializable JSON
+        path: path || '/', // Provide default path
         createdAt: createdAt || now,
         updatedAt: updatedAt || now,
-        parent: folderId,
-        folderId: folderId,
-        clusterId: undefined
+        // Use parentId for compound graphs or specific folder logic, ensure consistency
+        // If 'parent' is for cytoscape compound nodes, use it here.
+        // If it's custom app logic (like folderId), handle separately or store in data.
+        parent: folderId, // Cytoscape's parent for compound nodes
+        folderId: folderId, // Store custom folder relationship if needed separately
+        clusterId: undefined // Initialize clusterId, will be set below or by moveNodeToCluster
       }
     };
 
-    // Fix: Use the correct interface for undo-redo action
+    // Use ur.do for undo/redo support
     const addedElements = this.ur.do('add', [el]);
     this.titleIndex.set(slugTitle, nodeId);
 
-    // Get the newly added node
+    // Get the newly added node (ur.do might return the collection)
     const newNode = this.cy.getElementById(nodeId) as NodeSingular;
 
     // Handle initial cluster assignment
     if (clusterId) {
         if (this.clusterExists.has(clusterId)) {
-             this.moveNodeToCluster(nodeId, clusterId);
+             this.moveNodeToCluster(nodeId, clusterId); // Creates edge and updates data
         } else {
             console.warn(`Attempted to add note ${nodeId} to non-existent cluster ${clusterId}. Storing ID in data.`);
+            // Store clusterId in data only if moveNodeToCluster wasn't called
             newNode.data('clusterId', clusterId);
+            // Fix: Ensure we're using ElementDefinition by explicitly casting via unknown
             this.queueNotify([newNode.json() as unknown as ElementDefinition]);
         }
     } else {
+        // Ensure clusterId data field is absent or null if no cluster is assigned
         newNode.data('clusterId', undefined);
+        // Fix: Ensure we're using ElementDefinition by explicitly casting via unknown
         this.queueNotify([newNode.json() as unknown as ElementDefinition]);
     }
 
+
     return newNode;
   }
+
 
   public moveNodeToCluster(nodeId: string, clusterId?: string): boolean {
     const node = this.cy.getElementById(nodeId);
@@ -402,91 +418,82 @@ export class GraphService implements GraphAPI {
     const edgeSelector = `edge[label = "${EdgeType.IN_CLUSTER}"][source = "${nodeId}"]`;
     const existingEdges = this.cy.edges(edgeSelector); // Get all matching edges
 
-    // Fix: Use the correct interface for undo-redo action
-    this.ur.action(
-        'moveNodeToCluster',
-        (args: { nodeId: string; oldClusterId: string | undefined; newClusterId?: string }) => {
-            const currentNode = this.cy.getElementById(args.nodeId);
-            if (currentNode.empty()) return;
+    // --- Batch updates for efficiency and undo/redo ---
+    this.ur.action('moveNodeToCluster', {
+        nodeId: nodeId,
+        oldClusterId: node.data('clusterId'),
+        newClusterId: clusterId,
+        removedEdges: [],
+        addedEdges: [],
+        movedEdges: [] // Keep track of moved edges if needed for complex undo
+    }, (args) => { // DO action
+        const currentClusterId = args.newClusterId;
+        const currentNode = this.cy.getElementById(args.nodeId);
+        if (currentNode.empty()) return; // Node might have been deleted
 
-            const currentClusterId = args.newClusterId;
-            const currentEdges = this.cy.edges(`edge[label = "${EdgeType.IN_CLUSTER}"][source = "${args.nodeId}"]`);
-            const edgesToRemove = currentEdges.filter(edge => edge.target().id() !== currentClusterId);
-            const targetEdgeExists = currentEdges.filter(edge => edge.target().id() === currentClusterId).nonempty();
+        const currentEdges = this.cy.edges(`edge[label = "${EdgeType.IN_CLUSTER}"][source = "${args.nodeId}"]`);
+        const edgesToRemove = currentEdges.filter(edge => edge.target().id() !== currentClusterId);
+        const targetEdgeExists = currentEdges.filter(edge => edge.target().id() === currentClusterId).nonempty();
 
-            let removedEdges: ElementDefinition[] = [];
-            let addedEdges: ElementDefinition[] = [];
-
-            // Remove edges pointing to wrong clusters
-            if (edgesToRemove.nonempty()) {
-                removedEdges = edgesToRemove.jsons() as unknown as ElementDefinition[];
-                this.cy.remove(edgesToRemove);
-            }
-
-            // Add new edge if needed and doesn't exist
-            if (currentClusterId && !targetEdgeExists && this.clusterExists.has(currentClusterId)) {
-                const edgeDef: ElementDefinition = {
-                    group: 'edges' as ElementGroup,
-                    data: {
-                        id: `${EdgeType.IN_CLUSTER}_${args.nodeId}_${currentClusterId}`,
-                        source: args.nodeId,
-                        target: currentClusterId,
-                        label: EdgeType.IN_CLUSTER
-                    }
-                };
-                addedEdges = [edgeDef];
-                this.cy.add(edgeDef);
-            }
-
-            // Update the node's data
-            currentNode.data('clusterId', currentClusterId);
-            
-            return { 
-                nodeId: args.nodeId, 
-                oldClusterId: args.oldClusterId, 
-                newClusterId: args.newClusterId, 
-                removedEdges, 
-                addedEdges 
-            };
-        },
-        (undoArgs: { 
-            nodeId: string; 
-            oldClusterId?: string; 
-            newClusterId?: string;
-            removedEdges?: ElementDefinition[];
-            addedEdges?: ElementDefinition[];
-        }) => {
-            const currentNode = this.cy.getElementById(undoArgs.nodeId);
-            if (currentNode.empty()) return;
-            
-            const originalClusterId = undoArgs.oldClusterId;
-            const currentEdges = this.cy.edges(`edge[label = "${EdgeType.IN_CLUSTER}"][source = "${undoArgs.nodeId}"]`);
-            const edgesToRemove = currentEdges.filter(edge => edge.target().id() !== originalClusterId);
-
-            // Remove incorrectly added edges
-            if (edgesToRemove.nonempty()) {
-                this.cy.remove(edgesToRemove);
-            }
-
-            // Restore removed edges
-            if (undoArgs.removedEdges && undoArgs.removedEdges.length > 0) {
-                this.cy.add(undoArgs.removedEdges);
-            }
-
-            // Update node data back
-            currentNode.data('clusterId', originalClusterId);
+        // Remove edges pointing to wrong clusters
+        if (edgesToRemove.nonempty()) {
+            // Fix: Ensure we're using ElementDefinition[] by explicitly casting via unknown
+            args.removedEdges = edgesToRemove.jsons() as unknown as ElementDefinition[];
+            this.cy.remove(edgesToRemove); // Use cy.remove for potential batching benefits
         }
-    );
 
-    // Handle checking for action result and collecting changes
+        // Add new edge if needed and doesn't exist
+        if (currentClusterId && !targetEdgeExists && this.clusterExists.has(currentClusterId)) {
+            const edgeDef: ElementDefinition = {
+                group: 'edges' as ElementGroup,
+                data: {
+                    id: `${EdgeType.IN_CLUSTER}_${args.nodeId}_${currentClusterId}`,
+                    source: args.nodeId,
+                    target: currentClusterId,
+                    label: EdgeType.IN_CLUSTER
+                }
+            };
+            args.addedEdges = [edgeDef];
+            this.cy.add(edgeDef);
+        }
+
+        // Update the node's data
+        currentNode.data('clusterId', currentClusterId);
+        // Return data needed for UNDO
+        return { nodeId: args.nodeId, oldClusterId: args.oldClusterId, newClusterId: args.newClusterId, removedEdges: args.removedEdges, addedEdges: args.addedEdges };
+
+    }, (undoArgs) => { // UNDO action
+        const originalClusterId = undoArgs.oldClusterId;
+        const currentNode = this.cy.getElementById(undoArgs.nodeId);
+        if (currentNode.empty()) return;
+
+        const currentEdges = this.cy.edges(`edge[label = "${EdgeType.IN_CLUSTER}"][source = "${undoArgs.nodeId}"]`);
+        const edgesToRemove = currentEdges.filter(edge => edge.target().id() !== originalClusterId);
+
+        // Remove incorrectly added edges
+        if (edgesToRemove.nonempty()) {
+             this.cy.remove(edgesToRemove);
+        }
+
+        // Restore removed edges
+        if (undoArgs.removedEdges && undoArgs.removedEdges.length > 0) {
+             this.cy.add(undoArgs.removedEdges);
+        }
+
+        // Update node data back
+        currentNode.data('clusterId', originalClusterId);
+    });
+
+    // --- Notify listeners outside the batch ---
+    // Collect all potential changes (node data, added/removed edges)
     const changes: ElementDefinition[] = [];
-    changes.push(node.json() as unknown as ElementDefinition);
+    // Fix: Ensure we're using ElementDefinition by explicitly casting via unknown
+    changes.push(node.json() as unknown as ElementDefinition); // Node data changed
 
-    // Get the most recent action result (note: ur.lastAction is unavailable, we need to track changes differently)
-    // Since we can't directly access ur.lastAction, we'll rely on the previously collected changes
-    const edgesAfter = this.cy.edges(edgeSelector);
-    if (edgesAfter.nonempty()) {
-        changes.push(...(edgesAfter.jsons() as unknown as ElementDefinition[]));
+    const actionResult = this.ur.lastAction()?.result; // Get results from ur.do
+    if (actionResult) {
+        if (actionResult.removedEdges) changes.push(...actionResult.removedEdges);
+        if (actionResult.addedEdges) changes.push(...actionResult.addedEdges);
     }
 
     if (changes.length > 0) {
@@ -494,6 +501,129 @@ export class GraphService implements GraphAPI {
     }
 
     return true;
+  }
+
+
+   public importFromStore(notes: Note[], clusters: Cluster[]) {
+    this.cy.startBatch();
+    try {
+      this.initializeGraph(); // Clears graph and adds roots
+
+      const elements: ElementDefinition[] = [];
+
+      // Add clusters first so they exist when notes reference them
+      clusters.forEach(cluster => {
+        if (!cluster.id) {
+            console.warn("Cluster missing ID during import from store:", cluster);
+            cluster.id = generateNodeId(); // Assign an ID if missing
+        }
+        this.clusterExists.add(cluster.id);
+        elements.push({
+          group: 'nodes' as ElementGroup,
+          data: {
+            ...cluster, // Spread existing cluster data
+            type: NodeType.CLUSTER, // Ensure type is set correctly
+            // Add default timestamps if missing
+            createdAt: cluster.createdAt || new Date().toISOString(),
+            updatedAt: cluster.updatedAt || new Date().toISOString(),
+          }
+        });
+      });
+
+      // Add notes
+      notes.forEach(note => {
+        if (!note.id) {
+             console.warn("Note missing ID during import from store:", note);
+             note.id = generateNodeId(); // Assign an ID if missing
+        }
+        const slugTitle = slug(note.title || ''); // Handle potential undefined title
+        elements.push({
+          group: 'nodes' as ElementGroup,
+          data: {
+            ...note, // Spread existing note data
+            type: NodeType.NOTE, // Ensure type is set correctly
+            slugTitle: slugTitle,
+            // Add default timestamps if missing
+            createdAt: note.createdAt || new Date().toISOString(),
+            updatedAt: note.updatedAt || new Date().toISOString(),
+            // Store parentId if using for compound nodes, otherwise handle relationship separately
+            parent: note.parentId, // Assuming parentId is for cytoscape compound parent
+            // Ensure clusterId is present, even if null/undefined
+            clusterId: note.clusterId,
+          }
+        });
+        // Add to title index
+        if (note.title) {
+             this.titleIndex.set(slugTitle, note.id);
+        }
+      });
+
+      // Add all nodes first
+      this.cy.add(elements);
+
+      // Add edges after nodes exist
+      const edgeElements: ElementDefinition[] = [];
+      notes.forEach(note => {
+        // Add CONTAINS edge (if parentId exists and parent node exists)
+        if (note.parentId && this.cy.getElementById(note.parentId).nonempty()) {
+          edgeElements.push({
+            group: 'edges' as ElementGroup,
+            data: {
+              id: `contains_${note.parentId}_${note.id}`, // Swapped source/target order
+              source: note.parentId,
+              target: note.id,
+              label: EdgeType.CONTAINS
+            }
+          });
+        } else if (note.parentId) {
+            console.warn(`Parent node ${note.parentId} not found for note ${note.id}`);
+        }
+
+        // Add IN_CLUSTER edge (if clusterId exists and cluster node exists)
+        if (note.clusterId && this.clusterExists.has(note.clusterId)) {
+           edgeElements.push({
+            group: 'edges' as ElementGroup,
+            data: {
+              id: `${EdgeType.IN_CLUSTER}_${note.id}_${note.clusterId}`,
+              source: note.id, // Source is the note
+              target: note.clusterId, // Target is the cluster
+              label: EdgeType.IN_CLUSTER
+            }
+          });
+        } else if (note.clusterId) {
+             console.warn(`Cluster node ${note.clusterId} not found for note ${note.id}`);
+             // Optionally remove the clusterId from the node data if import fails
+             // this.cy.getElementById(note.id).data('clusterId', undefined);
+        }
+      });
+
+      // Add all edges
+      if (edgeElements.length > 0) {
+         this.cy.add(edgeElements);
+      }
+
+    } catch(error) {
+        console.error("Error during importFromStore:", error);
+    }
+    finally {
+      this.cy.endBatch();
+    }
+
+    // Notify about all elements added/updated
+    // Fix: Ensure we're using ElementDefinition[] by explicitly casting via unknown
+    this.queueNotify(this.cy.elements().jsons() as unknown as ElementDefinition[]);
+  }
+
+  public exportToStore() {
+    const nodes = this.cy.nodes().map(node => node.data());
+    // Filter based on type and cast accurately
+    const notes = nodes.filter(nodeData => nodeData.type === NodeType.NOTE) as Note[];
+    const clusters = nodes.filter(nodeData => nodeData.type === NodeType.CLUSTER) as Cluster[];
+
+    return {
+      notes: notes,
+      clusters: clusters
+    };
   }
 
   public updateNote(id: string, updates: Partial<Note>): boolean {
@@ -544,13 +674,12 @@ export class GraphService implements GraphAPI {
 
     // Apply changes via undo-redo if there are tracked changes
     if (changeOps.length > 0) {
-        this.ur.action(
-            'updateNoteData',
-            (args: { changes: typeof changeOps }) => { // DO
+        this.ur.action('updateNoteData', { changes: changeOps },
+            (args) => { // DO
                 args.changes.forEach(op => op.ele.data(op.name, op.newValue));
                 return args; // Pass args to undo
             },
-            (undoArgs: { changes: typeof changeOps }) => { // UNDO
+            (undoArgs) => { // UNDO
                 undoArgs.changes.forEach(op => op.ele.data(op.name, op.oldValue));
             }
         );
@@ -570,6 +699,7 @@ export class GraphService implements GraphAPI {
     this.queueNotify([node.json() as unknown as ElementDefinition]);
     return true;
   }
+
 
   public deleteNote(id: string): boolean {
     const node = this.cy.getElementById(id);
@@ -606,11 +736,9 @@ export class GraphService implements GraphAPI {
     return true;
   }
 
-  public addCluster(options: Partial<Cluster> = {}): NodeSingular {
-    const clusterId = options.id && String(options.id).length >= 15 
-      ? options.id 
-      : generateClusterId();
-      
+
+  public addCluster({ id, title, createdAt, updatedAt }: Partial<Cluster> = {}): NodeSingular {
+    const clusterId = id && String(id).length >= 15 ? id : generateNodeId(); // Ensure ID validity
     const existingCluster = this.cy.getElementById(clusterId);
     if (existingCluster.nonempty()) {
         console.warn(`Cluster with ID ${clusterId} already exists. Returning existing cluster.`);
@@ -624,21 +752,22 @@ export class GraphService implements GraphAPI {
       data: {
         id: clusterId,
         type: NodeType.CLUSTER,
-        title: options.title || 'Untitled Cluster',
-        createdAt: options.createdAt || now,
-        updatedAt: options.updatedAt || now
+        title: title || 'Untitled Cluster', // Default title
+        createdAt: createdAt || now,
+        updatedAt: updatedAt || now
       }
     };
 
-    // Use undo-redo for adding the element
-    this.ur.do('add', [el]);
+    // Use undo-redo
+    const addedElements = this.ur.do('add', [el]);
     this.clusterExists.add(clusterId); // Update internal set
 
     // Notify listeners
-    this.queueNotify([el]); 
+    this.queueNotify([el]); // Pass the definition used for adding
 
-    return this.cy.getElementById(clusterId) as NodeSingular;
+    return this.cy.getElementById(clusterId) as NodeSingular; // Return the added cluster
   }
+
 
   public updateCluster(id: string, updates: Partial<Cluster>): boolean {
     const node = this.cy.getElementById(id);
@@ -673,13 +802,12 @@ export class GraphService implements GraphAPI {
      node.data('updatedAt', newData.updatedAt); // Apply directly
 
     if (changeOps.length > 0) {
-        this.ur.action(
-            'updateClusterData',
-            (args: { changes: typeof changeOps }) => { // DO
+        this.ur.action('updateClusterData', { changes: changeOps },
+            (args) => { // DO
                 args.changes.forEach(op => op.ele.data(op.name, op.newValue));
                 return args;
             },
-            (undoArgs: { changes: typeof changeOps }) => { // UNDO
+            (undoArgs) => { // UNDO
                 undoArgs.changes.forEach(op => op.ele.data(op.name, op.oldValue));
             }
         );
@@ -688,10 +816,12 @@ export class GraphService implements GraphAPI {
     }
      // --- End undo-redo block ---
 
+
     // Fix: Ensure we're using ElementDefinition by explicitly casting via unknown
     this.queueNotify([node.json() as unknown as ElementDefinition]);
     return true;
   }
+
 
   public deleteCluster(id: string): boolean {
     const node = this.cy.getElementById(id);
@@ -706,89 +836,80 @@ export class GraphService implements GraphAPI {
     const memberNodeIds = memberNodes.map(n => n.id());
 
     // Get JSON before removal
+    // Fix: Ensure we're using ElementDefinition by explicitly casting via unknown
     const removedJson = node.json() as unknown as ElementDefinition;
 
-    // Fix: Use the proper interface for undo-redo action
-    this.ur.action(
-        'deleteClusterAndMembers',
-        (args: { clusterId: string; memberNodeIds: string[] }) => {
+
+    // --- Use undo-redo for the cluster removal and member update ---
+    this.ur.action('deleteClusterAndMembers', { clusterId: id, memberNodeIds: memberNodeIds },
+        (args) => { // DO action
             const clusterNode = this.cy.getElementById(args.clusterId);
             const removedElements: ElementDefinition[] = [];
             let removedClusterJson: ElementDefinition | null = null;
 
             if (clusterNode.nonempty()) {
+                // Fix: Cast via unknown
                 removedClusterJson = clusterNode.json() as unknown as ElementDefinition;
+                // Remove cluster and its connected edges (like IN_CLUSTER)
                 const removedCol = this.cy.remove(clusterNode);
-                if (removedCol) {
-                    const elementsArray = removedCol.map(ele => ele.json()) as unknown as ElementDefinition[];
-                    removedElements.push(...elementsArray);
-                }
+                // Fix: Cast via unknown
+                removedElements.push(...removedCol.jsons() as unknown as ElementDefinition[]);
             }
 
-            // Update member nodes: set their clusterId to undefined
-            const membersToUpdate = this.cy.nodes().filter(n => args.memberNodeIds.includes(n.id()));
-            membersToUpdate.forEach(member => {
-                member.data('clusterId', undefined);
-                removedElements.push(member.json() as unknown as ElementDefinition);
-            });
+             // Update member nodes: set their clusterId to undefined
+             const membersToUpdate = this.cy.nodes().filter(n => args.memberNodeIds.includes(n.id()));
+             membersToUpdate.forEach(member => {
+                 member.data('clusterId', undefined);
+                 // Fix: Cast via unknown
+                 removedElements.push(member.json() as unknown as ElementDefinition); // Add updated member json for notification
+             });
 
-            return { removedElements, clusterId: args.clusterId, memberNodeIds: args.memberNodeIds, removedClusterJson };
+
+             return { removedElements, clusterId: args.clusterId, memberNodeIds: args.memberNodeIds, removedClusterJson }; // Data for undo and notification
         },
-        (undoArgs: { 
-            removedElements?: ElementDefinition[]; 
-            clusterId: string; 
-            memberNodeIds: string[]; 
-            removedClusterJson?: ElementDefinition 
-        }) => {
+        (undoArgs) => { // UNDO action
             // Add back the cluster node and its edges if they were removed
             if (undoArgs.removedClusterJson) {
-                this.cy.add(undoArgs.removedClusterJson);
+                this.cy.add(undoArgs.removedClusterJson); // Add cluster back
+                // Note: Edges connected to the cluster were removed by cy.remove(clusterNode)
+                // We might need to store and restore those edges explicitly if not handled automatically
+                // For simplicity, assume IN_CLUSTER edges need recreation based on memberNodeIds
             }
 
             // Restore clusterId on member nodes
-            const membersToRestore = this.cy.nodes().filter(n => 
-                undoArgs.memberNodeIds.includes(n.id()));
-                
-            membersToRestore.forEach(member => {
-                member.data('clusterId', undoArgs.clusterId);
-                // Recreate IN_CLUSTER edge if necessary (assuming it was removed)
-                if (this.cy.getElementById(undoArgs.clusterId).nonempty()) {
-                    const edgeId = `${EdgeType.IN_CLUSTER}_${member.id()}_${undoArgs.clusterId}`;
-                    if (this.cy.getElementById(edgeId).empty()) {
-                        this.cy.add({
-                            group: 'edges',
-                            data: { 
-                                id: edgeId, 
-                                source: member.id(), 
-                                target: undoArgs.clusterId, 
-                                label: EdgeType.IN_CLUSTER 
-                            }
-                        });
-                    }
-                }
-            });
-        }
-    );
+             const membersToRestore = this.cy.nodes().filter(n => undoArgs.memberNodeIds.includes(n.id()));
+             membersToRestore.forEach(member => {
+                 member.data('clusterId', undoArgs.clusterId);
+                 // Recreate IN_CLUSTER edge if necessary (assuming it was removed)
+                 if (this.cy.getElementById(undoArgs.clusterId).nonempty()) {
+                      const edgeId = `${EdgeType.IN_CLUSTER}_${member.id()}_${undoArgs.clusterId}`;
+                      if (this.cy.getElementById(edgeId).empty()) {
+                           this.cy.add({
+                               group: 'edges',
+                               data: { id: edgeId, source: member.id(), target: undoArgs.clusterId, label: EdgeType.IN_CLUSTER }
+                           });
+                      }
+                 }
+             });
+
+        });
+     // --- End undo-redo block ---
 
     // Update internal set
     this.clusterExists.delete(id);
 
     // --- Notify listeners ---
-    // Since we can't access ur.lastAction() directly, collect changes from what we know was modified
-    const changedElements: ElementDefinition[] = [removedJson];
-    
-    // Add updates for member nodes
-    memberNodes.forEach(node => {
-        changedElements.push(node.json() as unknown as ElementDefinition);
-    });
-    
-    if (changedElements.length > 0) {
-        this.queueNotify(changedElements);
-    }
+    const actionResult = this.ur.lastAction()?.result;
+    const changedElements = actionResult?.removedElements || [removedJson]; // Use result if available
+     if (changedElements.length > 0) {
+       this.queueNotify(changedElements);
+     }
 
     return true;
   }
 
+
+  // Assumes 'parent' manipulation for Cytoscape compound nodes
   public moveNode(nodeId: string, newParentId?: string | null): boolean {
     const node = this.cy.getElementById(nodeId);
     if (node.empty()) {
@@ -809,16 +930,15 @@ export class GraphService implements GraphAPI {
     const oldParentId = node.parent().id(); // Get current compound parent ID
 
     // Use undo-redo for the move operation
-    this.ur.action(
-        'moveNodeCompound',
-        (args: { nodeId: string; oldParentId: string; newParentId: string | null }) => { // DO action
+    this.ur.action('moveNodeCompound', { nodeId: nodeId, oldParentId: oldParentId, newParentId: newParentId || null }, // Store null for root
+        (args) => { // DO action
             const nodeToMove = this.cy.getElementById(args.nodeId);
             if (nodeToMove.nonempty()) {
                 nodeToMove.move({ parent: args.newParentId }); // Move to new parent (or null for root)
             }
             return args; // Pass data for undo
         },
-        (undoArgs: { nodeId: string; oldParentId: string; newParentId: string | null }) => { // UNDO action
+        (undoArgs) => { // UNDO action
             const nodeToMove = this.cy.getElementById(undoArgs.nodeId);
              if (nodeToMove.nonempty()) {
                  nodeToMove.move({ parent: undoArgs.oldParentId }); // Move back to original parent
@@ -834,6 +954,84 @@ export class GraphService implements GraphAPI {
     this.queueNotify([node.json() as unknown as ElementDefinition]);
 
     return true;
+
+
+    // --- Old manual CONTAINS edge logic (keep if not using compound nodes) ---
+    /*
+    const edgeSel = `edge[label = "${EdgeType.CONTAINS}"][target = "${nodeId}"]`; // Edge points TO the child
+    const existingEdges = this.cy.edges(edgeSel); // Can have multiple? Should be only one parent edge.
+
+    this.ur.action('moveNodeParent', { nodeId: nodeId, oldParentId: node.data('parentId'), newParentId: newParentId },
+    (args) => { // DO
+        const nodeToUpdate = this.cy.getElementById(args.nodeId);
+        if (nodeToUpdate.empty()) return;
+
+        const currentEdges = this.cy.edges(`edge[label = "${EdgeType.CONTAINS}"][target = "${args.nodeId}"]`);
+        const removedEdges: ElementDefinition[] = [];
+        const addedEdges: ElementDefinition[] = [];
+
+        // Remove old parent edge(s)
+        if (currentEdges.nonempty()) {
+            removedEdges.push(...currentEdges.jsons() as unknown as ElementDefinition[]);
+            this.cy.remove(currentEdges);
+        }
+
+        // Add new parent edge if newParentId is provided and exists
+        if (args.newParentId && this.cy.getElementById(args.newParentId).nonempty()) {
+            const edgeDef: ElementDefinition = {
+                group: 'edges' as ElementGroup,
+                data: {
+                id: `contains_${args.newParentId}_${args.nodeId}`, // Correct source/target order
+                source: args.newParentId,
+                target: args.nodeId,
+                label: EdgeType.CONTAINS
+                }
+            };
+            addedEdges.push(edgeDef);
+            this.cy.add(edgeDef);
+        }
+
+        // Update parent data field on the node
+        nodeToUpdate.data('parentId', args.newParentId);
+
+        return { ...args, removedEdges, addedEdges }; // Data for undo
+    },
+    (undoArgs) => { // UNDO
+        const nodeToUpdate = this.cy.getElementById(undoArgs.nodeId);
+        if (nodeToUpdate.empty()) return;
+
+        const currentEdges = this.cy.edges(`edge[label = "${EdgeType.CONTAINS}"][target = "${undoArgs.nodeId}"]`);
+
+        // Remove newly added edge
+        if (currentEdges.nonempty()) {
+             this.cy.remove(currentEdges);
+        }
+
+        // Restore old edges
+        if (undoArgs.removedEdges.length > 0) {
+            this.cy.add(undoArgs.removedEdges);
+        }
+
+        // Restore parent data field
+        nodeToUpdate.data('parentId', undoArgs.oldParentId);
+    });
+
+    // --- Notify listeners ---
+    const changes: ElementDefinition[] = [];
+    // Fix: Ensure we're using ElementDefinition by explicitly casting via unknown
+    changes.push(node.json() as unknown as ElementDefinition); // Node data updated
+
+    const actionResult = this.ur.lastAction()?.result;
+    if (actionResult) {
+        if (actionResult.removedEdges) changes.push(...actionResult.removedEdges);
+        if (actionResult.addedEdges) changes.push(...actionResult.addedEdges);
+    }
+    if (changes.length > 0) {
+        this.queueNotify(changes);
+    }
+
+    return true;
+    */
   }
 
   public searchNodes(query: string, types: NodeType[]): NodeCollection {
@@ -862,16 +1060,17 @@ export class GraphService implements GraphAPI {
     }
   }
 
+
   public getRelatedNodes(nodeId: string): NodeCollection {
     const node = this.cy.getElementById(nodeId);
-    if (node.empty()) return this.cy.collection() as NodeCollection;
+    if (node.empty()) return this.cy.collection() as NodeCollection; // Return empty collection if node not found
 
     // neighborhood() includes the node itself and its direct neighbors (nodes and edges)
     // Filter for nodes only
-    return node.neighborhood().nodes() as NodeCollection;
+    return node.neighborhood().nodes();
   }
 
-  public getBacklinks(nodeId: string): Array<{ id: string; title?: string; type?: NodeType }> {
+  public getBacklinks(nodeId: string): any[] { // Consider defining a stricter return type like { id: string; title?: string; type?: NodeType }[]
     const node = this.cy.getElementById(nodeId);
     if (node.empty()) return [];
 
@@ -879,33 +1078,34 @@ export class GraphService implements GraphAPI {
     // sources() gets the source nodes of those incoming edges
     const backlinkingNodes = node.incomers('edge').sources();
 
-    // Convert to collection to array of objects with required properties
-    // Fix: Use map then convert to array
-    return backlinkingNodes.map((sourceNode: NodeSingular) => ({
+    return backlinkingNodes.map(sourceNode => ({
       id: sourceNode.id(),
+      // Provide default values if data fields might be missing
       title: sourceNode.data('title') || 'Untitled',
-      type: sourceNode.data('type') || undefined 
-    })).toArray(); // Convert Cytoscape collection to array
+      type: sourceNode.data('type') || undefined // Or a default NodeType
+    }));
   }
 
   public tagNote(noteId: string, tagName: string): boolean {
     const note = this.cy.getElementById(noteId);
-    if (note.empty() || note.data('type') !== NodeType.NOTE) {
-        console.warn(`Node ${noteId} not found or not a Note, cannot add tag.`);
-        return false;
-    }
+     if (note.empty() || note.data('type') !== NodeType.NOTE) {
+         console.warn(`Node ${noteId} not found or not a Note, cannot add tag.`);
+         return false;
+     }
 
     // Use slug for tag ID to handle case variations and special characters
-    const tagId = slug(tagName.trim());
+    const tagId = slug(tagName.trim()); // Trim whitespace before slugging
     if (!tagId) {
         console.warn(`Invalid tag name "${tagName}" resulted in empty slug.`);
-        return false; 
+        return false; // Avoid creating tags with empty IDs
     }
 
-    // Fix: Use the proper interface for undo-redo action
-    this.ur.action(
-        'tagNote',
-        (args: { noteId: string; tagId: string; tagName: string }) => {
+    let tagNode = this.cy.getElementById(tagId);
+    let addedTagJson: ElementDefinition | null = null;
+
+    // --- Use undo-redo for adding tag node and edge ---
+    this.ur.action('tagNote', { noteId, tagId, tagName },
+        (args) => { // DO Action
             let currentTagNode = this.cy.getElementById(args.tagId);
             let addedElementDefs: ElementDefinition[] = [];
             let createdTagNode = false;
@@ -915,9 +1115,9 @@ export class GraphService implements GraphAPI {
                 const tagEl: ElementDefinition = {
                     group: 'nodes' as ElementGroup,
                     data: {
-                        id: args.tagId,
-                        type: NodeType.TAG,
-                        title: args.tagName
+                    id: args.tagId,
+                    type: NodeType.TAG,
+                    title: args.tagName // Store original name for display
                     }
                 };
                 this.cy.add(tagEl);
@@ -936,201 +1136,74 @@ export class GraphService implements GraphAPI {
                         label: EdgeType.HAS_TAG
                     }
                 };
-                this.cy.add(edgeDef);
-                addedElementDefs.push(edgeDef);
+                 this.cy.add(edgeDef);
+                 addedElementDefs.push(edgeDef);
             }
 
-            return { ...args, addedElements: addedElementDefs, createdTagNode };
+             // Return data needed for undo
+             return { ...args, addedElements: addedElementDefs, createdTagNode };
         },
-        (undoArgs: { 
-            noteId: string; 
-            tagId: string; 
-            tagName: string; 
-            addedElements?: ElementDefinition[]; 
-            createdTagNode?: boolean 
-        }) => {
+        (undoArgs) => { // UNDO Action
             // Remove added elements (edge, potentially node)
             if (undoArgs.addedElements && undoArgs.addedElements.length > 0) {
                 const idsToRemove = undoArgs.addedElements.map(def => def.data.id);
                 this.cy.remove(this.cy.elements().filter(el => idsToRemove.includes(el.id())));
             }
+            // Note: If multiple notes shared this tag, this might remove the tag node incorrectly on undo.
+            // A more robust undo would check reference counts before removing the tag node.
+            // For simplicity here, we remove if we created it in the DO step.
         }
     );
+    // --- End undo-redo block ---
 
-    // --- Notify listeners ---
-    // Since we can't access ur.lastAction result directly, find elements that were added
-    const changes: ElementDefinition[] = [];
-    
-    const tagNode = this.cy.getElementById(tagId);
-    if (tagNode.nonempty()) {
-        changes.push(tagNode.json() as unknown as ElementDefinition);
-    }
-    
-    const edge = this.cy.edges(`edge[label = "${EdgeType.HAS_TAG}"][source = "${noteId}"][target = "${tagId}"]`);
-    if (edge.nonempty()) {
-        changes.push(...(edge.jsons() as unknown as ElementDefinition[]));
-    }
-    
-    if (changes.length > 0) {
-        this.queueNotify(changes);
+     // --- Notify listeners ---
+    const actionResult = this.ur.lastAction()?.result;
+    const changedElements = actionResult?.addedElements || []; // Get added elements from result
+    if (changedElements.length > 0) {
+        this.queueNotify(changedElements);
     }
 
     return true;
   }
 
-  public getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', Array<{ id: string; title?: string; type?: NodeType }>> {
+  public getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', any[]> { // Define stricter return type if possible
     const node = this.cy.getElementById(nodeId);
     if (node.empty()) return { tag: [], concept: [], mention: [] };
 
     // Helper function to get connected nodes by edge type (assuming node is the source)
-    const getConnectedTargets = (edgeType: EdgeType): Array<{ id: string; title?: string; type?: NodeType }> => {
+    const getConnectedTargets = (edgeType: EdgeType): any[] => { // Stricter type: { id: string; title?: string; type?: NodeType }[]
       // Ensure node is NodeSingular to call connectedEdges
       if (!node.isNode()) return [];
 
       // Get edges originating from this node with the specified label
       const outgoingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][source = "${nodeId}"]`);
-      
-      // Convert collection to array with map
-      return outgoingEdges.targets().map((target: NodeSingular) => ({
+
+      return outgoingEdges.targets().map(target => ({
         id: target.id(),
         title: target.data('title') || 'Untitled',
         type: target.data('type') || undefined
-      })).toArray(); // Convert Cytoscape collection to array
+      }));
     };
 
-    // Helper function to get nodes connected via incoming edges (assuming node is the target)
-    const getConnectingSources = (edgeType: EdgeType): Array<{ id: string; title?: string; type?: NodeType }> => {
-      if (!node.isNode()) return [];
-      const incomingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][target = "${nodeId}"]`);
-      
-      // Fix: Convert collection to array with map
-      return incomingEdges.sources().map((source: NodeSingular) => ({
-        id: source.id(),
-        title: source.data('title') || 'Untitled',
-        type: source.data('type') || undefined
-      })).toArray(); // Convert Cytoscape collection to array
-    };
+     // Helper function to get nodes connected via incoming edges (assuming node is the target)
+     // Example: If a 'mention' edge points *to* this node
+     const getConnectingSources = (edgeType: EdgeType): any[] => {
+         if (!node.isNode()) return [];
+         const incomingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][target = "${nodeId}"]`);
+         return incomingEdges.sources().map(source => ({
+             id: source.id(),
+             title: source.data('title') || 'Untitled',
+             type: source.data('type') || undefined
+         }));
+     };
+
 
     return {
-      tag: getConnectedTargets(EdgeType.HAS_TAG),
-      concept: getConnectedTargets(EdgeType.HAS_CONCEPT),
-      mention: getConnectedTargets(EdgeType.MENTIONS)
-    };
-  }
-
-  public importFromStore(notes: Note[], clusters: Cluster[]) {
-    this.cy.startBatch();
-    try {
-      this.initializeGraph(); // Clears graph and adds roots
-
-      const elements: ElementDefinition[] = [];
-
-      // Add clusters first so they exist when notes reference them
-      clusters.forEach(cluster => {
-        if (!cluster.id) {
-            console.warn("Cluster missing ID during import from store:", cluster);
-            cluster.id = generateClusterId(); // Assign an ID if missing
-        }
-        this.clusterExists.add(cluster.id);
-        elements.push({
-          group: 'nodes' as ElementGroup,
-          data: {
-            ...cluster,
-            type: NodeType.CLUSTER,
-            createdAt: cluster.createdAt || new Date().toISOString(),
-            updatedAt: cluster.updatedAt || new Date().toISOString(),
-          }
-        });
-      });
-
-      // Add notes
-      notes.forEach(note => {
-        if (!note.id) {
-             console.warn("Note missing ID during import from store:", note);
-             note.id = generateNodeId() as any; // Cast to correct type 
-        }
-        const slugTitle = slug(note.title || '');
-        elements.push({
-          group: 'nodes' as ElementGroup,
-          data: {
-            ...note,
-            type: NodeType.NOTE,
-            slugTitle: slugTitle,
-            createdAt: note.createdAt || new Date().toISOString(),
-            updatedAt: note.updatedAt || new Date().toISOString(),
-            parent: note.parentId,
-            folderId: note.parentId,
-            clusterId: note.clusterId,
-          }
-        });
-        if (note.title) {
-             this.titleIndex.set(slugTitle, note.id);
-        }
-      });
-
-      // Add all nodes first
-      this.cy.add(elements);
-
-      // Add edges after nodes exist
-      const edgeElements: ElementDefinition[] = [];
-      notes.forEach(note => {
-        if (note.parentId && this.cy.getElementById(note.parentId).nonempty()) {
-          edgeElements.push({
-            group: 'edges' as ElementGroup,
-            data: {
-              id: `contains_${note.parentId}_${note.id}`,
-              source: note.parentId,
-              target: note.id,
-              label: EdgeType.CONTAINS
-            }
-          });
-        } else if (note.parentId) {
-            console.warn(`Parent node ${note.parentId} not found for note ${note.id}`);
-        }
-
-        if (note.clusterId && this.clusterExists.has(note.clusterId)) {
-           edgeElements.push({
-            group: 'edges' as ElementGroup,
-            data: {
-              id: `${EdgeType.IN_CLUSTER}_${note.id}_${note.clusterId}`,
-              source: note.id,
-              target: note.clusterId,
-              label: EdgeType.IN_CLUSTER
-            }
-          });
-        } else if (note.clusterId) {
-             console.warn(`Cluster node ${note.clusterId} not found for note ${note.id}`);
-             // Optionally remove the clusterId from the node data if import fails
-             // this.cy.getElementById(note.id).data('clusterId', undefined);
-        }
-      });
-
-      // Add all edges
-      if (edgeElements.length > 0) {
-         this.cy.add(edgeElements);
-      }
-
-    } catch(error) {
-        console.error("Error during importFromStore:", error);
-    }
-    finally {
-      this.cy.endBatch();
-    }
-
-    // Notify about all elements added/updated
-    // Fix: Ensure we're using ElementDefinition[] by explicitly casting via unknown
-    this.queueNotify(this.cy.elements().jsons() as unknown as ElementDefinition[]);
-  }
-
-  public exportToStore() {
-    const nodes = this.cy.nodes().map(node => node.data());
-    // Filter based on type and cast accurately
-    const notes = nodes.filter(nodeData => nodeData.type === NodeType.NOTE) as Note[];
-    const clusters = nodes.filter(nodeData => nodeData.type === NodeType.CLUSTER) as Cluster[];
-
-    return {
-      notes: notes,
-      clusters: clusters
+      tag: getConnectedTargets(EdgeType.HAS_TAG), // Assuming note -> tag edge
+      concept: getConnectedTargets(EdgeType.HAS_CONCEPT), // Assuming note -> concept edge
+      mention: getConnectedTargets(EdgeType.MENTIONS) // Assuming note -> mentioned_note edge
+      // OR use getConnectingSources if mentions point *to* the current node
+      // mention: getConnectingSources(EdgeType.MENTIONS)
     };
   }
 }
@@ -1138,3 +1211,5 @@ export class GraphService implements GraphAPI {
 // Create and export a singleton instance of GraphService
 export const graphService = new GraphService();
 export default graphService;
+
+// --- Citation and Notation sections removed for brevity ---
