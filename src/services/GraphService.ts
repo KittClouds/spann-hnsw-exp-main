@@ -14,6 +14,7 @@ import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
 import { generateNodeId, NodeId, ClusterId } from '@/lib/utils/ids';
 
+// Register the automove plugin with cytoscape
 cytoscape.use(automove);
 
 // Node and Edge type enums
