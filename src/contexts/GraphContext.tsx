@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { graphService, NodeType } from '../services/GraphService';
 import { useAtom } from 'jotai';
@@ -100,7 +101,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     },
     
     getRelatedNotes: (noteId) => {
-      return graphService.getRelatedNotes(noteId).map(node => ({
+      return graphService.getRelatedNodes(noteId).map(node => ({
         id: node.id(),
         title: node.data('title'),
         type: node.data('type')

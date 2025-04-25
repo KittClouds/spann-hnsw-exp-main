@@ -1,3 +1,4 @@
+
 import cytoscape, {
   Core,
   CollectionReturnValue,
@@ -6,6 +7,7 @@ import cytoscape, {
   NodeCollection,
   EdgeCollection,
   ElementDefinition,
+  ElementGroup,
 } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
@@ -54,7 +56,7 @@ export class GraphService {
     
     if (this.cy.$(`node[type = "${NodeType.STANDARD_ROOT}"]`).empty()) {
       this.cy.add({
-        group: 'nodes',
+        group: 'nodes' as ElementGroup,
         data: {
           id: 'standard_root',
           type: NodeType.STANDARD_ROOT,
@@ -67,7 +69,7 @@ export class GraphService {
     
     if (this.cy.$(`node[type = "${NodeType.CLUSTERS_ROOT}"]`).empty()) {
       this.cy.add({
-        group: 'nodes',
+        group: 'nodes' as ElementGroup,
         data: {
           id: 'clusters_root',
           type: NodeType.CLUSTERS_ROOT,
@@ -154,11 +156,11 @@ export class GraphService {
       });
     });
 
-    this.queueNotify(this.cy.elements().jsons() as unknown as ElementDefinition[]);
+    this.queueNotify(this.cy.elements().jsons() as ElementDefinition[]);
   }
 
   public clearGraph(): void {
-    const removed = this.cy.elements().jsons() as unknown as ElementDefinition[];
+    const removed = this.cy.elements().jsons() as ElementDefinition[];
     this.cy.elements().remove();
     this.titleIndex.clear();
     this.queueNotify(removed);
@@ -185,7 +187,7 @@ export class GraphService {
     const slugTitle = slug(title);
 
     const el: ElementDefinition = {
-      group: 'nodes',
+      group: 'nodes' as ElementGroup,
       data: {
         id: nodeId,
         type: NodeType.NOTE,
@@ -212,7 +214,6 @@ export class GraphService {
     return node;
   }
 
-  // Add the missing moveNodeToCluster method
   public moveNodeToCluster(nodeId: string, clusterId?: string): boolean {
     const node = this.cy.getElementById(nodeId);
     if (node.empty()) return false;
@@ -227,19 +228,19 @@ export class GraphService {
     
     if (existingEdge.nonempty()) {
       if (!clusterId) {
-        const rm = existingEdge.json();
+        const rm = existingEdge.json() as ElementDefinition;
         existingEdge.remove();
         this.queueNotify([rm]);
       } else {
         existingEdge.move({ target: clusterId });
         existingEdge.data('target', clusterId);
-        this.queueNotify([existingEdge.json()]);
+        this.queueNotify([existingEdge.json() as ElementDefinition]);
       }
     }
     
     if (clusterId && existingEdge.empty()) {
-      const edgeDef = {
-        group: 'edges',
+      const edgeDef: ElementDefinition = {
+        group: 'edges' as ElementGroup,
         data: {
           id: `${EdgeType.IN_CLUSTER}_${nodeId}_${clusterId}`,
           source: nodeId,
@@ -252,7 +253,7 @@ export class GraphService {
     }
     
     node.data('cluster', clusterId);
-    this.queueNotify([node.json()]);
+    this.queueNotify([node.json() as ElementDefinition]);
     return true;
   }
 
@@ -264,7 +265,7 @@ export class GraphService {
 
       // Add standard root and clusters root
       elements.push({
-        group: 'nodes',
+        group: 'nodes' as ElementGroup,
         data: {
           id: 'standard_root',
           type: NodeType.STANDARD_ROOT,
@@ -275,7 +276,7 @@ export class GraphService {
       });
 
       elements.push({
-        group: 'nodes',
+        group: 'nodes' as ElementGroup,
         data: {
           id: 'clusters_root',
           type: NodeType.CLUSTERS_ROOT,
@@ -288,7 +289,7 @@ export class GraphService {
       clusters.forEach(cluster => {
         this.clusterExists.add(cluster.id);
         elements.push({
-          group: 'nodes',
+          group: 'nodes' as ElementGroup,
           data: {
             ...cluster,
             type: NodeType.CLUSTER,
@@ -298,7 +299,7 @@ export class GraphService {
 
       notes.forEach(note => {
         elements.push({
-          group: 'nodes',
+          group: 'nodes' as ElementGroup,
           data: {
             ...note,
             type: NodeType.NOTE,
@@ -310,8 +311,8 @@ export class GraphService {
 
       notes.forEach(note => {
         if (note.parentId) {
-          const edgeDef = {
-            group: 'edges',
+          const edgeDef: ElementDefinition = {
+            group: 'edges' as ElementGroup,
             data: {
               id: `contains_${note.id}_${note.parentId}`,
               source: note.parentId,
@@ -323,8 +324,8 @@ export class GraphService {
         }
         
         if (note.clusterId) {
-          const edgeDef = {
-            group: 'edges',
+          const edgeDef: ElementDefinition = {
+            group: 'edges' as ElementGroup,
             data: {
               id: `${EdgeType.IN_CLUSTER}_${note.id}_${note.clusterId}`,
               source: note.id,
@@ -342,7 +343,7 @@ export class GraphService {
       });
     });
 
-    this.queueNotify(this.cy.elements().jsons() as unknown as ElementDefinition[]);
+    this.queueNotify(this.cy.elements().jsons() as ElementDefinition[]);
   }
 
   public exportToStore() {
@@ -374,7 +375,7 @@ export class GraphService {
     this.titleIndex.delete(slug(oldTitle));
     this.titleIndex.set(slugTitle, id);
 
-    this.queueNotify([node.json()]);
+    this.queueNotify([node.json() as ElementDefinition]);
     return true;
   }
 
@@ -382,7 +383,7 @@ export class GraphService {
     const node = this.cy.getElementById(id);
     if (node.empty()) return false;
 
-    const removed = node.remove().jsons() as unknown as ElementDefinition[];
+    const removed = node.remove().jsons() as ElementDefinition[];
     this.titleIndex.delete(node.data('slugTitle'));
     this.queueNotify(removed);
     return true;
@@ -396,7 +397,7 @@ export class GraphService {
     const now = new Date().toISOString();
 
     const el: ElementDefinition = {
-      group: 'nodes',
+      group: 'nodes' as ElementGroup,
       data: {
         id: clusterId,
         type: NodeType.CLUSTER,
@@ -422,7 +423,7 @@ export class GraphService {
     };
 
     node.data(updatedData);
-    this.queueNotify([node.json()]);
+    this.queueNotify([node.json() as ElementDefinition]);
     return true;
   }
 
@@ -431,7 +432,7 @@ export class GraphService {
     if (node.empty()) return false;
 
     this.clusterExists.delete(id);
-    const removed = node.remove().jsons() as unknown as ElementDefinition[];
+    const removed = node.remove().jsons() as ElementDefinition[];
     this.queueNotify(removed);
     return true;
   }
@@ -445,19 +446,19 @@ export class GraphService {
 
     if (existingEdge.nonempty()) {
       if (!newParentId) {
-        const rm = existingEdge.json();
+        const rm = existingEdge.json() as ElementDefinition;
         existingEdge.remove();
         this.queueNotify([rm]);
       } else {
         existingEdge.move({ target: newParentId });
         existingEdge.data('target', newParentId);
-        this.queueNotify([existingEdge.json()]);
+        this.queueNotify([existingEdge.json() as ElementDefinition]);
       }
     }
 
     if (newParentId && existingEdge.empty()) {
-      const edgeDef = {
-        group: 'edges',
+      const edgeDef: ElementDefinition = {
+        group: 'edges' as ElementGroup,
         data: {
           id: `contains_${nodeId}_${newParentId}`,
           source: newParentId,
@@ -470,7 +471,7 @@ export class GraphService {
     }
 
     node.data('parent', newParentId);
-    this.queueNotify([node.json()]);
+    this.queueNotify([node.json() as ElementDefinition]);
     return true;
   }
 
@@ -509,7 +510,7 @@ export class GraphService {
 
     if (tag.empty()) {
       const el: ElementDefinition = {
-        group: 'nodes',
+        group: 'nodes' as ElementGroup,
         data: {
           id: tagId,
           type: NodeType.TAG,
@@ -522,8 +523,8 @@ export class GraphService {
 
     if (this.edgeExists(noteId, tagId, EdgeType.HAS_TAG)) return true;
 
-    const edgeDef = {
-      group: 'edges',
+    const edgeDef: ElementDefinition = {
+      group: 'edges' as ElementGroup,
       data: {
         id: `has_tag_${noteId}_${tagId}`,
         source: noteId,
