@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useBlockNote } from "@blocknote/react";
-import { BlockNoteView } from "@blocknote/mantine"; // Add this import
+import { BlockNoteView } from "@blocknote/mantine"; 
 import { useNoteInterface } from '../hooks/useNoteInterface';
 import { Button } from './ui/button';
 
@@ -29,11 +29,20 @@ export const NoteInterfaceExample = () => {
     noteInterface.addStyles({ bold: true });
   };
   
+  const handleInsertText = () => {
+    const blocks = noteInterface.getDocument();
+    if (blocks.length > 0) {
+      const firstBlockId = blocks[0].id;
+      noteInterface.insertText("Text inserted programmatically!");
+    }
+  };
+  
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <Button onClick={handleAddBlock}>Add Block</Button>
         <Button onClick={handleBoldSelection}>Bold Selection</Button>
+        <Button onClick={handleInsertText}>Insert Text</Button>
       </div>
       <div className="p-4 border rounded-lg">
         <BlockNoteView editor={editor} theme="light" />

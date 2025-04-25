@@ -75,11 +75,16 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     },
     
     insertText: (text) => {
-      // Using transact method to insert text at the current cursor position
-      // since insertText method doesn't exist directly on BlockNoteEditor
-      editor.transact((tr) => {
-        tr.insertText(text);
-      });
+      // Since we can't directly use transact, we can use another approach
+      // BlockNote doesn't have a direct insertText method on the editor instance
+      // Instead, we can create a paragraph block at the current cursor position
+      const cursorPosition = editor.getTextCursorPosition();
+      if (cursorPosition) {
+        editor.insertBlocks([{
+          type: "paragraph",
+          content: text
+        }], cursorPosition.block.id, 'after');
+      }
     },
     
     createLink: (url, text) => {
