@@ -1,11 +1,16 @@
-
-import * as React from "react";
-import { ChevronRight, File, Folder, Plus, Database } from "lucide-react";
+import React, { useState } from "react";
+import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
 import { useAtom } from "jotai";
-import { notesAtom, activeNoteIdAtom, createNote, createFolder, Note, clustersAtom, activeClusterIdAtom } from "@/lib/store";
+import { notesAtom, activeNoteIdAtom, createNote, createFolder, Note, clustersAtom, activeClusterIdAtom, deleteNote } from "@/lib/store";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Collapsible,
   CollapsibleContent,
@@ -26,12 +31,6 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "./ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ClusterView } from "./ClusterView";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -136,8 +135,38 @@ interface NoteTreeProps {
 }
 
 function NoteTree({ note, notes, activeNoteId, onSelect, onNewItem }: NoteTreeProps) {
-  const children = notes.filter(n => n.parentId === note.id);
+  const [notes_, setNotes] = useAtom(notesAtom);
   const isFolder = note.type === 'folder';
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(note.title);
+
+  const handleRename = () => {
+    if (editTitle.trim() === '') {
+      toast.error("Folder name cannot be empty");
+      setEditTitle(note.title);
+      return;
+    }
+    
+    setNotes(prevNotes => 
+      prevNotes.map(n => 
+        n.id === note.id 
+          ? { ...n, title: editTitle, updatedAt: new Date().toISOString() }
+          : n
+      )
+    );
+    setIsEditing(false);
+    toast.success("Renamed successfully");
+  };
+
+  const handleDelete = () => {
+    if (notes.filter(n => n.type === 'folder').length <= 1) {
+      toast.error("Cannot delete the last folder");
+      return;
+    }
+    
+    setNotes(prevNotes => deleteNote(prevNotes, note.id));
+    toast.success("Deleted successfully");
+  };
 
   if (!isFolder) {
     return (
@@ -156,33 +185,75 @@ function NoteTree({ note, notes, activeNoteId, onSelect, onNewItem }: NoteTreePr
   return (
     <SidebarMenuItem>
       <Collapsible defaultOpen>
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton className="[&[data-state=open]>svg:first-child]:rotate-90">
-            <ChevronRight className="shrink-0 transition-transform" />
-            <Folder className="shrink-0" />
-            <span className="truncate">{note.title}</span>
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
+        <div className="flex items-center justify-between pr-2">
+          <CollapsibleTrigger asChild>
+            <SidebarMenuButton className="flex-1 [&[data-state=open]>svg:first-child]:rotate-90">
+              <ChevronRight className="shrink-0 transition-transform" />
+              <Folder className="shrink-0" />
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onBlur={handleRename}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleRename();
+                    if (e.key === 'Escape') {
+                      setIsEditing(false);
+                      setEditTitle(note.title);
+                    }
+                  }}
+                  className="bg-transparent border-none focus:outline-none focus:ring-0 px-1 flex-1"
+                  autoFocus
+                />
+              ) : (
+                <span className="truncate">{note.title}</span>
+              )}
+            </SidebarMenuButton>
+          </CollapsibleTrigger>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Open folder menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => onNewItem('note', note.id)}>
+                <File className="mr-2 h-4 w-4" />
+                Add Note
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onNewItem('folder', note.id)}>
+                <Folder className="mr-2 h-4 w-4" />
+                Add Subfolder
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                setIsEditing(true);
+                setEditTitle(note.title);
+              }}>
+                <PenLine className="mr-2 h-4 w-4" />
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleDelete}
+                className="text-red-600 focus:text-red-600 dark:focus:text-red-400"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        
         <CollapsibleContent>
           <SidebarMenuSub>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 w-full justify-start px-2 hover:bg-accent/50">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => onNewItem('note', note.id)}>
-                  <File className="mr-2 h-4 w-4" />
-                  New Note
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onNewItem('folder', note.id)}>
-                  <Folder className="mr-2 h-4 w-4" />
-                  New Folder
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
             {children.map((child) => (
               <NoteTree
                 key={child.id}
