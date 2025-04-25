@@ -23,6 +23,7 @@ import {
   SidebarMenuSub,
 } from "@/components/ui/sidebar";
 import { Button } from "./ui/button";
+import { NoteId, ClusterId } from "@/lib/utils/ids";
 
 interface ClusterNoteTreeProps {
   clusterId: string;
@@ -34,9 +35,9 @@ export function ClusterNoteTree({ clusterId }: ClusterNoteTreeProps) {
   
   const rootNotes = notes.filter(note => note.parentId === null && note.clusterId === clusterId);
 
-  const handleNewItem = useCallback((type: 'note' | 'folder', parentId: string | null = null) => {
+  const handleNewItem = useCallback((type: 'note' | 'folder', parentId: NoteId | null = null) => {
     const creator = type === 'note' ? createNote : createFolder;
-    const { id, note } = creator(parentId, clusterId);
+    const { id, note } = creator(parentId, clusterId as ClusterId);
     setNotes(prevNotes => [...prevNotes, note]);
     if (type === 'note') {
       setActiveNoteId(id);
@@ -121,7 +122,7 @@ interface ClusterNoteTreeItemProps {
   notes: any[];
   activeNoteId: string | null;
   onSelect: (id: string) => void;
-  onNewItem: (type: 'note' | 'folder', parentId: string | null) => void;
+  onNewItem: (type: 'note' | 'folder', parentId: NoteId | null) => void;
   clusterId: string;
 }
 
