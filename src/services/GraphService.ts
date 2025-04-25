@@ -8,10 +8,11 @@ import cytoscape, {
   EdgeCollection,
   ElementDefinition,
   ElementGroup,
-  ElementsDefinitions,
+  ElementsDefinition,
   LayoutOptions,
   Position,
-  SingularElementArgument
+  SingularElementArgument,
+  StylesheetJson
 } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
@@ -58,7 +59,7 @@ export interface GraphJSON {
   meta: GraphMeta;
   data?: Record<string, unknown>;
   layout?: LayoutOptions;
-  style?: any;
+  style?: StylesheetJson[];
   viewport?: { zoom: number; pan: Position };
   elements: CyElementJSON[];
 }
@@ -169,13 +170,14 @@ export class GraphService {
 
   // ---------- EXPORT WHOLE GRAPH ----------
   public exportGraph(opts: {includeStyle?: boolean} = {}): GraphJSON {
+    const cyJson = this.cy.json();
     const g: GraphJSON = {
       meta: { app: 'BlockNote Graph', version: 2, exportedAt: new Date().toISOString() },
       data: this.cy.data(),
-      layout: this.cy.json().layout,
+      layout: cyJson.layout as LayoutOptions,
       style: opts.includeStyle ? this.cy.style().json() : undefined,
       viewport: { zoom: this.cy.zoom(), pan: this.cy.pan() },
-      elements: this.cy.json({ flatEles: true }).elements
+      elements: this.cy.json({ flatEles: true }).elements as CyElementJSON[]
     };
     return g;
   }
