@@ -147,7 +147,7 @@ export const createFolder = (parentId: string | null = null, clusterId: string |
 };
 
 export const createCluster = (title: string) => {
-  const newId = generateId();
+  const newId = `cluster-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   const now = getCurrentDate();
   
   const newCluster: Cluster = {
@@ -157,7 +157,24 @@ export const createCluster = (title: string) => {
     updatedAt: now,
   };
   
-  return { id: newId, cluster: newCluster };
+  // Create a default root folder for this cluster
+  const folderId = `folder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  const rootFolder: Note = {
+    id: folderId,
+    title: 'Root Folder',
+    content: [],
+    createdAt: now,
+    updatedAt: now,
+    parentId: null,
+    type: 'folder',
+    clusterId: newId
+  };
+  
+  return { 
+    id: newId, 
+    cluster: newCluster,
+    rootFolder
+  };
 };
 
 export const deleteNote = (notes: Note[], id: string): Note[] => {
@@ -184,3 +201,13 @@ const getAllChildrenIds = (notes: Note[], folderId: string): string[] => {
 
 export const graphInitializedAtom = atom<boolean>(false);
 export const graphLayoutAtom = atom<string>('dagre');
+
+// Helper to get notes by cluster
+export const getNotesByClusterId = (notes: Note[], clusterId: string | null): Note[] => {
+  return notes.filter(note => note.clusterId === clusterId);
+};
+
+// Helper to get root notes by cluster
+export const getRootNotesByClusterId = (notes: Note[], clusterId: string | null): Note[] => {
+  return notes.filter(note => note.clusterId === clusterId && note.parentId === null);
+};
