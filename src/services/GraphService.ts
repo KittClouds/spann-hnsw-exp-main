@@ -10,12 +10,14 @@ import cytoscape, {
   ElementsDefinition,
 } from 'cytoscape';
 import automove from 'cytoscape-automove';
+import undoRedo from 'cytoscape-undo-redo';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
 import { generateNodeId, NodeId, ClusterId } from '@/lib/utils/ids';
 
-// Register the automove plugin with cytoscape
+// Register plugins
 cytoscape.use(automove);
+cytoscape.use(undoRedo);
 
 // Node and Edge type enums
 export enum NodeType {
@@ -41,6 +43,7 @@ export enum EdgeType {
 
 export class GraphService {
   private cy: Core;
+  private ur: ReturnType<Core['undoRedo']>;
   private titleIndex = new Map<string, string>();
   private notifyScheduled = false;
   private pendingChanges: ElementDefinition[] = [];
@@ -49,6 +52,7 @@ export class GraphService {
 
   constructor() {
     this.cy = cytoscape({ headless: true });
+    this.ur = this.cy.undoRedo();
     
     // Configure automove to keep notes connected to their folders
     this.cy.automove({
@@ -127,6 +131,9 @@ export class GraphService {
       .filter(`[label = "${label}"]`)
       .empty();
   }
+
+  public undo() { this.ur.undo(); }
+  public redo() { this.ur.redo(); }
 
   public addChangeListener(listener: (elements: ElementDefinition[]) => void): void {
     this.changeListeners.push(listener);
@@ -216,17 +223,16 @@ export class GraphService {
       }
     };
 
-    const node = this.cy.add(el) as NodeSingular;
+    this.ur.do('add', { nodes: [el] });
     this.titleIndex.set(slugTitle, nodeId);
-    this.queueNotify([el]);
     
     if (clusterId && this.clusterExists.has(clusterId)) {
       this.moveNodeToCluster(nodeId, clusterId);
     } else if (clusterId) {
-      node.data('cluster', clusterId);
+      this.cy.getElementById(nodeId).data('cluster', clusterId);
     }
     
-    return node;
+    return this.cy.getElementById(nodeId) as NodeSingular;
   }
 
   public moveNodeToCluster(nodeId: string, clusterId?: string): boolean {
@@ -245,7 +251,7 @@ export class GraphService {
       if (!clusterId) {
         // Fix: Ensure we're using ElementDefinition by explicitly casting
         const rm = existingEdge.json() as unknown as ElementDefinition;
-        existingEdge.remove();
+        this.ur.do('remove', existingEdge);
         this.queueNotify([rm]);
       } else {
         existingEdge.move({ target: clusterId });
@@ -265,7 +271,7 @@ export class GraphService {
           label: EdgeType.IN_CLUSTER
         }
       };
-      this.cy.add(edgeDef);
+      this.ur.do('add', { edges: [edgeDef] });
       this.queueNotify([edgeDef]);
     }
     
@@ -383,13 +389,20 @@ export class GraphService {
     const newTitle = updates.title || oldTitle;
     const slugTitle = slug(newTitle);
 
-    const updatedData = {
+    const newData = {
       ...updates,
       slugTitle,
       updatedAt: new Date().toISOString()
     };
 
-    node.data(updatedData);
+    this.ur.do('changeData', {
+      eles: node,
+      name: Object.keys(newData)[0],
+      oldValue: node.data()[Object.keys(newData)[0]],
+      newValue: Object.values(newData)[0]
+    });
+
+    node.data(newData);
     this.titleIndex.delete(slug(oldTitle));
     this.titleIndex.set(slugTitle, id);
 
@@ -403,9 +416,10 @@ export class GraphService {
     if (node.empty()) return false;
 
     // Fix: Ensure we're using ElementDefinition[] by explicitly casting
-    const removed = node.remove().jsons() as unknown as ElementDefinition[];
+    const removed = node.json() as unknown as ElementDefinition;
+    this.ur.do('remove', node);
     this.titleIndex.delete(node.data('slugTitle'));
-    this.queueNotify(removed);
+    this.queueNotify([removed]);
     return true;
   }
 
@@ -427,22 +441,29 @@ export class GraphService {
       }
     };
 
+    this.ur.do('add', { nodes: [el] });
     this.clusterExists.add(clusterId);
-    const node = this.cy.add(el) as NodeSingular;
     this.queueNotify([el]);
-    return node;
+    return this.cy.getElementById(clusterId) as NodeSingular;
   }
 
   public updateCluster(id: string, updates: Partial<Cluster>): boolean {
     const node = this.cy.getElementById(id);
     if (node.empty()) return false;
 
-    const updatedData = {
+    const newData = {
       ...updates,
       updatedAt: new Date().toISOString()
     };
 
-    node.data(updatedData);
+    this.ur.do('changeData', {
+      eles: node,
+      name: Object.keys(newData)[0],
+      oldValue: node.data()[Object.keys(newData)[0]],
+      newValue: Object.values(newData)[0]
+    });
+
+    node.data(newData);
     // Fix: Ensure we're using ElementDefinition by explicitly casting
     this.queueNotify([node.json() as unknown as ElementDefinition]);
     return true;
@@ -454,8 +475,9 @@ export class GraphService {
 
     this.clusterExists.delete(id);
     // Fix: Ensure we're using ElementDefinition[] by explicitly casting
-    const removed = node.remove().jsons() as unknown as ElementDefinition[];
-    this.queueNotify(removed);
+    const removed = node.json() as unknown as ElementDefinition;
+    this.ur.do('remove', node);
+    this.queueNotify([removed]);
     return true;
   }
 
@@ -470,7 +492,7 @@ export class GraphService {
       if (!newParentId) {
         // Fix: Ensure we're using ElementDefinition by explicitly casting
         const rm = existingEdge.json() as unknown as ElementDefinition;
-        existingEdge.remove();
+        this.ur.do('remove', existingEdge);
         this.queueNotify([rm]);
       } else {
         existingEdge.move({ target: newParentId });
@@ -490,7 +512,7 @@ export class GraphService {
           label: EdgeType.CONTAINS
         }
       };
-      this.cy.add(edgeDef);
+      this.ur.do('add', { edges: [edgeDef] });
       this.queueNotify([edgeDef]);
     }
 
@@ -542,8 +564,8 @@ export class GraphService {
           title: tagName
         }
       };
-      tag = this.cy.add(el);
-      this.queueNotify([el]);
+      this.ur.do('add', { nodes: [el] });
+      tag = this.cy.getElementById(tagId);
     }
 
     if (this.edgeExists(noteId, tagId, EdgeType.HAS_TAG)) return true;
@@ -558,7 +580,7 @@ export class GraphService {
       }
     };
 
-    this.cy.add(edgeDef);
+    this.ur.do('add', { edges: [edgeDef] });
     this.queueNotify([edgeDef]);
     return true;
   }
