@@ -139,6 +139,8 @@ function NoteTree({ note, notes, activeNoteId, onSelect, onNewItem }: NoteTreePr
   const isFolder = note.type === 'folder';
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(note.title);
+  
+  const childNotes = notes.filter(n => n.parentId === note.id);
 
   const handleRename = () => {
     if (editTitle.trim() === '') {
@@ -254,7 +256,7 @@ function NoteTree({ note, notes, activeNoteId, onSelect, onNewItem }: NoteTreePr
         
         <CollapsibleContent>
           <SidebarMenuSub>
-            {children.map((child) => (
+            {childNotes.map((child) => (
               <NoteTree
                 key={child.id}
                 note={child}
