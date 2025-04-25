@@ -22,6 +22,7 @@ import undoRedo from 'cytoscape-undo-redo';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
 import { generateNodeId, NodeId, ClusterId } from '@/lib/utils/ids';
+import { GraphAPI } from './GraphAPI';
 
 // Register plugins
 cytoscape.use(automove);
@@ -69,7 +70,7 @@ export interface GraphJSON {
   elements: CyElementJSON[]; // Keep this using CyElementJSON for the external interface
 }
 
-export class GraphService {
+export class GraphService implements GraphAPI {
   private cy: Core;
   private ur: ReturnType<Core['undoRedo']>;
   private titleIndex = new Map<string, string>();
@@ -155,7 +156,6 @@ export class GraphService {
     }
   }
 
-
   private edgeExists(srcId: string, tgtId: string, label: EdgeType): boolean {
     const src = this.cy.getElementById(srcId);
     if (src.empty()) return false;
@@ -181,29 +181,24 @@ export class GraphService {
     return this.cy;
   }
 
-  // ---------- EXPORT WHOLE GRAPH ----------
   public exportGraph(opts: {includeStyle?: boolean} = {}): GraphJSON {
-    // Fix: Cast the result of cy.json() to CytoscapeOptions for proper typing
-    const cyJson = this.cy.json() as CytoscapeOptions;
+    // Get the JSON representation of the Cytoscape instance
+    const cyJson = this.cy.json() as unknown as CytoscapeOptions;
+    
     const g: GraphJSON = {
       meta: { app: 'BlockNote Graph', version: 2, exportedAt: new Date().toISOString() },
       data: this.cy.data(),
-      // Fix: Access layout from the typed cyJson object
-      layout: cyJson.layout,
-      // Fix: Ensure cy.style() returns Stylesheet and call .json() on it
-      style: opts.includeStyle ? (this.cy.style() as Stylesheet).json() : undefined,
+      // Safely extract layout from cyJson
+      layout: cyJson.layout as unknown as LayoutOptions,
+      // Ensure style is properly retrieved
+      style: opts.includeStyle ? (this.cy.style() as unknown as { json(): StylesheetJson[] }).json() : undefined,
       viewport: { zoom: this.cy.zoom(), pan: this.cy.pan() },
-      // Fix: Use cy.elements().jsons() for a direct array of ElementDefinition.
-      // Cast to CyElementJSON[] using 'unknown' as requested by the error message context,
-      // although cy.elements().jsons() directly returning ElementDefinition[] which CyElementJSON extends is usually sufficient.
+      // Use elements().jsons() to get a proper array of elements
       elements: this.cy.elements().jsons() as unknown as CyElementJSON[]
-      // Alternative based on original code & error message:
-      // elements: (cyJson.elements || []) as unknown as CyElementJSON[]
     };
     return g;
   }
 
-  // ---------- IMPORT WHOLE GRAPH ----------
   public importGraph(g: GraphJSON): void {
     if (!g || !g.elements || !Array.isArray(g.elements)) {
       console.error("Invalid graph data format", g);
@@ -235,15 +230,17 @@ export class GraphService {
       }).filter(e => e !== null) as ElementDefinition[]; // Filter out any nulls from invalid definitions
 
       // Fix: Pass the elements object correctly typed for cy.json update
-      // Cast the partial update object to CytoscapeOptions to satisfy the type checker.
-      this.cy.json({ elements: elements } as CytoscapeOptions);
+      this.cy.json({ elements: elements } as unknown as CytoscapeOptions);
 
-      if (g.layout) this.cy.json({ layout: g.layout } as CytoscapeOptions);
-       // Fix: Ensure cy.style() returns Stylesheet before chaining methods.
-       // Also ensure g.style is valid StylesheetJson[]
+      if (g.layout) this.cy.json({ layout: g.layout } as unknown as CytoscapeOptions);
+      
+      // Fix: Ensure style is properly updated
       if (g.style && Array.isArray(g.style)) {
-        (this.cy.style() as Stylesheet).fromJson(g.style).update(); // .update() takes 0 args
+        (this.cy.style() as unknown as { fromJson(json: StylesheetJson[]): { update(): void } })
+          .fromJson(g.style)
+          .update();
       }
+      
       if (g.data) this.cy.data(g.data);
       if (g.viewport) {
         this.cy.zoom(g.viewport.zoom);
@@ -268,26 +265,22 @@ export class GraphService {
 
     } catch (error) {
         console.error("Error during graph import:", error);
-        // Optionally re-throw or handle more gracefully
     }
     finally {
       this.cy.endBatch();
     }
 
     // Use jsons() which returns ElementDefinition[] directly.
-    // Cast with 'unknown' as per error message context/requirement.
     const elementDefs = this.cy.elements().jsons() as unknown as ElementDefinition[];
     this.queueNotify(elementDefs);
   }
 
-  // ---------- EXPORT ONE ELEMENT ----------
   public exportElement(ele: SingularElementArgument): CyElementJSON {
      // ele is already SingularElementArgument, which has .json() method
     // The return type ElementDefinition is compatible with CyElementJSON
     return ele.json();
   }
 
-  // ---------- IMPORT / PATCH ONE ELEMENT ----------
   public importElement(json: CyElementJSON): void {
     // Ensure json and json.data exist and json.data.id is valid
     if (!json || !json.data || !json.data.id) {
@@ -327,7 +320,6 @@ export class GraphService {
     }
     this.initializeGraph(); // Re-add root nodes
   }
-
 
   public getNodesByType(type: NodeType): NodeCollection {
     return this.cy.$(`node[type = "${type}"]`);
@@ -400,7 +392,6 @@ export class GraphService {
 
     return newNode;
   }
-
 
   public moveNodeToCluster(nodeId: string, clusterId?: string): boolean {
     const node = this.cy.getElementById(nodeId);
@@ -503,8 +494,7 @@ export class GraphService {
     return true;
   }
 
-
-   public importFromStore(notes: Note[], clusters: Cluster[]) {
+  public importFromStore(notes: Note[], clusters: Cluster[]) {
     this.cy.startBatch();
     try {
       this.initializeGraph(); // Clears graph and adds roots
@@ -700,7 +690,6 @@ export class GraphService {
     return true;
   }
 
-
   public deleteNote(id: string): boolean {
     const node = this.cy.getElementById(id);
     // Ensure it's actually a note before deleting
@@ -736,7 +725,6 @@ export class GraphService {
     return true;
   }
 
-
   public addCluster({ id, title, createdAt, updatedAt }: Partial<Cluster> = {}): NodeSingular {
     const clusterId = id && String(id).length >= 15 ? id : generateNodeId(); // Ensure ID validity
     const existingCluster = this.cy.getElementById(clusterId);
@@ -767,7 +755,6 @@ export class GraphService {
 
     return this.cy.getElementById(clusterId) as NodeSingular; // Return the added cluster
   }
-
 
   public updateCluster(id: string, updates: Partial<Cluster>): boolean {
     const node = this.cy.getElementById(id);
@@ -816,12 +803,10 @@ export class GraphService {
     }
      // --- End undo-redo block ---
 
-
     // Fix: Ensure we're using ElementDefinition by explicitly casting via unknown
     this.queueNotify([node.json() as unknown as ElementDefinition]);
     return true;
   }
-
 
   public deleteCluster(id: string): boolean {
     const node = this.cy.getElementById(id);
@@ -908,8 +893,6 @@ export class GraphService {
     return true;
   }
 
-
-  // Assumes 'parent' manipulation for Cytoscape compound nodes
   public moveNode(nodeId: string, newParentId?: string | null): boolean {
     const node = this.cy.getElementById(nodeId);
     if (node.empty()) {
@@ -954,84 +937,6 @@ export class GraphService {
     this.queueNotify([node.json() as unknown as ElementDefinition]);
 
     return true;
-
-
-    // --- Old manual CONTAINS edge logic (keep if not using compound nodes) ---
-    /*
-    const edgeSel = `edge[label = "${EdgeType.CONTAINS}"][target = "${nodeId}"]`; // Edge points TO the child
-    const existingEdges = this.cy.edges(edgeSel); // Can have multiple? Should be only one parent edge.
-
-    this.ur.action('moveNodeParent', { nodeId: nodeId, oldParentId: node.data('parentId'), newParentId: newParentId },
-    (args) => { // DO
-        const nodeToUpdate = this.cy.getElementById(args.nodeId);
-        if (nodeToUpdate.empty()) return;
-
-        const currentEdges = this.cy.edges(`edge[label = "${EdgeType.CONTAINS}"][target = "${args.nodeId}"]`);
-        const removedEdges: ElementDefinition[] = [];
-        const addedEdges: ElementDefinition[] = [];
-
-        // Remove old parent edge(s)
-        if (currentEdges.nonempty()) {
-            removedEdges.push(...currentEdges.jsons() as unknown as ElementDefinition[]);
-            this.cy.remove(currentEdges);
-        }
-
-        // Add new parent edge if newParentId is provided and exists
-        if (args.newParentId && this.cy.getElementById(args.newParentId).nonempty()) {
-            const edgeDef: ElementDefinition = {
-                group: 'edges' as ElementGroup,
-                data: {
-                id: `contains_${args.newParentId}_${args.nodeId}`, // Correct source/target order
-                source: args.newParentId,
-                target: args.nodeId,
-                label: EdgeType.CONTAINS
-                }
-            };
-            addedEdges.push(edgeDef);
-            this.cy.add(edgeDef);
-        }
-
-        // Update parent data field on the node
-        nodeToUpdate.data('parentId', args.newParentId);
-
-        return { ...args, removedEdges, addedEdges }; // Data for undo
-    },
-    (undoArgs) => { // UNDO
-        const nodeToUpdate = this.cy.getElementById(undoArgs.nodeId);
-        if (nodeToUpdate.empty()) return;
-
-        const currentEdges = this.cy.edges(`edge[label = "${EdgeType.CONTAINS}"][target = "${undoArgs.nodeId}"]`);
-
-        // Remove newly added edge
-        if (currentEdges.nonempty()) {
-             this.cy.remove(currentEdges);
-        }
-
-        // Restore old edges
-        if (undoArgs.removedEdges.length > 0) {
-            this.cy.add(undoArgs.removedEdges);
-        }
-
-        // Restore parent data field
-        nodeToUpdate.data('parentId', undoArgs.oldParentId);
-    });
-
-    // --- Notify listeners ---
-    const changes: ElementDefinition[] = [];
-    // Fix: Ensure we're using ElementDefinition by explicitly casting via unknown
-    changes.push(node.json() as unknown as ElementDefinition); // Node data updated
-
-    const actionResult = this.ur.lastAction()?.result;
-    if (actionResult) {
-        if (actionResult.removedEdges) changes.push(...actionResult.removedEdges);
-        if (actionResult.addedEdges) changes.push(...actionResult.addedEdges);
-    }
-    if (changes.length > 0) {
-        this.queueNotify(changes);
-    }
-
-    return true;
-    */
   }
 
   public searchNodes(query: string, types: NodeType[]): NodeCollection {
@@ -1060,7 +965,6 @@ export class GraphService {
     }
   }
 
-
   public getRelatedNodes(nodeId: string): NodeCollection {
     const node = this.cy.getElementById(nodeId);
     if (node.empty()) return this.cy.collection() as NodeCollection; // Return empty collection if node not found
@@ -1070,7 +974,7 @@ export class GraphService {
     return node.neighborhood().nodes();
   }
 
-  public getBacklinks(nodeId: string): any[] { // Consider defining a stricter return type like { id: string; title?: string; type?: NodeType }[]
+  public getBacklinks(nodeId: string): Array<{ id: string; title?: string; type?: NodeType }> {
     const node = this.cy.getElementById(nodeId);
     if (node.empty()) return [];
 
@@ -1082,7 +986,7 @@ export class GraphService {
       id: sourceNode.id(),
       // Provide default values if data fields might be missing
       title: sourceNode.data('title') || 'Untitled',
-      type: sourceNode.data('type') || undefined // Or a default NodeType
+      type: sourceNode.data('type') || undefined 
     }));
   }
 
@@ -1166,12 +1070,12 @@ export class GraphService {
     return true;
   }
 
-  public getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', any[]> { // Define stricter return type if possible
+  public getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', Array<{ id: string; title?: string; type?: NodeType }>> {
     const node = this.cy.getElementById(nodeId);
     if (node.empty()) return { tag: [], concept: [], mention: [] };
 
     // Helper function to get connected nodes by edge type (assuming node is the source)
-    const getConnectedTargets = (edgeType: EdgeType): any[] => { // Stricter type: { id: string; title?: string; type?: NodeType }[]
+    const getConnectedTargets = (edgeType: EdgeType): Array<{ id: string; title?: string; type?: NodeType }> => {
       // Ensure node is NodeSingular to call connectedEdges
       if (!node.isNode()) return [];
 
@@ -1185,25 +1089,21 @@ export class GraphService {
       }));
     };
 
-     // Helper function to get nodes connected via incoming edges (assuming node is the target)
-     // Example: If a 'mention' edge points *to* this node
-     const getConnectingSources = (edgeType: EdgeType): any[] => {
-         if (!node.isNode()) return [];
-         const incomingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][target = "${nodeId}"]`);
-         return incomingEdges.sources().map(source => ({
-             id: source.id(),
-             title: source.data('title') || 'Untitled',
-             type: source.data('type') || undefined
-         }));
-     };
-
+    // Helper function to get nodes connected via incoming edges (assuming node is the target)
+    const getConnectingSources = (edgeType: EdgeType): Array<{ id: string; title?: string; type?: NodeType }> => {
+      if (!node.isNode()) return [];
+      const incomingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][target = "${nodeId}"]`);
+      return incomingEdges.sources().map(source => ({
+        id: source.id(),
+        title: source.data('title') || 'Untitled',
+        type: source.data('type') || undefined
+      }));
+    };
 
     return {
-      tag: getConnectedTargets(EdgeType.HAS_TAG), // Assuming note -> tag edge
-      concept: getConnectedTargets(EdgeType.HAS_CONCEPT), // Assuming note -> concept edge
-      mention: getConnectedTargets(EdgeType.MENTIONS) // Assuming note -> mentioned_note edge
-      // OR use getConnectingSources if mentions point *to* the current node
-      // mention: getConnectingSources(EdgeType.MENTIONS)
+      tag: getConnectedTargets(EdgeType.HAS_TAG),
+      concept: getConnectedTargets(EdgeType.HAS_CONCEPT),
+      mention: getConnectedTargets(EdgeType.MENTIONS)
     };
   }
 }
@@ -1211,5 +1111,3 @@ export class GraphService {
 // Create and export a singleton instance of GraphService
 export const graphService = new GraphService();
 export default graphService;
-
-// --- Citation and Notation sections removed for brevity ---

@@ -1,151 +1,47 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { graphService, NodeType, CyElementJSON } from '../services/GraphService';
-import { useAtom } from 'jotai';
-import { notesAtom, clustersAtom, Note, Cluster, graphInitializedAtom } from '@/lib/store';
-import { ClusterId } from '@/lib/utils/ids';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { GraphAPI } from '../services/GraphAPI';
+import { graphService } from '../services/GraphService';
+import { ElementDefinition } from 'cytoscape';
 
-interface GraphContextType {
-  importNotes: () => void;
-  exportNotes: () => { notes: Note[], clusters: Cluster[] };
-  exportGraphJSON: (includeStyle?: boolean) => any;
-  importGraphJSON: (graphData: any) => void;
-  exportElement: (elementId: string) => CyElementJSON | undefined;
-  importElement: (elementJson: CyElementJSON) => void;
-  addNote: (note: Partial<Note>) => string;
-  updateNote: (id: string, updates: Partial<Note>) => boolean;
-  deleteNote: (id: string) => boolean;
-  addCluster: (cluster: Partial<Cluster>) => string;
-  updateCluster: (id: string, updates: Partial<Cluster>) => boolean;
-  deleteCluster: (id: string) => boolean;
-  moveNode: (nodeId: string, newParentId?: string) => boolean;
-  searchNotes: (query: string) => any[];
-  getRelatedNotes: (noteId: string) => any[];
-  getBacklinks: (noteId: string) => any[];
-  tagNote: (noteId: string, tagName: string) => boolean;
-  getConnections: (noteId: string) => Record<'tag' | 'concept' | 'mention', any[]>;
+interface GraphContextType extends GraphAPI {
+  // Add any additional context-specific properties here
+  isLoading: boolean;
+  lastUpdate: number; // Timestamp of last graph update
 }
 
-const GraphContext = createContext<GraphContextType | undefined>(undefined);
+const GraphContext = createContext<GraphContextType | null>(null);
 
-export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const [notes] = useAtom(notesAtom);
-  const [clusters] = useAtom(clustersAtom);
-  const [initialized, setInitialized] = useAtom(graphInitializedAtom);
-
+export const GraphProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
+  
+  // Handle initial loading state
   useEffect(() => {
-    if (!initialized) {
-      console.log("Initializing graph with notes and clusters", { notes, clusters });
-      
-      if (!clusters.some(c => c.id === 'cluster-default')) {
-        console.warn("Default cluster missing from store during initialization");
-      }
-      
-      graphService.importFromStore(notes, clusters);
-      setInitialized(true);
-    }
-  }, [notes, clusters, initialized, setInitialized]);
-
-  const value: GraphContextType = {
-    importNotes: () => {
-      graphService.importFromStore(notes, clusters);
-    },
+    // Simulate loading or actual initialization logic
+    setIsLoading(false);
     
-    exportNotes: () => {
-      const { notes, clusters } = graphService.exportToStore();
-      return { notes, clusters };
-    },
+    // Add a change listener to track updates
+    const handleGraphChange = () => {
+      setLastUpdate(Date.now());
+    };
     
-    exportGraphJSON: (includeStyle = false) => {
-      return graphService.exportGraph({ includeStyle });
-    },
+    graphService.addChangeListener(handleGraphChange);
     
-    importGraphJSON: (graphData) => {
-      graphService.importGraph(graphData);
-    },
-    
-    exportElement: (elementId) => {
-      const element = graphService.getGraph().getElementById(elementId);
-      if (element.empty()) return undefined;
-      return graphService.exportElement(element);
-    },
-    
-    importElement: (elementJson) => {
-      graphService.importElement(elementJson);
-    },
-    
-    addNote: (note) => {
-      let clusterId = note.clusterId || undefined;
-      
-      const node = graphService.addNote({
-        title: note.title || 'Untitled Note',
-        content: note.content || [],
-        ...note
-      }, note.parentId, clusterId);
-      
-      return node.id();
-    },
-    
-    updateNote: (id, updates) => {
-      return graphService.updateNote(id, updates);
-    },
-    
-    deleteNote: (id) => {
-      return graphService.deleteNote(id);
-    },
-    
-    addCluster: (cluster) => {
-      return graphService.addCluster({
-        title: cluster.title || 'Untitled Cluster',
-        ...cluster
-      }).id();
-    },
-    
-    updateCluster: (id, updates) => {
-      return graphService.updateCluster(id, updates);
-    },
-    
-    deleteCluster: (id) => {
-      return graphService.deleteCluster(id);
-    },
-    
-    moveNode: (nodeId, newParentId) => {
-      const result = graphService.moveNode(nodeId, newParentId);
-      return !!result;
-    },
-    
-    searchNotes: (query) => {
-      return graphService.searchNodes(query, [NodeType.NOTE]).map(node => ({
-        id: node.id(),
-        title: node.data('title'),
-        type: node.data('type')
-      }));
-    },
-    
-    getRelatedNotes: (noteId) => {
-      return graphService.getRelatedNodes(noteId).map(node => ({
-        id: node.id(),
-        title: node.data('title'),
-        type: node.data('type')
-      }));
-    },
-    
-    getBacklinks: (noteId) => {
-      return graphService.getBacklinks(noteId);
-    },
-    
-    tagNote: (noteId, tagName) => {
-      const result = graphService.tagNote(noteId, tagName);
-      return !!result;
-    },
-    
-    getConnections: (noteId) => {
-      return graphService.getConnections(noteId);
-    }
+    return () => {
+      graphService.removeChangeListener(handleGraphChange);
+    };
+  }, []);
+  
+  // Create context value - extend graphService with context-specific properties
+  const contextValue: GraphContextType = {
+    ...graphService as unknown as GraphAPI, // Cast to GraphAPI to ensure interface compliance
+    isLoading,
+    lastUpdate
   };
-
+  
   return (
-    <GraphContext.Provider value={value}>
+    <GraphContext.Provider value={contextValue}>
       {children}
     </GraphContext.Provider>
   );
@@ -153,10 +49,8 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
 
 export const useGraph = (): GraphContextType => {
   const context = useContext(GraphContext);
-  if (!context) {
+  if (context === null) {
     throw new Error('useGraph must be used within a GraphProvider');
   }
   return context;
 };
-
-export default GraphContext;
