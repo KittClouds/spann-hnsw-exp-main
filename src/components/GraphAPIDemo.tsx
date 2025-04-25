@@ -10,7 +10,7 @@ export const GraphAPIDemo = () => {
   const [searchResults, setSearchResults] = useState<string[]>([]);
   
   const handleExportGraph = () => {
-    const exportedGraph = graph.exportGraph(true);
+    const exportedGraph = graph.exportGraph({ includeStyle: true });
     setGraphJson(JSON.stringify(exportedGraph, null, 2));
   };
   
