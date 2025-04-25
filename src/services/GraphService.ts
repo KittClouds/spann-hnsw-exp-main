@@ -1,3 +1,4 @@
+
 import cytoscape, {
   Core,
   CollectionReturnValue,
@@ -7,7 +8,10 @@ import cytoscape, {
   EdgeCollection,
   ElementDefinition,
   ElementGroup,
-  ElementsDefinition,
+  ElementsDefinitions,
+  LayoutOptions,
+  Position,
+  SingularElementArgument
 } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
@@ -39,6 +43,24 @@ export enum EdgeType {
   MENTIONS = 'mentions',
   HAS_CONCEPT = 'has_concept',
   IN_CLUSTER = 'in_cluster'
+}
+
+// TypeScript interfaces for graph JSON
+export interface CyElementJSON extends ElementDefinition {}
+
+export interface GraphMeta {
+  app: string;
+  version: number;
+  exportedAt: string;
+}
+
+export interface GraphJSON {
+  meta: GraphMeta;
+  data?: Record<string, unknown>;
+  layout?: LayoutOptions;
+  style?: any;
+  viewport?: { zoom: number; pan: Position };
+  elements: CyElementJSON[];
 }
 
 export class GraphService {
@@ -145,19 +167,30 @@ export class GraphService {
     return this.cy;
   }
 
-  public exportGraph(): object {
-    return this.cy.json();
+  // ---------- EXPORT WHOLE GRAPH ----------
+  public exportGraph(opts: {includeStyle?: boolean} = {}): GraphJSON {
+    const g: GraphJSON = {
+      meta: { app: 'BlockNote Graph', version: 2, exportedAt: new Date().toISOString() },
+      data: this.cy.data(),
+      layout: this.cy.json().layout,
+      style: opts.includeStyle ? this.cy.style().json() : undefined,
+      viewport: { zoom: this.cy.zoom(), pan: this.cy.pan() },
+      elements: this.cy.json({ flatEles: true }).elements
+    };
+    return g;
   }
 
-  public importGraph(graphData: any): void {
-    if (!graphData || !graphData.elements || !Array.isArray(graphData.elements)) {
-      console.error("Invalid graph data format", graphData);
+  // ---------- IMPORT WHOLE GRAPH ----------
+  public importGraph(g: GraphJSON): void {
+    if (!g || !g.elements || !Array.isArray(g.elements)) {
+      console.error("Invalid graph data format", g);
       return;
     }
 
     this.cy.startBatch();
     try {
-      const elements = graphData.elements.map((e: any) => {
+      // Ensure IDs are valid
+      const elements = g.elements.map((e: ElementDefinition) => {
         if (e && e.data) {
           if (!e.data.id || e.data.id.length < 15) {
             e.data.id = generateNodeId();
@@ -167,10 +200,25 @@ export class GraphService {
       });
 
       this.cy.json({ elements });
+      
+      if (g.layout) this.cy.json({ layout: g.layout });
+      if (g.style) this.cy.style().fromJson(g.style).update();
+      if (g.data) this.cy.data(g.data);
+      if (g.viewport) { 
+        this.cy.zoom(g.viewport.zoom); 
+        this.cy.pan(g.viewport.pan); 
+      }
 
+      // Rebuild titleIndex
       this.titleIndex.clear();
+      this.clusterExists.clear();
+      
       this.cy.$(`node[type = "${NodeType.NOTE}"]`).forEach(node => {
         this.titleIndex.set(slug(node.data('title')), node.id());
+      });
+      
+      this.cy.$(`node[type = "${NodeType.CLUSTER}"]`).forEach(node => {
+        this.clusterExists.add(node.id());
       });
     } finally {
       this.cy.endBatch();
@@ -180,11 +228,39 @@ export class GraphService {
     this.queueNotify(elementDefs);
   }
 
+  // ---------- EXPORT ONE ELEMENT ----------
+  public exportElement(ele: SingularElementArgument): CyElementJSON {
+    return ele.json();
+  }
+
+  // ---------- IMPORT / PATCH ONE ELEMENT ----------
+  public importElement(json: CyElementJSON): void {
+    const exists = this.cy.getElementById(json.data.id);
+    
+    if (exists.nonempty()) { 
+      exists.json(json); 
+    } else { 
+      this.cy.add(json); 
+      
+      // Update indexes
+      if (json.data.type === NodeType.NOTE && json.data.title) {
+        this.titleIndex.set(slug(json.data.title), json.data.id);
+      }
+      
+      if (json.data.type === NodeType.CLUSTER) {
+        this.clusterExists.add(json.data.id);
+      }
+    }
+    
+    this.queueNotify([json]);
+  }
+
   public clearGraph(): void {
     // Fix: Ensure we're using ElementDefinition[] by explicitly casting
     const removed = this.cy.elements().jsons() as unknown as ElementDefinition[];
     this.cy.elements().remove();
     this.titleIndex.clear();
+    this.clusterExists.clear();
     this.queueNotify(removed);
     this.initializeGraph();
   }

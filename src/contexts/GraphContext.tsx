@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { graphService, NodeType } from '../services/GraphService';
+import { graphService, NodeType, CyElementJSON } from '../services/GraphService';
 import { useAtom } from 'jotai';
 import { notesAtom, clustersAtom, Note, Cluster, graphInitializedAtom } from '@/lib/store';
 import { ClusterId } from '@/lib/utils/ids';
@@ -8,6 +8,10 @@ import { ClusterId } from '@/lib/utils/ids';
 interface GraphContextType {
   importNotes: () => void;
   exportNotes: () => { notes: Note[], clusters: Cluster[] };
+  exportGraphJSON: (includeStyle?: boolean) => any;
+  importGraphJSON: (graphData: any) => void;
+  exportElement: (elementId: string) => CyElementJSON | undefined;
+  importElement: (elementJson: CyElementJSON) => void;
   addNote: (note: Partial<Note>) => string;
   updateNote: (id: string, updates: Partial<Note>) => boolean;
   deleteNote: (id: string) => boolean;
@@ -50,6 +54,24 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     exportNotes: () => {
       const { notes, clusters } = graphService.exportToStore();
       return { notes, clusters };
+    },
+    
+    exportGraphJSON: (includeStyle = false) => {
+      return graphService.exportGraph({ includeStyle });
+    },
+    
+    importGraphJSON: (graphData) => {
+      graphService.importGraph(graphData);
+    },
+    
+    exportElement: (elementId) => {
+      const element = graphService.getGraph().getElementById(elementId);
+      if (element.empty()) return undefined;
+      return graphService.exportElement(element);
+    },
+    
+    importElement: (elementJson) => {
+      graphService.importElement(elementJson);
     },
     
     addNote: (note) => {
