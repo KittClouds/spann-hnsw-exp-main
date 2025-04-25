@@ -1,24 +1,24 @@
-
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
+import { generateClusterId, generateNoteId, ClusterId, NoteId } from './utils/ids';
 
 export interface Cluster {
-  id: string;
+  id: ClusterId;
   title: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface Note {
-  id: string;
+  id: NoteId;
   title: string;
   content: PartialBlock[];
   createdAt: string;
   updatedAt: string;
-  parentId: string | null;
+  parentId: NoteId | null;
   type: 'note' | 'folder';
-  clusterId: string | null;
+  clusterId: ClusterId | null;
   path?: string;
   tags?: string[];
   mentions?: string[];
@@ -27,10 +27,8 @@ export interface Note {
 
 const getCurrentDate = () => new Date().toISOString();
 
-const generateId = () => `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
 const initialCluster: Cluster = {
-  id: 'default-cluster',
+  id: 'cluster-default' as ClusterId,
   title: 'Main Cluster',
   createdAt: getCurrentDate(),
   updatedAt: getCurrentDate(),
@@ -38,17 +36,17 @@ const initialCluster: Cluster = {
 
 const initialNotes: Note[] = [
   {
-    id: 'folder-1',
+    id: 'note-folder-1' as NoteId,
     title: 'Getting Started',
     content: [],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
     parentId: null,
     type: 'folder',
-    clusterId: 'default-cluster'
+    clusterId: initialCluster.id
   },
   { 
-    id: generateId(),
+    id: generateNoteId(),
     title: 'Welcome Note',
     content: [{ 
       type: 'paragraph',
@@ -56,12 +54,12 @@ const initialNotes: Note[] = [
     }] as PartialBlock[],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
-    parentId: 'folder-1',
+    parentId: 'note-folder-1' as NoteId,
     type: 'note',
-    clusterId: 'default-cluster'
+    clusterId: initialCluster.id
   },
   { 
-    id: generateId(),
+    id: generateNoteId(),
     title: 'How to Use',
     content: [{ 
       type: 'paragraph',
@@ -69,9 +67,9 @@ const initialNotes: Note[] = [
     }] as PartialBlock[],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
-    parentId: 'folder-1',
+    parentId: 'note-folder-1' as NoteId,
     type: 'note',
-    clusterId: 'default-cluster'
+    clusterId: initialCluster.id
   },
 ];
 
@@ -110,8 +108,8 @@ export const activeNoteAtom = atom(
   }
 );
 
-export const createNote = (parentId: string | null = null, clusterId: string | null = null) => {
-  const newId = generateId();
+export const createNote = (parentId: NoteId | null = null, clusterId: ClusterId | null = null) => {
+  const newId = generateNoteId();
   const now = getCurrentDate();
   
   const newNote: Note = {
@@ -128,8 +126,8 @@ export const createNote = (parentId: string | null = null, clusterId: string | n
   return { id: newId, note: newNote };
 };
 
-export const createFolder = (parentId: string | null = null, clusterId: string | null = null) => {
-  const newId = generateId();
+export const createFolder = (parentId: NoteId | null = null, clusterId: ClusterId | null = null) => {
+  const newId = generateNoteId();
   const now = getCurrentDate();
   
   const newFolder: Note = {
@@ -147,7 +145,7 @@ export const createFolder = (parentId: string | null = null, clusterId: string |
 };
 
 export const createCluster = (title: string) => {
-  const newId = `cluster-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  const newId = generateClusterId();
   const now = getCurrentDate();
   
   const newCluster: Cluster = {
@@ -158,7 +156,7 @@ export const createCluster = (title: string) => {
   };
   
   // Create a default root folder for this cluster
-  const folderId = `folder-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  const folderId = generateNoteId();
   const rootFolder: Note = {
     id: folderId,
     title: 'Root Folder',
