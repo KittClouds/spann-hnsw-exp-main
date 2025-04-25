@@ -108,7 +108,7 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("heading" as BlockType)}
+                onClick={() => operations.changeBlockType("heading")}
               >
                 <Heading1 size={16} />
               </Button>
@@ -121,7 +121,7 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("heading-2" as BlockType)}
+                onClick={() => operations.changeBlockType("heading")}
               >
                 <Heading2 size={16} />
               </Button>
@@ -134,7 +134,7 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("heading-3" as BlockType)}
+                onClick={() => operations.changeBlockType("heading")}
               >
                 <Heading3 size={16} />
               </Button>
@@ -151,7 +151,7 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("bulletList" as BlockType)}
+                onClick={() => operations.changeBlockType("bulletListItem")}
               >
                 <List size={16} />
               </Button>
@@ -164,7 +164,7 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("numberedList" as BlockType)}
+                onClick={() => operations.changeBlockType("numberedListItem")}
               >
                 <ListOrdered size={16} />
               </Button>
@@ -177,12 +177,12 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => operations.changeBlockType("quote" as BlockType)}
+                onClick={() => operations.changeBlockType("codeBlock")}
               >
                 <Quote size={16} />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Quote</TooltipContent>
+            <TooltipContent>Code Block</TooltipContent>
           </Tooltip>
         </div>
         

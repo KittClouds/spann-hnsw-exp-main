@@ -7,13 +7,12 @@ import { toast } from 'sonner';
 export type BlockType = 
   | "paragraph"
   | "heading"
-  | "heading-2"
-  | "heading-3"
-  | "bulletList"
-  | "numberedList"
   | "codeBlock"
-  | "quote"
+  | "bulletListItem"
+  | "numberedListItem"
+  | "checkListItem"
   | "table"
+  | "file" 
   | "image"
   | "video"
   | "audio";
