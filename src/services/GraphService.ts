@@ -279,9 +279,8 @@ export class GraphService implements GraphAPI {
   }
 
   public exportElement(ele: SingularElementArgument): CyElementJSON {
-     // ele is already SingularElementArgument, which has .json() method
-    // The return type ElementDefinition is compatible with CyElementJSON
-    return ele.json();
+     // Fix: Cast to ElementDefinition
+    return ele.json() as unknown as CyElementJSON;
   }
 
   public importElement(json: CyElementJSON): void {
@@ -631,8 +630,8 @@ export class GraphService implements GraphAPI {
       }
     };
 
-    // Use undo-redo
-    const addedElements = this.ur.do('add', [el]);
+    // Use undo-redo for adding the element
+    this.ur.do('add', [el]);
     this.clusterExists.add(clusterId); // Update internal set
 
     // Notify listeners
@@ -880,12 +879,13 @@ export class GraphService implements GraphAPI {
     // sources() gets the source nodes of those incoming edges
     const backlinkingNodes = node.incomers('edge').sources();
 
-    // Convert to array of objects with required properties
-    return backlinkingNodes.map(sourceNode => ({
+    // Convert to collection to array of objects with required properties
+    // Fix: Use map then convert to array
+    return backlinkingNodes.map((sourceNode: NodeSingular) => ({
       id: sourceNode.id(),
       title: sourceNode.data('title') || 'Untitled',
       type: sourceNode.data('type') || undefined 
-    })).toArray(); // Convert Collection to Array
+    })).toArray(); // Convert Cytoscape collection to array
   }
 
   public tagNote(noteId: string, tagName: string): boolean {
@@ -989,23 +989,26 @@ export class GraphService implements GraphAPI {
 
       // Get edges originating from this node with the specified label
       const outgoingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][source = "${nodeId}"]`);
-
-      return outgoingEdges.targets().map(target => ({
+      
+      // Convert collection to array with map
+      return outgoingEdges.targets().map((target: NodeSingular) => ({
         id: target.id(),
         title: target.data('title') || 'Untitled',
         type: target.data('type') || undefined
-      })).toArray(); // Convert Collection to Array
+      })).toArray(); // Convert Cytoscape collection to array
     };
 
     // Helper function to get nodes connected via incoming edges (assuming node is the target)
     const getConnectingSources = (edgeType: EdgeType): Array<{ id: string; title?: string; type?: NodeType }> => {
       if (!node.isNode()) return [];
       const incomingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][target = "${nodeId}"]`);
-      return incomingEdges.sources().map(source => ({
+      
+      // Fix: Convert collection to array with map
+      return incomingEdges.sources().map((source: NodeSingular) => ({
         id: source.id(),
         title: source.data('title') || 'Untitled',
         type: source.data('type') || undefined
-      })).toArray(); // Convert Collection to Array
+      })).toArray(); // Convert Cytoscape collection to array
     };
 
     return {

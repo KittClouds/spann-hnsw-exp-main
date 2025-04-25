@@ -10,6 +10,7 @@ export const GraphAPIDemo = () => {
   const [searchResults, setSearchResults] = useState<string[]>([]);
   
   const handleExportGraph = () => {
+    // Fix: Pass the options object correctly
     const exportedGraph = graph.exportGraph({ includeStyle: true });
     setGraphJson(JSON.stringify(exportedGraph, null, 2));
   };
