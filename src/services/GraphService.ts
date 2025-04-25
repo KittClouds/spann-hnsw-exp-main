@@ -121,14 +121,12 @@ export class GraphService {
     this.changeListeners.forEach(l => l(changes));
   }
 
-  private edgeExists(src: string, tgt: string, label: EdgeType): boolean {
-    const s = this.cy.getElementById(src);
-    const t = this.cy.getElementById(tgt);
-    if (s.empty() || t.empty()) return false;
+  private edgeExists(srcId: string, tgtId: string, label: EdgeType): boolean {
+    const src = this.cy.getElementById(srcId);
+    if (src.empty()) return false;
 
-    return !s
-      .edgesWith(t)
-      .filter(`[label = "${label}"]`)
+    return !src
+      .connectedEdges(`[label = "${label}"][target = "${tgtId}"]`)
       .empty();
   }
 
@@ -157,7 +155,8 @@ export class GraphService {
       return;
     }
 
-    this.cy.batch(() => {
+    this.cy.startBatch();
+    try {
       const elements = graphData.elements.map((e: any) => {
         if (e && e.data) {
           if (!e.data.id || e.data.id.length < 15) {
@@ -173,9 +172,10 @@ export class GraphService {
       this.cy.$(`node[type = "${NodeType.NOTE}"]`).forEach(node => {
         this.titleIndex.set(slug(node.data('title')), node.id());
       });
-    });
+    } finally {
+      this.cy.endBatch();
+    }
 
-    // Fix: Ensure we're using ElementDefinition[] by explicitly casting
     const elementDefs = this.cy.elements().jsons() as unknown as ElementDefinition[];
     this.queueNotify(elementDefs);
   }
@@ -282,7 +282,8 @@ export class GraphService {
   }
 
   public importFromStore(notes: Note[], clusters: Cluster[]) {
-    this.cy.batch(() => {
+    this.cy.startBatch();
+    try {
       this.initializeGraph();
 
       const elements: ElementDefinition[] = [];
@@ -365,7 +366,9 @@ export class GraphService {
       this.cy.$(`node[type = "${NodeType.NOTE}"]`).forEach(node => {
         this.titleIndex.set(slug(node.data('title')), node.id());
       });
-    });
+    } finally {
+      this.cy.endBatch();
+    }
 
     this.queueNotify(this.cy.elements().jsons() as unknown as ElementDefinition[]);
   }
