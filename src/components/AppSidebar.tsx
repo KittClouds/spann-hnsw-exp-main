@@ -1,10 +1,9 @@
-
 import React, { useState } from "react";
 import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
 import { useAtom } from "jotai";
 import { notesAtom, activeNoteIdAtom, createNote, createFolder, Note, clustersAtom, activeClusterIdAtom, deleteNote } from "@/lib/store";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,16 +56,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, [setNotes, setActiveNoteId, activeClusterId]);
 
   return (
-    <Sidebar {...props}>
+    <Sidebar className="bg-[#0a0a0d] border-r border-[#1a1b23]" {...props}>
       <SidebarContent>
-        <Tabs defaultValue="folders" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="folders">Folders</TabsTrigger>
-            <TabsTrigger value="clusters">Clusters</TabsTrigger>
+        <Tabs defaultValue="folders" className="w-full">
+          <TabsList className="w-full grid grid-cols-2 bg-transparent border-b border-[#1a1b23] rounded-none p-0 h-auto">
+            <TabsTrigger 
+              value="folders" 
+              className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 tab-inactive data-[state=active]:tab-active"
+            >
+              Folders
+            </TabsTrigger>
+            <TabsTrigger 
+              value="clusters" 
+              className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 tab-inactive data-[state=active]:tab-active"
+            >
+              Clusters
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="folders" className="mt-0">
             <SidebarGroup>
-              <SidebarGroupLabel>Notes</SidebarGroupLabel>
+              <SidebarGroupLabel className="text-xs text-muted-foreground uppercase tracking-wider">Notes</SidebarGroupLabel>
               <SidebarGroupAction>
                 <DropdownMenu>
                   <DropdownMenuTrigger>
@@ -85,7 +94,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenu>
               </SidebarGroupAction>
               <SidebarGroupContent>
-                <SidebarMenu>
+                <SidebarMenu className="px-1">
                   {rootNotes.map((note) => (
                     <NoteTree 
                       key={note.id} 
@@ -108,7 +117,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter className="p-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button className="w-full dark:bg-[#7c5bf1] dark:hover:bg-[#6b4ad5] light:bg-[#614ac2] light:hover:bg-[#563db0] text-white">
+            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
               <Plus className="h-4 w-4 mr-2" /> New
             </Button>
           </DropdownMenuTrigger>
@@ -190,6 +199,7 @@ function NoteTree({ note, notes, activeNoteId, onSelect, onNewItem }: NoteTreePr
       <SidebarMenuItem>
         <SidebarMenuButton
           isActive={activeNoteId === note.id}
+          className="rounded-md transition-colors duration-200 hover:bg-[#12141f] data-[active=true]:sidebar-note-active-dark"
           onClick={() => onSelect(note.id)}
         >
           <File className="shrink-0" />
@@ -204,7 +214,7 @@ function NoteTree({ note, notes, activeNoteId, onSelect, onNewItem }: NoteTreePr
       <Collapsible defaultOpen>
         <div className="flex items-center justify-between pr-2">
           <CollapsibleTrigger asChild>
-            <SidebarMenuButton className="flex-1 [&[data-state=open]>svg:first-child]:rotate-90">
+            <SidebarMenuButton className="flex-1 rounded-md transition-colors duration-200 hover:bg-[#12141f] [&[data-state=open]>svg:first-child]:rotate-90">
               <ChevronRight className="shrink-0 transition-transform" />
               <Folder className="shrink-0" />
               {isEditing ? (

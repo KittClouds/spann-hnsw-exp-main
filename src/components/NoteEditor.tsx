@@ -124,13 +124,13 @@ export function NoteEditor() {
   }
 
   return (
-    <div className="flex-1 flex flex-col p-6 dark:bg-[#0d0e18] light:bg-white">
+    <div className="flex-1 flex flex-col p-6 bg-[#0a0a0d]">
       <div className="flex items-center justify-between mb-4">
         <div className="flex-1">
           <Input
             value={activeNote.title}
             onChange={handleTitleChange}
-            className="text-xl font-semibold bg-transparent border-none focus-visible:ring-0 px-0 text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]"
+            className="text-xl font-semibold bg-transparent border-none focus-visible:ring-0 px-0 text-primary"
             placeholder="Note Title"
           />
         </div>
@@ -138,13 +138,13 @@ export function NoteEditor() {
           onClick={handleDeleteNote} 
           variant="outline" 
           size="icon" 
-          className="ml-2 text-destructive hover:bg-destructive/10"
+          className="ml-2 text-destructive hover:bg-destructive/10 border-[#1a1b23] bg-[#12141f]"
         >
           <Trash className="h-4 w-4" />
         </Button>
       </div>
       
-      <div className="flex-1 dark:bg-[#12141f] light:bg-[#f8f6ff] rounded-md shadow-xl border-border transition-all duration-200 overflow-auto">
+      <div className="flex-1 bg-[#12141f] rounded-md shadow-xl border-[#1a1b23] transition-all duration-200 overflow-auto">
         <BlockNoteView 
           editor={editor} 
           theme={theme}

@@ -29,7 +29,6 @@ export function ClusterView() {
   
   const DEFAULT_CLUSTER_ID = 'cluster-default' as ClusterId;
   
-  // Ensure default cluster exists
   useEffect(() => {
     if (!clusters.some(c => c.id === DEFAULT_CLUSTER_ID)) {
       const defaultCluster = {
@@ -40,7 +39,6 @@ export function ClusterView() {
       };
       setClusters(prev => [...prev, defaultCluster]);
       
-      // Also add it to the graph service
       setTimeout(() => {
         addCluster(defaultCluster);
       }, 0);
@@ -104,8 +102,8 @@ export function ClusterView() {
     <div className="h-full flex flex-col p-4 overflow-auto">
       {clusters.length <= 1 ? (
         <div className="text-center space-y-4">
-          <div className="w-20 h-20 rounded-full bg-galaxy-dark-accent flex items-center justify-center mx-auto">
-            <Database className="w-10 h-10 text-[#7c5bf1]" />
+          <div className="w-20 h-20 rounded-full bg-[#12141f] flex items-center justify-center mx-auto">
+            <Database className="w-10 h-10 text-primary" />
           </div>
           <h3 className="text-lg font-semibold text-foreground">No clusters yet</h3>
           <p className="text-sm text-muted-foreground">
@@ -113,7 +111,7 @@ export function ClusterView() {
           </p>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-[#7c5bf1] hover:bg-[#6b4ad5]">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <Plus className="w-4 h-4 mr-2" />
                 New Cluster
               </Button>
@@ -132,7 +130,7 @@ export function ClusterView() {
                   }}
                 />
                 <Button
-                  className="w-full bg-[#7c5bf1] hover:bg-[#6b4ad5]"
+                  className="w-full bg-primary hover:bg-primary/90"
                   onClick={handleCreateCluster}
                 >
                   Create Cluster
@@ -144,10 +142,10 @@ export function ClusterView() {
       ) : (
         <div className="w-full space-y-2">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-medium">Your Clusters</h3>
+            <h3 className="text-xs text-muted-foreground uppercase tracking-wider">Your Clusters</h3>
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" variant="outline" className="h-7">
+                <Button size="sm" variant="outline" className="h-7 border-[#1a1b23] bg-[#12141f] hover:bg-[#1a1b23]">
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   New Cluster
                 </Button>
@@ -166,7 +164,7 @@ export function ClusterView() {
                     }}
                   />
                   <Button
-                    className="w-full bg-[#7c5bf1] hover:bg-[#6b4ad5]"
+                    className="w-full bg-primary hover:bg-primary/90"
                     onClick={handleCreateCluster}
                   >
                     Create Cluster
@@ -180,8 +178,8 @@ export function ClusterView() {
             {clusters.map((cluster) => (
               <Collapsible key={cluster.id}>
                 <div 
-                  className={`flex items-center justify-between p-2 rounded-md ${
-                    activeClusterId === cluster.id ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'
+                  className={`flex items-center justify-between p-2 rounded-md transition-colors duration-200 ${
+                    activeClusterId === cluster.id ? 'bg-[#12141f] text-primary' : 'hover:bg-[#12141f]'
                   }`}
                 >
                   <CollapsibleTrigger className="flex items-center gap-2 flex-1" onClick={() => handleClusterClick(cluster.id)}>
