@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
 import { useAtom } from "jotai";
@@ -32,7 +33,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "./ui/button";
 import { ClusterView } from "./ClusterView";
-import { NoteId, ClusterId } from "@/lib/graph/utils";
+import { NoteId, ClusterId } from "@/lib/utils/ids";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [notes, setNotes] = useAtom(notesAtom);

@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { useBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine"; 
 import { useNoteInterface } from '../hooks/useNoteInterface';
 import { Button } from './ui/button';
-import { useGraph } from '../lib/graph/context';
+import { useGraph } from '../contexts/GraphContext';
 
 export const NoteInterfaceExample = () => {
   const editor = useBlockNote({
