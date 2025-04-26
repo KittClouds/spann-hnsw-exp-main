@@ -1,59 +1,74 @@
 
-import { Core, CollectionReturnValue, LayoutOptions, ElementDefinition, NodeCollection, Position } from 'cytoscape';
-import { Note, Cluster } from '../store';
+import { ElementDefinition } from 'cytoscape';
 
-// Basic types for graph elements
-export type NodeType = 'note' | 'folder' | 'tag' | 'cluster';
-export type EdgeType = 'child' | 'reference' | 'tag';
+export enum NodeType {
+  NOTE = 'note',
+  FOLDER = 'folder',
+  TAG = 'tag',
+  CONCEPT = 'concept',
+  CLUSTER = 'cluster',
+  STANDARD_ROOT = 'standard_root',
+  CLUSTERS_ROOT = 'clusters_root',
+  CLUSTER_DEFINITION = 'cluster_definition',
+  CLUSTER_ROOT = 'cluster_root'
+}
 
-// Graph metadata for imports/exports 
+export enum EdgeType {
+  CONTAINS = 'contains',
+  NOTE_LINK = 'note_link',
+  HAS_TAG = 'has_tag',
+  MENTIONS = 'mentions',
+  HAS_CONCEPT = 'has_concept',
+  IN_CLUSTER = 'in_cluster'
+}
+
+export interface CyElementJSON extends ElementDefinition {}
+
 export interface GraphMeta {
-    version: string;
-    created: string;
-    updated: string;
-}
-
-// Graph element data structure
-export interface GraphElementData {
-    id: string;
-    type: NodeType | EdgeType;
-    label?: string;
-    [key: string]: any; // Allow for flexible data attributes
-}
-
-// Edge specific type
-export interface Edge extends GraphElementData {
-    type: EdgeType;
-    source: string;
-    target: string;
-}
-
-// Tag specific type 
-export interface Tag extends GraphElementData {
-    type: 'tag';
-    name: string;
-}
-
-// Graph JSON format for import/export
-export interface CyElementJSON {
-    data: GraphElementData;
-    position?: Position;
-    group?: 'nodes' | 'edges';
+  app: string;
+  version: number;
+  exportedAt: string;
 }
 
 export interface GraphJSON {
-    elements: CyElementJSON[];
-    meta?: GraphMeta;
-    style?: any[]; // Style is flexible
+  meta: GraphMeta;
+  data?: Record<string, unknown>;
+  layout?: any;
+  style?: any[];
+  viewport?: { zoom: number; pan: { x: number, y: number } };
+  elements: CyElementJSON[];
 }
 
-// Type for graph data structure
+export interface GraphElementData {
+  id?: string;
+  type?: NodeType | string;
+  title?: string;
+  [key: string]: any; // Allow arbitrary data
+}
+
 export interface GraphData {
-    nodes: Note[];
-    edges: Edge[];
-    clusters: Cluster[];
-    tags: Tag[];
+  meta: GraphMeta;
+  data?: Record<string, unknown>;
+  layout?: any;
+  style?: any[];
+  viewport?: { zoom: number; pan: { x: number, y: number } };
+  elements: ElementDefinition[];
 }
 
-// Type for change listeners
-export type ChangeListener = (elements: ElementDefinition[]) => void;
+export interface Edge {
+  id: string;
+  source: string;
+  target: string;
+  label?: EdgeType | string;
+  [key: string]: any;
+}
+
+export interface Tag {
+  id: string;
+  type: NodeType.TAG;
+  title: string;
+  [key: string]: any;
+}
+
+// Define the change listener type
+export type ChangeListener = (changeType: 'add' | 'update' | 'remove', elements: ElementDefinition[]) => void;

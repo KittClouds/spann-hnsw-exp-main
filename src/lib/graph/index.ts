@@ -1,5 +1,5 @@
 
 export * from './types';
 export * from './IGraphService';
-export { GraphService } from './GraphService';
+export { GraphService, graphService } from './GraphService';
 export { useGraph, GraphProvider } from './context';

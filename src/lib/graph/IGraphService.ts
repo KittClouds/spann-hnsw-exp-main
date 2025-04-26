@@ -1,3 +1,4 @@
+
 import { Core, CollectionReturnValue, LayoutOptions, ElementDefinition, NodeCollection, Position } from 'cytoscape';
 import { Note, Cluster } from '../store';
 import { 
@@ -7,7 +8,6 @@ import {
 
 export interface IGraphService {
     // Lifecycle
-    // init(container: HTMLElement): void; // Omitted if only headless
     destroy(): void;
     getCy(): Core | null;
 
