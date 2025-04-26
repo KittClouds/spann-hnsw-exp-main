@@ -1,3 +1,4 @@
+
 import cytoscape, {
   Core,
   CollectionReturnValue,
@@ -13,13 +14,13 @@ import cytoscape, {
   SingularElementArgument,
   StylesheetJson,
   CytoscapeOptions,
-  Stylesheet
+  StylesheetCSS
 } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
-import { generateNodeId, NodeId, ClusterId } from '@/lib/utils/ids';
+import { generateNodeId, NodeId, ClusterId, generateClusterId, generateNoteId } from '@/lib/utils/ids';
 
 cytoscape.use(automove);
 cytoscape.use(undoRedo);
@@ -62,9 +63,22 @@ export interface GraphJSON {
   elements: CyElementJSON[];
 }
 
+// Extended interface for the undo-redo plugin
+interface UndoRedoInstance {
+  do: (actionName: string, args?: any) => CollectionReturnValue;
+  undo: () => void;
+  redo: () => void;
+  action: (
+    name: string,
+    doFn: (args: any) => any,
+    undoFn: (args: any) => void
+  ) => void;
+  lastAction: () => { name: string; result: any } | undefined;
+}
+
 export class GraphService {
   private cy: Core;
-  private ur: ReturnType<Core['undoRedo']>;
+  private ur: UndoRedoInstance;
   private titleIndex = new Map<string, string>();
   private notifyScheduled = false;
   private pendingChanges: ElementDefinition[] = [];
@@ -73,7 +87,7 @@ export class GraphService {
 
   constructor() {
     this.cy = cytoscape({ headless: true });
-    this.ur = this.cy.undoRedo();
+    this.ur = this.cy.undoRedo() as unknown as UndoRedoInstance;
 
     (this.cy as any).automove({
       nodesMatching: 'node[type = "note"]',
@@ -173,7 +187,7 @@ export class GraphService {
       meta: { app: 'BlockNote Graph', version: 2, exportedAt: new Date().toISOString() },
       data: this.cy.data(),
       layout: cyJson.layout,
-      style: opts.includeStyle ? (this.cy.style() as Stylesheet).json() : undefined,
+      style: opts.includeStyle ? (this.cy.style() as unknown as StylesheetCSS).json() : undefined,
       viewport: { zoom: this.cy.zoom(), pan: this.cy.pan() },
       elements: this.cy.elements().jsons() as unknown as CyElementJSON[]
     };
@@ -208,7 +222,7 @@ export class GraphService {
 
       if (g.layout) this.cy.json({ layout: g.layout } as CytoscapeOptions);
       if (g.style && Array.isArray(g.style)) {
-        (this.cy.style() as Stylesheet).fromJson(g.style).update();
+        (this.cy.style() as unknown as StylesheetCSS).fromJson(g.style);
       }
       if (g.data) this.cy.data(g.data);
       if (g.viewport) {
@@ -295,7 +309,7 @@ export class GraphService {
     updatedAt?: string;
     path?: string;
   }, folderId?: string, clusterId?: string): NodeSingular {
-    const nodeId = id && String(id).length >= 15 ? id : generateNodeId();
+    const nodeId = id && String(id).length >= 15 ? id : generateNoteId();
     const existingNode = this.cy.getElementById(nodeId);
     if (existingNode.nonempty()) {
       console.warn(`Note with ID ${nodeId} already exists. Returning existing node.`);
@@ -360,62 +374,67 @@ export class GraphService {
     const edgeSelector = `edge[label = "${EdgeType.IN_CLUSTER}"][source = "${nodeId}"]`;
     const existingEdges = this.cy.edges(edgeSelector);
 
-    this.ur.action('moveNodeToCluster', {
-        nodeId: nodeId,
-        oldClusterId: node.data('clusterId'),
-        newClusterId: clusterId,
-        removedEdges: [],
-        addedEdges: [],
-        movedEdges: []
-    }, (args) => {
-        const currentClusterId = args.newClusterId;
-        const currentNode = this.cy.getElementById(args.nodeId);
-        if (currentNode.empty()) return;
+    this.ur.action(
+        'moveNodeToCluster',
+        (args: { nodeId: string, oldClusterId: string, newClusterId: string | undefined }) => {
+            const currentClusterId = args.newClusterId;
+            const currentNode = this.cy.getElementById(args.nodeId);
+            if (currentNode.empty()) return;
 
-        const currentEdges = this.cy.edges(`edge[label = "${EdgeType.IN_CLUSTER}"][source = "${args.nodeId}"]`);
-        const edgesToRemove = currentEdges.filter(edge => edge.target().id() !== currentClusterId);
-        const targetEdgeExists = currentEdges.filter(edge => edge.target().id() === currentClusterId).nonempty();
+            const currentEdges = this.cy.edges(`edge[label = "${EdgeType.IN_CLUSTER}"][source = "${args.nodeId}"]`);
+            const edgesToRemove = currentEdges.filter(edge => edge.target().id() !== currentClusterId);
+            const targetEdgeExists = currentEdges.filter(edge => edge.target().id() === currentClusterId).nonempty();
+            
+            let removedEdges: ElementDefinition[] = [];
+            let addedEdges: ElementDefinition[] = [];
 
-        if (edgesToRemove.nonempty()) {
-            args.removedEdges = edgesToRemove.jsons() as unknown as ElementDefinition[];
-            this.cy.remove(edgesToRemove);
-        }
+            if (edgesToRemove.nonempty()) {
+                removedEdges = edgesToRemove.jsons() as unknown as ElementDefinition[];
+                this.cy.remove(edgesToRemove);
+            }
 
-        if (currentClusterId && !targetEdgeExists && this.clusterExists.has(currentClusterId)) {
-            const edgeDef: ElementDefinition = {
-                group: 'edges' as ElementGroup,
-                data: {
-                    id: `${EdgeType.IN_CLUSTER}_${args.nodeId}_${currentClusterId}`,
-                    source: args.nodeId,
-                    target: currentClusterId,
-                    label: EdgeType.IN_CLUSTER
-                }
+            if (currentClusterId && !targetEdgeExists && this.clusterExists.has(currentClusterId)) {
+                const edgeDef: ElementDefinition = {
+                    group: 'edges' as ElementGroup,
+                    data: {
+                        id: `${EdgeType.IN_CLUSTER}_${args.nodeId}_${currentClusterId}`,
+                        source: args.nodeId,
+                        target: currentClusterId,
+                        label: EdgeType.IN_CLUSTER
+                    }
+                };
+                addedEdges = [edgeDef];
+                this.cy.add(edgeDef);
+            }
+
+            currentNode.data('clusterId', currentClusterId);
+            return { 
+                nodeId: args.nodeId, 
+                oldClusterId: args.oldClusterId, 
+                newClusterId: args.newClusterId, 
+                removedEdges, 
+                addedEdges 
             };
-            args.addedEdges = [edgeDef];
-            this.cy.add(edgeDef);
+        },
+        (undoArgs: { nodeId: string, oldClusterId: string, newClusterId: string | undefined, removedEdges: ElementDefinition[], addedEdges: ElementDefinition[] }) => {
+            const originalClusterId = undoArgs.oldClusterId;
+            const currentNode = this.cy.getElementById(undoArgs.nodeId);
+            if (currentNode.empty()) return;
+
+            const currentEdges = this.cy.edges(`edge[label = "${EdgeType.IN_CLUSTER}"][source = "${undoArgs.nodeId}"]`);
+            const edgesToRemove = currentEdges.filter(edge => edge.target().id() !== originalClusterId);
+
+            if (edgesToRemove.nonempty()) {
+                 this.cy.remove(edgesToRemove);
+            }
+
+            if (undoArgs.removedEdges && undoArgs.removedEdges.length > 0) {
+                 this.cy.add(undoArgs.removedEdges);
+            }
+
+            currentNode.data('clusterId', originalClusterId);
         }
-
-        currentNode.data('clusterId', currentClusterId);
-        return { nodeId: args.nodeId, oldClusterId: args.oldClusterId, newClusterId: args.newClusterId, removedEdges: args.removedEdges, addedEdges: args.addedEdges };
-
-    }, (undoArgs) => {
-        const originalClusterId = undoArgs.oldClusterId;
-        const currentNode = this.cy.getElementById(undoArgs.nodeId);
-        if (currentNode.empty()) return;
-
-        const currentEdges = this.cy.edges(`edge[label = "${EdgeType.IN_CLUSTER}"][source = "${undoArgs.nodeId}"]`);
-        const edgesToRemove = currentEdges.filter(edge => edge.target().id() !== originalClusterId);
-
-        if (edgesToRemove.nonempty()) {
-             this.cy.remove(edgesToRemove);
-        }
-
-        if (undoArgs.removedEdges && undoArgs.removedEdges.length > 0) {
-             this.cy.add(undoArgs.removedEdges);
-        }
-
-        currentNode.data('clusterId', originalClusterId);
-    });
+    );
 
     const changes: ElementDefinition[] = [];
     changes.push(node.json() as unknown as ElementDefinition);
@@ -444,7 +463,7 @@ export class GraphService {
       clusters.forEach(cluster => {
         if (!cluster.id) {
             console.warn("Cluster missing ID during import from store:", cluster);
-            cluster.id = generateNodeId();
+            cluster.id = generateClusterId();
         }
         this.clusterExists.add(cluster.id);
         elements.push({
@@ -461,7 +480,7 @@ export class GraphService {
       notes.forEach(note => {
         if (!note.id) {
              console.warn("Note missing ID during import from store:", note);
-             note.id = generateNodeId();
+             note.id = generateNoteId();
         }
         const slugTitle = slug(note.title || '');
         elements.push({
@@ -578,12 +597,13 @@ export class GraphService {
     node.data('updatedAt', newData.updatedAt);
 
     if (changeOps.length > 0) {
-        this.ur.action('updateNoteData', { changes: changeOps },
-            (args) => {
+        this.ur.action(
+            'updateNoteData',
+            (args: { changes: typeof changeOps }) => {
                 args.changes.forEach(op => op.ele.data(op.name, op.newValue));
                 return args;
             },
-            (undoArgs) => {
+            (undoArgs: { changes: typeof changeOps }) => {
                 undoArgs.changes.forEach(op => op.ele.data(op.name, op.oldValue));
             }
         );
@@ -617,7 +637,7 @@ export class GraphService {
         this.titleIndex.delete(slugTitle);
     }
 
-    const actualRemovedJsons = removedCollection.jsons() as unknown as ElementDefinition[];
+    const actualRemovedJsons = removedCollection?.jsons() as unknown as ElementDefinition[] || [];
     if (actualRemovedJsons.length > 0) {
        this.queueNotify(actualRemovedJsons);
     } else {
@@ -629,7 +649,7 @@ export class GraphService {
 
 
   public addCluster({ id, title, createdAt, updatedAt }: Partial<Cluster> = {}): NodeSingular {
-    const clusterId = id && String(id).length >= 15 ? id : generateNodeId();
+    const clusterId = id && String(id).length >= 15 ? id : generateClusterId();
     const existingCluster = this.cy.getElementById(clusterId);
     if (existingCluster.nonempty()) {
         console.warn(`Cluster with ID ${clusterId} already exists. Returning existing cluster.`);
@@ -688,19 +708,19 @@ export class GraphService {
      node.data('updatedAt', newData.updatedAt);
 
     if (changeOps.length > 0) {
-        this.ur.action('updateClusterData', { changes: changeOps },
-            (args) => {
+        this.ur.action(
+            'updateClusterData',
+            (args: { changes: typeof changeOps }) => {
                 args.changes.forEach(op => op.ele.data(op.name, op.newValue));
                 return args;
             },
-            (undoArgs) => {
+            (undoArgs: { changes: typeof changeOps }) => {
                 undoArgs.changes.forEach(op => op.ele.data(op.name, op.oldValue));
             }
         );
     } else if (Object.keys(newData).length === 1 && newData.updatedAt) {
          node.data('updatedAt', newData.updatedAt);
     }
-
 
     this.queueNotify([node.json() as unknown as ElementDefinition]);
     return true;
@@ -719,9 +739,9 @@ export class GraphService {
 
     const removedJson = node.json() as unknown as ElementDefinition;
 
-
-    this.ur.action('deleteClusterAndMembers', { clusterId: id, memberNodeIds: memberNodeIds },
-        (args) => {
+    this.ur.action(
+        'deleteClusterAndMembers',
+        (args: { clusterId: string, memberNodeIds: string[] }) => {
             const clusterNode = this.cy.getElementById(args.clusterId);
             const removedElements: ElementDefinition[] = [];
             let removedClusterJson: ElementDefinition | null = null;
@@ -729,7 +749,7 @@ export class GraphService {
             if (clusterNode.nonempty()) {
                 removedClusterJson = clusterNode.json() as unknown as ElementDefinition;
                 const removedCol = this.cy.remove(clusterNode);
-                removedElements.push(...removedCol.jsons() as unknown as ElementDefinition[]);
+                removedElements.push(...(removedCol?.jsons() as unknown as ElementDefinition[] || []));
             }
 
              const membersToUpdate = this.cy.nodes().filter(n => args.memberNodeIds.includes(n.id()));
@@ -738,10 +758,9 @@ export class GraphService {
                  removedElements.push(member.json() as unknown as ElementDefinition);
              });
 
-
              return { removedElements, clusterId: args.clusterId, memberNodeIds: args.memberNodeIds, removedClusterJson };
         },
-        (undoArgs) => {
+        (undoArgs: { removedElements: ElementDefinition[], clusterId: string, memberNodeIds: string[], removedClusterJson: ElementDefinition | null }) => {
             if (undoArgs.removedClusterJson) {
                 this.cy.add(undoArgs.removedClusterJson);
             }
@@ -759,8 +778,8 @@ export class GraphService {
                       }
                  }
              });
-
-        });
+        }
+    );
 
     this.clusterExists.delete(id);
 
@@ -788,15 +807,16 @@ export class GraphService {
 
     const oldParentId = node.parent().id();
 
-    this.ur.action('moveNodeCompound', { nodeId: nodeId, oldParentId: oldParentId, newParentId: newParentId || null },
-        (args) => {
+    this.ur.action(
+        'moveNodeCompound',
+        (args: { nodeId: string, oldParentId: string, newParentId: string | null }) => {
             const nodeToMove = this.cy.getElementById(args.nodeId);
             if (nodeToMove.nonempty()) {
                 nodeToMove.move({ parent: args.newParentId });
             }
             return args;
         },
-        (undoArgs) => {
+        (undoArgs: { nodeId: string, oldParentId: string, newParentId: string | null }) => {
             const nodeToMove = this.cy.getElementById(undoArgs.nodeId);
              if (nodeToMove.nonempty()) {
                  nodeToMove.move({ parent: undoArgs.oldParentId });
@@ -807,7 +827,6 @@ export class GraphService {
     this.queueNotify([node.json() as unknown as ElementDefinition]);
 
     return true;
-
   }
 
   public searchNodes(query: string, types: NodeType[]): NodeCollection {
@@ -868,8 +887,9 @@ export class GraphService {
     let tagNode = this.cy.getElementById(tagId);
     let addedTagJson: ElementDefinition | null = null;
 
-    this.ur.action('tagNote', { noteId, tagId, tagName },
-        (args) => {
+    this.ur.action(
+        'tagNote',
+        (args: { noteId: string, tagId: string, tagName: string }) => {
             let currentTagNode = this.cy.getElementById(args.tagId);
             let addedElementDefs: ElementDefinition[] = [];
             let createdTagNode = false;
@@ -904,7 +924,7 @@ export class GraphService {
 
              return { ...args, addedElements: addedElementDefs, createdTagNode };
         },
-        (undoArgs) => {
+        (undoArgs: { addedElements?: ElementDefinition[], noteId: string, tagId: string, tagName: string }) => {
             if (undoArgs.addedElements && undoArgs.addedElements.length > 0) {
                 const idsToRemove = undoArgs.addedElements.map(def => def.data.id);
                 this.cy.remove(this.cy.elements().filter(el => idsToRemove.includes(el.id())));
