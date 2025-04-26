@@ -1,7 +1,7 @@
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { PartialBlock } from '@blocknote/core';
-import { generateClusterId, generateNoteId, ClusterId, NoteId } from './utils/ids';
+import { generateClusterId, generateNoteId, ClusterId, NoteId } from './graph/utils';
 
 export interface Cluster {
   id: ClusterId;

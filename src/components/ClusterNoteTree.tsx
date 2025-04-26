@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
 import { useAtom } from "jotai";
@@ -23,7 +22,7 @@ import {
   SidebarMenuSub,
 } from "@/components/ui/sidebar";
 import { Button } from "./ui/button";
-import { NoteId, ClusterId } from "@/lib/utils/ids";
+import { NoteId, ClusterId } from "@/lib/graph/utils";
 
 interface ClusterNoteTreeProps {
   clusterId: string;

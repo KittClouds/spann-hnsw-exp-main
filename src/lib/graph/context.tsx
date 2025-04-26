@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAtom } from 'jotai';
 import { notesAtom, clustersAtom, Note, Cluster, graphInitializedAtom } from '@/lib/store';
 import { graphService } from './GraphService';
-import { GraphContextType } from './types';
+import { GraphContextType, NodeType } from './types';
 import { ClusterId } from './utils';
 
 const GraphContext = createContext<GraphContextType | undefined>(undefined);

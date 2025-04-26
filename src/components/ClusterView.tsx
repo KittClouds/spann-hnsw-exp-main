@@ -1,3 +1,4 @@
+
 import { useAtom } from 'jotai';
 import { Button } from './ui/button';
 import { Plus, Database, MoreVertical, PenLine, Trash2 } from 'lucide-react';
@@ -6,10 +7,10 @@ import { Input } from './ui/input';
 import { useState, useEffect } from 'react';
 import { clustersAtom, createCluster, activeClusterIdAtom, notesAtom } from '@/lib/store';
 import { toast } from 'sonner';
-import { useGraph } from '@/contexts/GraphContext';
+import { useGraph } from '@/lib/graph/context';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { ClusterNoteTree } from './ClusterNoteTree';
-import { ClusterId } from '@/lib/utils/ids';
+import { ClusterId } from '@/lib/graph/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
