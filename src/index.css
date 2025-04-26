@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -126,10 +127,14 @@
   }
 
   .indicator-yellow {
-    @apply bg-[#F3BA2F];
+    @apply bg-[#FFBE0B];
   }
 
   .indicator-green {
     @apply bg-[#2FA84F];
+  }
+  
+  .indicator-counter {
+    @apply text-xs text-[#7C5BF1] ml-0.5;
   }
 }
