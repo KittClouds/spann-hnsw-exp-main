@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
 import { useAtom } from "jotai";
@@ -57,19 +56,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, [setNotes, setActiveNoteId, activeClusterId]);
 
   return (
-    <Sidebar className="bg-[#0a0a0d] border-r border-[#1a1b23]" {...props}>
+    <Sidebar className="bg-black border-r border-[#1a1b23]" {...props}>
       <SidebarContent>
         <Tabs defaultValue="folders" className="w-full">
           <TabsList className="w-full grid grid-cols-2 bg-transparent border-b border-[#1a1b23] rounded-none p-0 h-auto">
             <TabsTrigger 
               value="folders" 
-              className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 tab-inactive data-[state=active]:tab-active"
+              className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 sidebar-tab-inactive data-[state=active]:sidebar-tab-active"
             >
               Folders
             </TabsTrigger>
             <TabsTrigger 
               value="clusters" 
-              className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 tab-inactive data-[state=active]:tab-active"
+              className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 sidebar-tab-inactive data-[state=active]:sidebar-tab-active"
             >
               Clusters
             </TabsTrigger>
