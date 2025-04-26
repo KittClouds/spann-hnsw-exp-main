@@ -848,10 +848,10 @@ export class GraphService {
 
   public tagNote(noteId: string, tagName: string): boolean {
     const note = this.cy.getElementById(noteId);
-     if (note.empty() || node.data('type') !== NodeType.NOTE) {
-         console.warn(`Node ${noteId} not found or not a Note, cannot add tag.`);
-         return false;
-     }
+    if (note.empty() || note.data('type') !== NodeType.NOTE) {
+        console.warn(`Node ${noteId} not found or not a Note, cannot add tag.`);
+        return false;
+    }
 
     const tagId = slug(tagName.trim());
     if (!tagId) {
@@ -893,11 +893,11 @@ export class GraphService {
                         label: EdgeType.HAS_TAG
                     }
                 };
-                 this.cy.add(edgeDef);
-                 addedElementDefs.push(edgeDef);
+                this.cy.add(edgeDef);
+                addedElementDefs.push(edgeDef);
             }
 
-             return { ...args, addedElements: addedElementDefs, createdTagNode };
+            return { ...args, addedElements: addedElementDefs, createdTagNode };
         },
         (undoArgs: { addedElements?: ElementDefinition[], noteId: string, tagId: string, tagName: string }) => {
             if (undoArgs.addedElements && undoArgs.addedElements.length > 0) {
@@ -910,4 +910,45 @@ export class GraphService {
     const actionResult = this.ur.lastAction()?.result;
     const changedElements = actionResult?.addedElements || [];
     if (changedElements.length > 0) {
-        this.queue
+        this.queueNotify(changedElements);
+    }
+    
+    return true;
+  }
+
+  public getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', any[]> {
+    const node = this.cy.getElementById(nodeId);
+    if (node.empty()) return { tag: [], concept: [], mention: [] };
+
+    const getConnectedTargets = (edgeType: EdgeType): any[] => {
+      if (!node.isNode()) return [];
+
+      const outgoingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][source = "${nodeId}"]`);
+
+      return outgoingEdges.targets().map(target => ({
+        id: target.id(),
+        title: target.data('title') || 'Untitled',
+        type: target.data('type') || undefined
+      }));
+    };
+
+    const getConnectingSources = (edgeType: EdgeType): any[] => {
+      if (!node.isNode()) return [];
+      const incomingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][target = "${nodeId}"]`);
+      return incomingEdges.sources().map(source => ({
+        id: source.id(),
+        title: source.data('title') || 'Untitled',
+        type: source.data('type') || undefined
+      }));
+    };
+
+    return {
+      tag: getConnectedTargets(EdgeType.HAS_TAG),
+      concept: getConnectedTargets(EdgeType.HAS_CONCEPT),
+      mention: getConnectedTargets(EdgeType.MENTIONS)
+    };
+  }
+}
+
+export const graphService = new GraphService();
+export default graphService;
