@@ -1,9 +1,10 @@
+
 import React, { useState } from "react";
 import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
 import { useAtom } from "jotai";
 import { notesAtom, activeNoteIdAtom, createNote, createFolder, Note, clustersAtom, activeClusterIdAtom, deleteNote } from "@/lib/store";
 import { toast } from "sonner";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
