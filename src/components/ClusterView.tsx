@@ -1,6 +1,7 @@
+
 import { useAtom } from 'jotai';
 import { Button } from './ui/button';
-import { Database, File, Folder, ChevronRight, MoreVertical, Plus } from 'lucide-react';
+import { Database, File, Folder, ChevronRight, MoreVertical, Plus, PenLine, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
 import { useState, useEffect } from 'react';
