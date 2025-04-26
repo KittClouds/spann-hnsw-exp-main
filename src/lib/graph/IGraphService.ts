@@ -1,5 +1,5 @@
 
-import { Core, CollectionReturnValue, LayoutOptions, ElementDefinition, NodeCollection, Position } from 'cytoscape';
+import { Core, CollectionReturnValue, LayoutOptions, ElementDefinition, NodeCollection, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '../store';
 import { 
     NodeType, EdgeType, CyElementJSON, GraphJSON, GraphData, 
@@ -14,7 +14,7 @@ export interface IGraphService {
     // Data I/O
     importGraph(data: GraphJSON | GraphData): Promise<void>; // Allow GraphJSON for compatibility
     exportGraph(opts?: { includeStyle?: boolean }): GraphJSON; // Return GraphJSON
-    exportElement(ele: ElementDefinition | CollectionReturnValue): CyElementJSON; // Match service signature
+    exportElement(ele: SingularElementArgument): CyElementJSON; // Match service signature
     importElement(json: CyElementJSON): void;
 
     // Change Notification
@@ -68,7 +68,7 @@ export interface IGraphService {
 
     // Querying & Selection
     searchNodes(query: string, types: NodeType[]): NodeCollection;
-    getRelatedNodes(nodeId: string, includeClusters?: boolean): Array<Note | Cluster>;
+    getRelatedNodes(nodeId: string, includeClusters?: boolean): Array<{id: string; title: string; type: string}>;
     getBacklinks(nodeId: string): Array<{id: string; title: string}>;
     getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', Array<{id: string; title: string}>>;
     selectNode(nodeId: string): void;

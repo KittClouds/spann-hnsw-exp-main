@@ -11,7 +11,8 @@ import cytoscape, {
   ElementsDefinition,
   LayoutOptions,
   Position,
-  SingularElementArgument
+  SingularElementArgument,
+  StylesheetCSS
 } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
@@ -177,7 +178,6 @@ export class GraphService implements IGraphService {
 
   // --- Data Import/Export ---
   
-  // Implementation of interface methods 
   async importGraph(data: GraphJSON | GraphData): Promise<void> {
     // Implement based on your needs
     console.log("Import graph called", data);
@@ -197,7 +197,7 @@ export class GraphService implements IGraphService {
   }
 
   exportElement(ele: SingularElementArgument): CyElementJSON {
-    return ele.json();
+    return ele.json() as CyElementJSON;
   }
 
   importElement(json: CyElementJSON): void {
@@ -227,7 +227,7 @@ export class GraphService implements IGraphService {
   }
 
   clearUndoStack(): void {
-    if (this.ur) {
+    if (this.ur && typeof this.ur.reset === 'function') {
       this.ur.reset();
       console.log('Undo stack cleared');
     }
@@ -370,7 +370,7 @@ export class GraphService implements IGraphService {
     return this.cy.collection().filter('node') as NodeCollection;
   }
 
-  getRelatedNodes(nodeId: string, includeClusters: boolean = false): Array<Note | Cluster> {
+  getRelatedNodes(nodeId: string, includeClusters: boolean = false): Array<{id: string; title: string; type: string}> {
     console.log("Get related nodes called", nodeId, includeClusters);
     return [];
   }

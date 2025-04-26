@@ -189,11 +189,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     }, [service]),
 
     getRelatedNotes: useCallback((noteId, includeClusters = false) => {
-      return service.getRelatedNodes(noteId, includeClusters).map(data => ({
-        id: data.id,
-        title: data.title,
-        type: data.type
-      }));
+      return service.getRelatedNodes(noteId, includeClusters);
     }, [service]),
 
     getBacklinks: useCallback((noteId) => {
@@ -201,7 +197,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     }, [service]),
 
     getConnections: useCallback((noteId) => {
-      return service.getConnections(nodeId);
+      return service.getConnections(noteId);
     }, [service]),
 
     selectNode: useCallback((nodeId: string) => service.selectNode(nodeId), [service]),
