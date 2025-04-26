@@ -1,6 +1,6 @@
 import { useAtom } from 'jotai';
 import { Button } from './ui/button';
-import { Plus, Database, MoreVertical, PenLine, Trash2 } from 'lucide-react';
+import { Plus, Database, MoreVertical, PenLine, Trash2, ChevronRight, File } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
 import { useState, useEffect } from 'react';
@@ -99,7 +99,7 @@ export function ClusterView() {
   };
 
   return (
-    <div className="h-full flex flex-col p-4 overflow-auto">
+    <div className="h-full flex flex-col p-4 overflow-auto sidebar-bg">
       {clusters.length <= 1 ? (
         <div className="text-center space-y-4">
           <div className="w-20 h-20 rounded-full bg-[#12141f] flex items-center justify-center mx-auto">
@@ -142,10 +142,14 @@ export function ClusterView() {
       ) : (
         <div className="w-full space-y-2">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xs text-muted-foreground uppercase tracking-wider">Your Clusters</h3>
+            <h3 className="sidebar-header">Your Clusters</h3>
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" variant="outline" className="h-7 border-[#1a1b23] bg-[#12141f] hover:bg-[#1a1b23]">
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-7 hover:bg-[#12141f] text-[#9b9ba4] hover:text-white"
+                >
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   New Cluster
                 </Button>
@@ -177,13 +181,12 @@ export function ClusterView() {
           <div className="space-y-1">
             {clusters.map((cluster) => (
               <Collapsible key={cluster.id}>
-                <div 
-                  className={`flex items-center justify-between p-2 rounded-md transition-colors duration-200 ${
-                    activeClusterId === cluster.id ? 'bg-[#12141f] text-primary' : 'hover:bg-[#12141f]'
-                  }`}
-                >
-                  <CollapsibleTrigger className="flex items-center gap-2 flex-1" onClick={() => handleClusterClick(cluster.id)}>
-                    <Database className="h-4 w-4" />
+                <div className={`sidebar-item ${
+                  activeClusterId === cluster.id ? 'sidebar-item-active' : 'sidebar-item-inactive'
+                }`}>
+                  <CollapsibleTrigger className="flex items-center gap-2 flex-1">
+                    <ChevronRight className="sidebar-chevron" />
+                    <Database className="sidebar-database" />
                     {editingClusterId === cluster.id ? (
                       <Input
                         className="h-6 py-1 px-1"
@@ -198,7 +201,7 @@ export function ClusterView() {
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
-                      <span className="text-sm">{cluster.title}</span>
+                      <span>{cluster.title}</span>
                     )}
                   </CollapsibleTrigger>
                   
