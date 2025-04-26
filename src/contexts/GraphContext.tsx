@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { graphService, NodeType, CyElementJSON } from '../services/GraphService';
 import { useAtom } from 'jotai';
@@ -8,7 +7,7 @@ import { ClusterId } from '@/lib/utils/ids';
 interface GraphContextType {
   importNotes: () => void;
   exportNotes: () => { notes: Note[], clusters: Cluster[] };
-  exportGraphJSON: (includeStyle?: boolean) => any;
+  exportGraphJSON: () => any;
   importGraphJSON: (graphData: any) => void;
   exportElement: (elementId: string) => CyElementJSON | undefined;
   importElement: (elementJson: CyElementJSON) => void;
@@ -56,8 +55,8 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
       return { notes, clusters };
     },
     
-    exportGraphJSON: (includeStyle = false) => {
-      return graphService.exportGraph({ includeStyle });
+    exportGraphJSON: () => {
+      return graphService.exportGraph();
     },
     
     importGraphJSON: (graphData) => {

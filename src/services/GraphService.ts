@@ -246,7 +246,7 @@ export class GraphService {
   }
 
   public exportElement(ele: SingularElementArgument): CyElementJSON {
-    return ele.json();
+    return ele.json() as CyElementJSON;
   }
 
   public importElement(json: CyElementJSON): void {
@@ -780,12 +780,8 @@ export class GraphService {
         return false;
     }
 
-    if (newParentId && this.cy.getElementById(newParentId).empty()) {
-        console.warn(`Target parent node ${newParentId} does not exist.`);
-        return false;
-    }
-
-    const oldParentId = node.parent().id();
+    const parent = node.parent().first();
+    const oldParentId = parent.id();
 
     this.ur.action(
         'moveNodeCompound',
@@ -916,43 +912,3 @@ export class GraphService {
     if (changedElements.length > 0) {
         this.queueNotify(changedElements);
     }
-
-    return true;
-  }
-
-  public getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', any[]> {
-    const node = this.cy.getElementById(nodeId);
-    if (node.empty()) return { tag: [], concept: [], mention: [] };
-
-    const getConnectedTargets = (edgeType: EdgeType): any[] => {
-      if (!node.isNode()) return [];
-
-      const outgoingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][source = "${nodeId}"]`);
-
-      return outgoingEdges.targets().map(target => ({
-        id: target.id(),
-        title: target.data('title') || 'Untitled',
-        type: target.data('type') || undefined
-      }));
-    };
-
-     const getConnectingSources = (edgeType: EdgeType): any[] => {
-         if (!node.isNode()) return [];
-         const incomingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][target = "${nodeId}"]`);
-         return incomingEdges.sources().map(source => ({
-             id: source.id(),
-             title: source.data('title') || 'Untitled',
-             type: source.data('type') || undefined
-         }));
-     };
-
-    return {
-      tag: getConnectedTargets(EdgeType.HAS_TAG),
-      concept: getConnectedTargets(EdgeType.HAS_CONCEPT),
-      mention: getConnectedTargets(EdgeType.MENTIONS)
-    };
-  }
-}
-
-export const graphService = new GraphService();
-export default graphService;
