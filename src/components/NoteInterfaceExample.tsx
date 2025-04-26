@@ -41,7 +41,8 @@ export const NoteInterfaceExample = () => {
   };
   
   const handleExportGraph = () => {
-    const exportedGraph = graph.exportGraphJSON(true);
+    // Fix: Remove the argument as exportGraphJSON doesn't accept any arguments
+    const exportedGraph = graph.exportGraphJSON();
     setGraphJson(JSON.stringify(exportedGraph, null, 2));
   };
   
