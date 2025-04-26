@@ -1,8 +1,7 @@
-
-import { Core, NodeSingular, NodeCollection, ElementDefinition, ElementGroup, SingularElementArgument } from 'cytoscape';
+import { Core, NodeSingular, NodeCollection, ElementDefinition, ElementGroup, SingularElementArgument, Collection } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
-import { generateNodeId } from './utils';
+import { generateNodeId, ClusterId, NoteId } from './utils';
 import { cytoscape } from './plugins';
 import { NodeType, EdgeType, CyElementJSON, GraphJSON } from './types';
 
@@ -128,7 +127,7 @@ export class GraphService {
     });
 
     // Run layout
-    cy.layout({ name: 'dagre', rankDir: 'TB' }).run();
+    cy.layout({ name: 'dagre', directed: true }).run();
     
     return { notes, clusters };
   }
@@ -142,7 +141,7 @@ export class GraphService {
     // Extract clusters
     cy.nodes(`[type = "${NodeType.CLUSTER_DEFINITION}"]`).forEach(node => {
       const cluster: Cluster = {
-        id: node.data('id') as ClusterId,
+        id: node.data('id'),
         title: node.data('title') || 'Untitled Cluster',
         createdAt: node.data('createdAt') || new Date().toISOString(),
         updatedAt: node.data('updatedAt') || new Date().toISOString()
@@ -153,7 +152,7 @@ export class GraphService {
     // Extract notes
     cy.nodes(`[type = "${NodeType.NOTE}"], [type = "${NodeType.FOLDER}"]`).forEach(node => {
       const note: Note = {
-        id: node.data('id') as NoteId,
+        id: node.data('id'),
         title: node.data('title') || 'Untitled',
         content: node.data('content') || [],
         createdAt: node.data('createdAt') || new Date().toISOString(),
@@ -233,7 +232,7 @@ export class GraphService {
     
     if (noteNode.empty()) {
       // Create new node
-      noteNode = cy.add({
+      const newNode = cy.add({
         group: 'nodes',
         data: {
           id,
@@ -245,7 +244,9 @@ export class GraphService {
           parentId,
           clusterId
         }
-      })[0];
+      });
+      
+      noteNode = newNode.first();
 
       // Random position if no parent
       if (!parentId) {
@@ -372,7 +373,7 @@ export class GraphService {
     // Check if cluster definition exists
     let clusterDefNode = cy.getElementById(id);
     if (clusterDefNode.empty()) {
-      clusterDefNode = cy.add({
+      const newNode = cy.add({
         group: 'nodes',
         data: {
           id,
@@ -381,14 +382,15 @@ export class GraphService {
           createdAt: cluster.createdAt || new Date().toISOString(),
           updatedAt: cluster.updatedAt || new Date().toISOString()
         }
-      })[0];
+      });
+      clusterDefNode = newNode.first();
     }
 
     // Check if cluster root exists
     const clusterRootId = `${id}-root`;
     let clusterRootNode = cy.getElementById(clusterRootId);
     if (clusterRootNode.empty()) {
-      clusterRootNode = cy.add({
+      const newNode = cy.add({
         group: 'nodes',
         data: {
           id: clusterRootId,
@@ -396,7 +398,8 @@ export class GraphService {
           title: `${cluster.title || 'Untitled'} Root`,
           clusterId: id
         }
-      })[0];
+      });
+      clusterRootNode = newNode.first();
 
       // Connect cluster root to clusters root
       cy.add({
@@ -703,7 +706,7 @@ export class GraphService {
     const cy = this.getGraph();
     const node = cy.getElementById(nodeId);
     
-    if (node.empty()) return cy.collection();
+    if (node.empty()) return cy.collection() as NodeCollection;
 
     return node.neighborhood().nodes();
   }
@@ -713,21 +716,21 @@ export class GraphService {
     const cy = this.getGraph();
     const node = cy.getElementById(nodeId);
     
-    if (node.empty()) return cy.collection();
+    if (node.empty()) return cy.collection() as NodeCollection;
 
     return cy.edges(`[target = "${nodeId}"][type = "${EdgeType.NOTE_LINK}"]`).sources();
   }
 
   // Get connections of a note
-  getConnections(noteId: string): Record<'tag' | 'concept' | 'mention', NodeCollection> {
+  getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', NodeCollection> {
     const cy = this.getGraph();
-    const node = cy.getElementById(noteId);
+    const node = cy.getElementById(nodeId);
     
     if (node.empty()) {
       return {
-        tag: cy.collection(),
-        concept: cy.collection(),
-        mention: cy.collection()
+        tag: cy.collection() as NodeCollection,
+        concept: cy.collection() as NodeCollection,
+        mention: cy.collection() as NodeCollection
       };
     }
 
@@ -776,7 +779,7 @@ export class GraphService {
         version: 1,
         exportedAt: new Date().toISOString()
       },
-      elements: cy.elements().map(ele => ele.json())
+      elements: cy.elements().map((ele) => ele.json() as CyElementJSON)
     };
 
     // Include layout state
@@ -798,7 +801,7 @@ export class GraphService {
 
   // Export a single element to JSON
   exportElement(element: SingularElementArgument): CyElementJSON {
-    return this.getGraph().elements(element).first().json();
+    return this.getGraph().elements(element).first().json() as CyElementJSON;
   }
 
   // Import a single element

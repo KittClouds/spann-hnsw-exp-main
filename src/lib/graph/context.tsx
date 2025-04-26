@@ -73,12 +73,36 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
         type: node.data('type')
       }));
     },
-    getBacklinks: (noteId) => graphService.getBacklinks(noteId),
+    getBacklinks: (noteId) => {
+      const backlinks = graphService.getBacklinks(noteId);
+      return Array.from(backlinks).map(node => ({
+        id: node.id(),
+        title: node.data('title'),
+        type: node.data('type')
+      }));
+    },
     tagNote: (noteId, tagName) => {
       const result = graphService.tagNote(noteId, tagName);
       return !!result;
     },
-    getConnections: (noteId) => graphService.getConnections(noteId)
+    getConnections: (noteId) => {
+      const connections = graphService.getConnections(noteId);
+      return {
+        tag: Array.from(connections.tag).map(node => ({
+          id: node.id(),
+          name: node.data('name')
+        })),
+        concept: Array.from(connections.concept).map(node => ({
+          id: node.id(),
+          name: node.data('name'),
+          type: node.data('conceptType')
+        })),
+        mention: Array.from(connections.mention).map(node => ({
+          id: node.id(),
+          name: node.data('name')
+        }))
+      };
+    }
   };
 
   return (
