@@ -5,6 +5,7 @@ import { notesAtom, clustersAtom, Note, Cluster, graphInitializedAtom } from '@/
 import { ClusterId } from '@/lib/utils/ids';
 import { GraphService } from './GraphService';
 import { IGraphService } from './IGraphService';
+import { NodeType } from './types';
 
 interface GraphContextType {
   importNotes: () => void;
@@ -122,7 +123,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     },
     
     searchNotes: (query) => {
-      return graphService.searchNodes(query, ['note']).map(node => ({
+      return graphService.searchNodes(query, [NodeType.NOTE]).map(node => ({
         id: node.id(),
         title: node.data('title'),
         type: node.data('type')

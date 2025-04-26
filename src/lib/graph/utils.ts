@@ -1,5 +1,5 @@
 
-import { ElementDefinition, SingularElementArgument } from 'cytoscape';
+import { ElementDefinition, SingularElementArgument, ElementGroup } from 'cytoscape';
 import { slug } from '@/lib/utils';
 import { ClusterId, NodeId, generateNodeId } from '@/lib/utils/ids';
 import { NodeType, EdgeType } from './types';
@@ -110,5 +110,5 @@ export const getCurrentTimestamp = (): string => {
 export const collectionToElementDefinitions = (
   collection: cytoscape.Collection
 ): ElementDefinition[] => {
-  return collection.map(ele => ele.json()).toArray();
+  return collection.map(ele => ele.json()).toArray() as ElementDefinition[];
 };

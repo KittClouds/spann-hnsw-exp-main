@@ -17,7 +17,7 @@ import {
 export * from './context';
 export * from './types';
 export * from './utils';
-export { IGraphService };
+export type { IGraphService };
 
 // Create and export a singleton instance
 export const graphService = new GraphService();
