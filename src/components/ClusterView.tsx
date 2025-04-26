@@ -98,27 +98,13 @@ export function ClusterView() {
     deleteCluster(clusterId);
     toast.success("Cluster deleted successfully");
   };
-  
-  // Function to assign indicator colors and counters based on index
-  const getIndicatorProps = (index: number) => {
-    if (index % 10 === 0) return { color: 'yellow', counter: null };
-    if (index % 7 === 0) return { color: 'green', counter: null };
-    
-    // Add counters to some items
-    if (index % 5 === 0) return { color: 'purple', counter: '+1' };
-    if (index % 6 === 0) return { color: 'purple', counter: '+2' };
-    if (index % 8 === 0) return { color: 'purple', counter: '+3' };
-    if (index % 9 === 0) return { color: 'purple', counter: '+4' };
-    
-    return { color: 'purple', counter: null };
-  };
 
   return (
     <div className="h-full flex flex-col p-4 overflow-auto bg-black">
       {clusters.length <= 1 ? (
         <div className="text-center space-y-4">
           <div className="w-20 h-20 rounded-full bg-[#12141f] flex items-center justify-center mx-auto">
-            <Database className="w-10 h-10 text-[#7C5BF1]" />
+            <Database className="w-10 h-10 text-primary" />
           </div>
           <h3 className="text-lg font-semibold text-foreground">No clusters yet</h3>
           <p className="text-sm text-muted-foreground">
@@ -126,7 +112,7 @@ export function ClusterView() {
           </p>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-[#7C5BF1] hover:bg-[#7C5BF1]/90 text-white">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <Plus className="w-4 h-4 mr-2" />
                 New Cluster
               </Button>
@@ -145,7 +131,7 @@ export function ClusterView() {
                   }}
                 />
                 <Button
-                  className="w-full bg-[#7C5BF1] hover:bg-[#7C5BF1]/90"
+                  className="w-full bg-primary hover:bg-primary/90"
                   onClick={handleCreateCluster}
                 >
                   Create Cluster
@@ -183,7 +169,7 @@ export function ClusterView() {
                     }}
                   />
                   <Button
-                    className="w-full bg-[#7C5BF1] hover:bg-[#7C5BF1]/90"
+                    className="w-full bg-primary hover:bg-primary/90"
                     onClick={handleCreateCluster}
                   >
                     Create Cluster
@@ -194,85 +180,78 @@ export function ClusterView() {
           </div>
           
           <div className="space-y-1">
-            {clusters.map((cluster, index) => {
-              const { color, counter } = getIndicatorProps(index);
-              return (
-                <Collapsible key={cluster.id}>
-                  <div 
-                    className={`flex items-center justify-between transition-colors duration-200 ${
-                      activeClusterId === cluster.id ? 'sidebar-note-active' : 'sidebar-cluster'
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <div className={`sidebar-indicator indicator-${color} mr-2`}></div>
-                      {counter && <span className="indicator-counter mr-1">{counter}</span>}
-                    </div>
-                    <CollapsibleTrigger className="flex items-center gap-2 flex-1" onClick={() => handleClusterClick(cluster.id)}>
-                      <ChevronRight className="h-4 w-4 text-[#7C5BF1] transition-transform [&[data-state=open]>svg]:rotate-90" />
-                      <Database className="h-4 w-4 text-[#7C5BF1]" />
-                      {editingClusterId === cluster.id ? (
-                        <Input
-                          className="h-6 py-1 px-1"
-                          autoFocus
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          onBlur={() => handleRenameCluster(cluster.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleRenameCluster(cluster.id);
-                            if (e.key === 'Escape') setEditingClusterId(null);
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      ) : (
-                        <span className="text-sm truncate">{cluster.title}</span>
-                      )}
-                    </CollapsibleTrigger>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6 ml-2"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            setEditingClusterId(cluster.id);
-                            setEditTitle(cluster.title);
-                          }}
-                        >
-                          <PenLine className="mr-2 h-4 w-4" />
-                          Rename
-                        </DropdownMenuItem>
-                        
-                        <DropdownMenuSeparator />
-                        
-                        <DropdownMenuItem 
-                          onClick={() => handleDeleteCluster(cluster.id)}
-                          className={cluster.id === DEFAULT_CLUSTER_ID ? 'text-muted-foreground' : 'text-red-600 focus:text-red-600 dark:focus:text-red-400'}
-                          disabled={cluster.id === DEFAULT_CLUSTER_ID}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  
-                  <CollapsibleContent>
-                    {activeClusterId === cluster.id && (
-                      <div className="pl-4 mt-1">
-                        <ClusterNoteTree clusterId={cluster.id} />
-                      </div>
+            {clusters.map((cluster) => (
+              <Collapsible key={cluster.id}>
+                <div 
+                  className={`flex items-center justify-between transition-colors duration-200 ${
+                    activeClusterId === cluster.id ? 'sidebar-note-active' : 'sidebar-cluster'
+                  }`}
+                >
+                  <CollapsibleTrigger className="flex items-center gap-2 flex-1" onClick={() => handleClusterClick(cluster.id)}>
+                    <ChevronRight className="h-4 w-4 text-[#7C5BF1] transition-transform [&[data-state=open]>svg]:rotate-90" />
+                    <Database className="h-4 w-4 text-[#7C5BF1]" />
+                    {editingClusterId === cluster.id ? (
+                      <Input
+                        className="h-6 py-1 px-1"
+                        autoFocus
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onBlur={() => handleRenameCluster(cluster.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRenameCluster(cluster.id);
+                          if (e.key === 'Escape') setEditingClusterId(null);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span className="text-sm truncate">{cluster.title}</span>
                     )}
-                  </CollapsibleContent>
-                </Collapsible>
-              );
-            })}
+                  </CollapsibleTrigger>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 ml-2"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem 
+                        onClick={() => {
+                          setEditingClusterId(cluster.id);
+                          setEditTitle(cluster.title);
+                        }}
+                      >
+                        <PenLine className="mr-2 h-4 w-4" />
+                        Rename
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuSeparator />
+                      
+                      <DropdownMenuItem 
+                        onClick={() => handleDeleteCluster(cluster.id)}
+                        className={cluster.id === DEFAULT_CLUSTER_ID ? 'text-muted-foreground' : 'text-red-600 focus:text-red-600 dark:focus:text-red-400'}
+                        disabled={cluster.id === DEFAULT_CLUSTER_ID}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                
+                <CollapsibleContent>
+                  {activeClusterId === cluster.id && (
+                    <div className="pl-4 mt-1">
+                      <ClusterNoteTree clusterId={cluster.id} />
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
           </div>
         </div>
       )}
