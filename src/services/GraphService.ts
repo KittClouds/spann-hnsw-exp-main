@@ -1,4 +1,3 @@
-
 import cytoscape, {
   Core,
   CollectionReturnValue,
@@ -12,9 +11,9 @@ import cytoscape, {
   LayoutOptions,
   Position,
   SingularElementArgument,
+  Style,
   StylesheetJson,
-  CytoscapeOptions,
-  StylesheetCSS
+  CytoscapeOptions
 } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
@@ -63,7 +62,6 @@ export interface GraphJSON {
   elements: CyElementJSON[];
 }
 
-// Extended interface for the undo-redo plugin
 interface UndoRedoInstance {
   do: (actionName: string, args?: any) => CollectionReturnValue;
   undo: () => void;
@@ -156,7 +154,6 @@ export class GraphService {
     }
   }
 
-
   private edgeExists(srcId: string, tgtId: string, label: EdgeType): boolean {
     const src = this.cy.getElementById(srcId);
     if (src.empty()) return false;
@@ -187,7 +184,7 @@ export class GraphService {
       meta: { app: 'BlockNote Graph', version: 2, exportedAt: new Date().toISOString() },
       data: this.cy.data(),
       layout: cyJson.layout,
-      style: opts.includeStyle ? (this.cy.style() as unknown as StylesheetCSS).json() : undefined,
+      style: opts.includeStyle ? this.cy.style().json() : undefined,
       viewport: { zoom: this.cy.zoom(), pan: this.cy.pan() },
       elements: this.cy.elements().jsons() as unknown as CyElementJSON[]
     };
@@ -202,27 +199,29 @@ export class GraphService {
 
     this.cy.startBatch();
     try {
-      const elements = g.elements.map((e: ElementDefinition) => {
-        if (e && e.data) {
-          if (!e.data.id || String(e.data.id).length < 15) {
-             console.warn(`Element missing valid ID, generating new one:`, e.data);
-             e.data.id = generateNodeId();
-          }
-        } else if (e) {
-             console.warn(`Element missing data field, attempting to generate ID:`, e);
-             e.data = { id: generateNodeId() };
-        } else {
+      const elements = g.elements
+        .map((e: ElementDefinition) => {
+          if (e && e.data) {
+            if (!e.data.id || String(e.data.id).length < 15) {
+              console.warn(`Element missing valid ID, generating new one:`, e.data);
+              e.data.id = generateNodeId();
+            }
+          } else if (e) {
+            console.warn(`Element missing data field, attempting to generate ID:`, e);
+            e.data = { id: generateNodeId() };
+          } else {
             console.warn(`Encountered null or undefined element definition in import.`);
             return null;
-        }
-        return e;
-      }).filter(e => e !== null) as ElementDefinition[];
+          }
+          return e;
+        })
+        .filter((e): e is ElementDefinition => e !== null);
 
       this.cy.json({ elements: elements } as CytoscapeOptions);
 
       if (g.layout) this.cy.json({ layout: g.layout } as CytoscapeOptions);
       if (g.style && Array.isArray(g.style)) {
-        (this.cy.style() as unknown as StylesheetCSS).fromJson(g.style);
+        this.cy.style().fromJson(g.style);
       }
       if (g.data) this.cy.data(g.data);
       if (g.viewport) {
@@ -296,7 +295,6 @@ export class GraphService {
     this.initializeGraph();
   }
 
-
   public getNodesByType(type: NodeType): NodeCollection {
     return this.cy.$(`node[type = "${type}"]`);
   }
@@ -354,10 +352,8 @@ export class GraphService {
         this.queueNotify([newNode.json() as unknown as ElementDefinition]);
     }
 
-
     return newNode;
   }
-
 
   public moveNodeToCluster(nodeId: string, clusterId?: string): boolean {
     const node = this.cy.getElementById(nodeId);
@@ -452,8 +448,7 @@ export class GraphService {
     return true;
   }
 
-
-   public importFromStore(notes: Note[], clusters: Cluster[]) {
+  public importFromStore(notes: Note[], clusters: Cluster[]) {
     this.cy.startBatch();
     try {
       this.initializeGraph();
@@ -620,7 +615,6 @@ export class GraphService {
     return true;
   }
 
-
   public deleteNote(id: string): boolean {
     const node = this.cy.getElementById(id);
     if (node.empty() || node.data('type') !== NodeType.NOTE) {
@@ -646,7 +640,6 @@ export class GraphService {
 
     return true;
   }
-
 
   public addCluster({ id, title, createdAt, updatedAt }: Partial<Cluster> = {}): NodeSingular {
     const clusterId = id && String(id).length >= 15 ? id : generateClusterId();
@@ -676,7 +669,6 @@ export class GraphService {
 
     return this.cy.getElementById(clusterId) as NodeSingular;
   }
-
 
   public updateCluster(id: string, updates: Partial<Cluster>): boolean {
     const node = this.cy.getElementById(id);
@@ -726,16 +718,15 @@ export class GraphService {
     return true;
   }
 
-
   public deleteCluster(id: string): boolean {
     const node = this.cy.getElementById(id);
     if (node.empty() || node.data('type') !== NodeType.CLUSTER) {
-         console.warn(`Cluster ${id} not found for deletion.`);
-         return false;
+      console.warn(`Cluster ${id} not found for deletion.`);
+      return false;
     }
 
     const memberNodes = this.cy.nodes(`[clusterId = "${id}"]`);
-    const memberNodeIds = memberNodes.map(n => n.id());
+    const memberNodeIds = memberNodes.toArray().map(n => n.id());
 
     const removedJson = node.json() as unknown as ElementDefinition;
 
@@ -791,7 +782,6 @@ export class GraphService {
 
     return true;
   }
-
 
   public moveNode(nodeId: string, newParentId?: string | null): boolean {
     const node = this.cy.getElementById(nodeId);
@@ -849,7 +839,6 @@ export class GraphService {
         return this.cy.collection() as NodeCollection;
     }
   }
-
 
   public getRelatedNodes(nodeId: string): NodeCollection {
     const node = this.cy.getElementById(nodeId);
@@ -966,7 +955,6 @@ export class GraphService {
              type: source.data('type') || undefined
          }));
      };
-
 
     return {
       tag: getConnectedTargets(EdgeType.HAS_TAG),
