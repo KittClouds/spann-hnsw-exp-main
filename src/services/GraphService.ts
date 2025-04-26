@@ -11,8 +11,6 @@ import cytoscape, {
   LayoutOptions,
   Position,
   SingularElementArgument,
-  Style,
-  StylesheetJson,
   CytoscapeOptions
 } from 'cytoscape';
 import automove from 'cytoscape-automove';
@@ -57,7 +55,6 @@ export interface GraphJSON {
   meta: GraphMeta;
   data?: Record<string, unknown>;
   layout?: LayoutOptions;
-  style?: StylesheetJson[];
   viewport?: { zoom: number; pan: Position };
   elements: CyElementJSON[];
 }
@@ -178,13 +175,12 @@ export class GraphService {
     return this.cy;
   }
 
-  public exportGraph(opts: {includeStyle?: boolean} = {}): GraphJSON {
+  public exportGraph(): GraphJSON {
     const cyJson = this.cy.json() as CytoscapeOptions;
     const g: GraphJSON = {
       meta: { app: 'BlockNote Graph', version: 2, exportedAt: new Date().toISOString() },
       data: this.cy.data(),
       layout: cyJson.layout,
-      style: opts.includeStyle ? this.cy.style().json() : undefined,
       viewport: { zoom: this.cy.zoom(), pan: this.cy.pan() },
       elements: this.cy.elements().jsons() as unknown as CyElementJSON[]
     };
@@ -206,23 +202,17 @@ export class GraphService {
               console.warn(`Element missing valid ID, generating new one:`, e.data);
               e.data.id = generateNodeId();
             }
-          } else if (e) {
-            console.warn(`Element missing data field, attempting to generate ID:`, e);
-            e.data = { id: generateNodeId() };
+            return e;
           } else {
-            console.warn(`Encountered null or undefined element definition in import.`);
+            console.warn(`Encountered invalid element definition in import.`);
             return null;
           }
-          return e;
         })
         .filter((e): e is ElementDefinition => e !== null);
 
       this.cy.json({ elements: elements } as CytoscapeOptions);
 
       if (g.layout) this.cy.json({ layout: g.layout } as CytoscapeOptions);
-      if (g.style && Array.isArray(g.style)) {
-        this.cy.style().fromJson(g.style);
-      }
       if (g.data) this.cy.data(g.data);
       if (g.viewport) {
         this.cy.zoom(g.viewport.zoom);
