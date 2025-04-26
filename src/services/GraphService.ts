@@ -257,8 +257,13 @@ export class GraphService {
     const elementId = json.data.id;
     const exists = this.cy.getElementById(elementId);
 
-    if (exists.nonempty()) { // Fixed: Removed parameter from nonempty()
-      exists.json(json);
+    if (exists.nonempty()) {
+      exists.data(json.data);
+      
+      if (json.position && exists.isNode()) {
+        (exists[0] as NodeSingular).position(json.position);
+      }
+      
     } else {
       this.cy.add(json);
 
