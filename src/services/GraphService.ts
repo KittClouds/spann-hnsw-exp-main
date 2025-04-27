@@ -1,77 +1,23 @@
-import cytoscape, {
-  Core,
-  CollectionReturnValue,
-  NodeSingular,
-  EdgeSingular,
-  NodeCollection,
-  EdgeCollection,
-  ElementDefinition,
-  ElementGroup,
-  ElementsDefinition,
-  LayoutOptions,
-  Position,
-  SingularElementArgument,
-  CytoscapeOptions
-} from 'cytoscape';
+import cytoscape, { Core, NodeSingular, EdgeSingular, NodeCollection, ElementDefinition, ElementGroup } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
-import { generateNodeId, NodeId, ClusterId, generateClusterId, generateNoteId } from '@/lib/utils/ids';
+import { generateNodeId, generateClusterId, generateNoteId } from '@/lib/utils/ids';
+import { IGraphService, NodeType, EdgeType, GraphJSON } from './types';
 
 cytoscape.use(automove);
 cytoscape.use(undoRedo);
 
-export enum NodeType {
-  NOTE = 'note',
-  FOLDER = 'folder',
-  TAG = 'tag',
-  CONCEPT = 'concept',
-  CLUSTER = 'cluster',
-  STANDARD_ROOT = 'standard_root',
-  CLUSTERS_ROOT = 'clusters_root',
-  CLUSTER_DEFINITION = 'cluster_definition',
-  CLUSTER_ROOT = 'cluster_root'
-}
-
-export enum EdgeType {
-  CONTAINS = 'contains',
-  NOTE_LINK = 'note_link',
-  HAS_TAG = 'has_tag',
-  MENTIONS = 'mentions',
-  HAS_CONCEPT = 'has_concept',
-  IN_CLUSTER = 'in_cluster'
-}
-
-export interface CyElementJSON extends ElementDefinition {}
-
-export interface GraphMeta {
-  app: string;
-  version: number;
-  exportedAt: string;
-}
-
-export interface GraphJSON {
-  meta: GraphMeta;
-  data?: Record<string, unknown>;
-  layout?: LayoutOptions;
-  viewport?: { zoom: number; pan: Position };
-  elements: CyElementJSON[];
-}
-
 interface UndoRedoInstance {
-  do: (actionName: string, args?: any) => CollectionReturnValue;
+  do: (actionName: string, args?: any) => any;
   undo: () => void;
   redo: () => void;
-  action: (
-    name: string,
-    doFn: (args: any) => any,
-    undoFn: (args: any) => void
-  ) => void;
+  action: (name: string, doFn: (args: any) => any, undoFn: (args: any) => void) => void;
   lastAction: () => { name: string; result: any } | undefined;
 }
 
-export class GraphService {
+export class GraphService implements IGraphService {
   private cy: Core;
   private ur: UndoRedoInstance;
   private titleIndex = new Map<string, string>();
@@ -160,6 +106,10 @@ export class GraphService {
       .empty();
   }
 
+  public getGraph(): Core {
+    return this.cy;
+  }
+
   public undo() { this.ur.undo(); }
   public redo() { this.ur.redo(); }
 
@@ -171,20 +121,19 @@ export class GraphService {
     this.changeListeners = this.changeListeners.filter((l) => l !== listener);
   }
 
-  public getGraph(): Core {
-    return this.cy;
-  }
-
   public exportGraph(): GraphJSON {
-    const cyJson = this.cy.json() as CytoscapeOptions;
-    const g: GraphJSON = {
-      meta: { app: 'BlockNote Graph', version: 2, exportedAt: new Date().toISOString() },
+    const cyJson = this.cy.json();
+    return {
+      meta: { 
+        app: 'BlockNote Graph', 
+        version: 2, 
+        exportedAt: new Date().toISOString() 
+      },
       data: this.cy.data(),
       layout: cyJson.layout,
       viewport: { zoom: this.cy.zoom(), pan: this.cy.pan() },
-      elements: this.cy.elements().jsons() as unknown as CyElementJSON[]
+      elements: this.cy.elements().jsons() as ElementDefinition[]
     };
-    return g;
   }
 
   public importGraph(g: GraphJSON): void {
