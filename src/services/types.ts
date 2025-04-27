@@ -85,7 +85,7 @@ export interface IGraphService {
   // Import/Export
   importGraph(data: GraphJSON): void;
   exportGraph(): GraphJSON;
-  exportStoreFormat(): { notes: Note[], clusters: Cluster[] };
+  exportStoreFormat(): StoreFormat;
 
   // CRUD Operations - Notes
   addNote(note: Partial<Note>, folderId?: string, clusterId?: string): NodeSingular;
@@ -109,7 +109,7 @@ export interface IGraphService {
   removeParent?(childId: string): void;
   addToCluster?(noteId: string, clusterId: string): EdgeSingular | null;
   removeFromCluster?(noteId: string, clusterId: string): void;
-  addTag(noteId: string, tagId: string): boolean;
+  tagNote(noteId: string, tagName: string): boolean;
   removeTag?(noteId: string, tagId: string): void;
   addLink?(sourceId: string, targetId: string, data?: any): EdgeSingular | null;
   removeLink?(linkId: string): void;
@@ -137,7 +137,6 @@ export interface IGraphService {
   // Additional methods
   moveNode(nodeId: string, newParentId?: string | null): boolean;
   moveNodeToCluster(nodeId: string, clusterId?: string): boolean;
-  tagNote(noteId: string, tagName: string): boolean;
   getGraph(): Core;
   exportElement(ele: SingularElementArgument): ElementDefinition;
   importElement(json: ElementDefinition): void;

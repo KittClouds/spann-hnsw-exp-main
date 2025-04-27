@@ -1,3 +1,4 @@
+
 import cytoscape, { Core, NodeSingular, EdgeSingular, NodeCollection, ElementDefinition, ElementGroup, SingularElementArgument, Position } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
@@ -126,7 +127,7 @@ export class GraphService implements IGraphService {
 
   public exportGraph(): GraphJSON {
     const cyJson = this.cy.json();
-    const layoutData = ((cyJson as any).layout || {}) as Record<string, unknown>;
+    const layoutData = (cyJson.layout || {}) as Record<string, unknown>;
     
     return {
       meta: { 
@@ -403,7 +404,7 @@ export class GraphService implements IGraphService {
     this.queueNotify(elementDefs);
   }
 
-  public exportStoreFormat() {
+  public exportStoreFormat(): { notes: Note[], clusters: Cluster[] } {
     const nodes = this.cy.nodes().map(node => node.data());
     const notes = nodes.filter(nodeData => nodeData.type === NodeType.NOTE) as Note[];
     const clusters = nodes.filter(nodeData => nodeData.type === NodeType.CLUSTER) as Cluster[];
@@ -648,9 +649,9 @@ export class GraphService implements IGraphService {
     );
 
     const actionResult = this.ur.lastAction()?.result;
-    const removedJsons = actionResult?.addedElements || [];
-    if (removedJsons.length > 0) {
-       this.queueNotify(removedJsons);
+    const addedElements = actionResult?.addedElements || [];
+    if (addedElements.length > 0) {
+       this.queueNotify(addedElements);
     }
     
     return true;
@@ -724,8 +725,8 @@ export class GraphService implements IGraphService {
         elements: elements || [],
       });
       if (this.cy) {
-        const elements = this.cy.elements().jsons();
-        newCy.add(elements);
+        const cyElements = this.cy.elements().jsons() as unknown as ElementDefinition[];
+        newCy.add(cyElements);
       }
       this.cy = newCy;
     } else {
@@ -761,7 +762,7 @@ export class GraphService implements IGraphService {
     }
   }
 
-  getCy(): Core {
+  getCy(): Core | null {
     return this.cy;
   }
 }
