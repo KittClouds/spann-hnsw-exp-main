@@ -1,4 +1,3 @@
-
 import cytoscape, { Core, NodeSingular, EdgeSingular, NodeCollection, ElementDefinition, ElementGroup, SingularElementArgument, Position } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
@@ -43,35 +42,47 @@ export class GraphService implements IGraphService {
     this.initializeGraph();
   }
 
-  private initializeGraph() {
-    this.cy.elements().remove();
-    this.titleIndex.clear();
-    this.clusterExists.clear();
-
-    if (this.cy.$(`node#standard_root`).empty()) {
-      this.cy.add({
-        group: 'nodes' as ElementGroup,
-        data: {
-          id: 'standard_root',
-          type: NodeType.STANDARD_ROOT,
-          title: 'Root',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+  public initializeGraph(container?: HTMLElement, elements?: ElementDefinition[]): void {
+    if (container) {
+      const newCy = cytoscape({
+        container: container,
+        elements: elements || [],
       });
-    }
-
-    if (this.cy.$(`node#clusters_root`).empty()) {
-      this.cy.add({
-        group: 'nodes' as ElementGroup,
-        data: {
-          id: 'clusters_root',
-          type: NodeType.CLUSTERS_ROOT,
-          title: 'Clusters',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      });
+      if (this.cy) {
+        const cyElements = this.cy.elements().jsons() as unknown as ElementDefinition[];
+        newCy.add(cyElements);
+      }
+      this.cy = newCy;
+    } else {
+      this.cy.elements().remove();
+      this.titleIndex.clear();
+      this.clusterExists.clear();
+  
+      if (this.cy.$(`node#standard_root`).empty()) {
+        this.cy.add({
+          group: 'nodes' as ElementGroup,
+          data: {
+            id: 'standard_root',
+            type: NodeType.STANDARD_ROOT,
+            title: 'Root',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        });
+      }
+  
+      if (this.cy.$(`node#clusters_root`).empty()) {
+        this.cy.add({
+          group: 'nodes' as ElementGroup,
+          data: {
+            id: 'clusters_root',
+            type: NodeType.CLUSTERS_ROOT,
+            title: 'Clusters',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        });
+      }
     }
   }
 
@@ -127,7 +138,7 @@ export class GraphService implements IGraphService {
 
   public exportGraph(): GraphJSON {
     const cyJson = this.cy.json();
-    const layoutData = (cyJson.layout || {}) as Record<string, unknown>;
+    const layoutData = ((cyJson as any).layout || {}) as Record<string, unknown>;
     
     return {
       meta: { 
@@ -690,7 +701,7 @@ export class GraphService implements IGraphService {
     };
   }
 
-  getNoteById(noteId: string): NodeSingular | null {
+  public getNoteById(noteId: string): NodeSingular | null {
     const node = this.cy.getElementById(noteId);
     if (node.empty() || node.data('type') !== NodeType.NOTE) {
       return null;
@@ -698,7 +709,7 @@ export class GraphService implements IGraphService {
     return node as NodeSingular;
   }
 
-  getNodeData(nodeId: string): Note | null {
+  public getNodeData(nodeId: string): Note | null {
     const node = this.cy.getElementById(nodeId);
     if (node.empty() || node.data('type') !== NodeType.NOTE) {
       return null;
@@ -706,7 +717,7 @@ export class GraphService implements IGraphService {
     return node.data() as Note;
   }
 
-  getClusterById(clusterId: string): NodeSingular | null {
+  public getClusterById(clusterId: string): NodeSingular | null {
     const node = this.cy.getElementById(clusterId);
     if (node.empty() || node.data('type') !== NodeType.CLUSTER) {
       return null;
@@ -714,55 +725,11 @@ export class GraphService implements IGraphService {
     return node as NodeSingular;
   }
 
-  getGraphElements(): ElementDefinition[] {
+  public getGraphElements(): ElementDefinition[] {
     return this.cy.elements().jsons() as unknown as ElementDefinition[];
   }
 
-  initializeGraph(container?: HTMLElement, elements?: ElementDefinition[]): void {
-    if (container) {
-      const newCy = cytoscape({
-        container: container,
-        elements: elements || [],
-      });
-      if (this.cy) {
-        const cyElements = this.cy.elements().jsons() as unknown as ElementDefinition[];
-        newCy.add(cyElements);
-      }
-      this.cy = newCy;
-    } else {
-      this.cy.elements().remove();
-      this.titleIndex.clear();
-      this.clusterExists.clear();
-  
-      if (this.cy.$(`node#standard_root`).empty()) {
-        this.cy.add({
-          group: 'nodes' as ElementGroup,
-          data: {
-            id: 'standard_root',
-            type: NodeType.STANDARD_ROOT,
-            title: 'Root',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-        });
-      }
-  
-      if (this.cy.$(`node#clusters_root`).empty()) {
-        this.cy.add({
-          group: 'nodes' as ElementGroup,
-          data: {
-            id: 'clusters_root',
-            type: NodeType.CLUSTERS_ROOT,
-            title: 'Clusters',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-        });
-      }
-    }
-  }
-
-  getCy(): Core | null {
+  public getCy(): Core | null {
     return this.cy;
   }
 }
