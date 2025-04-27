@@ -1,4 +1,3 @@
-
 import cytoscape, { Core, NodeSingular, EdgeSingular, NodeCollection, ElementDefinition, ElementGroup, SingularElementArgument, Position } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
@@ -127,6 +126,8 @@ export class GraphService implements IGraphService {
 
   public exportGraph(): GraphJSON {
     const cyJson = this.cy.json();
+    const layoutData = ((cyJson as any).layout || {}) as Record<string, unknown>;
+    
     return {
       meta: { 
         app: 'BlockNote Graph', 
@@ -134,9 +135,9 @@ export class GraphService implements IGraphService {
         exportedAt: new Date().toISOString() 
       },
       data: this.cy.data(),
-      layout: (cyJson.layout as any) as Record<string, unknown>,
+      layout: layoutData,
       viewport: { zoom: this.cy.zoom(), pan: this.cy.pan() },
-      elements: this.cy.elements().jsons() as ElementDefinition[]
+      elements: this.cy.elements().jsons() as unknown as ElementDefinition[]
     };
   }
 
@@ -194,7 +195,7 @@ export class GraphService implements IGraphService {
       this.cy.endBatch();
     }
 
-    const elementDefs = this.cy.elements().jsons() as ElementDefinition[];
+    const elementDefs = this.cy.elements().jsons() as unknown as ElementDefinition[];
     this.queueNotify(elementDefs);
   }
 
@@ -233,7 +234,7 @@ export class GraphService implements IGraphService {
   }
 
   public clearGraph(): void {
-    const removed = this.cy.elements().jsons() as ElementDefinition[];
+    const removed = this.cy.elements().jsons() as unknown as ElementDefinition[];
     this.cy.elements().remove();
     this.titleIndex.clear();
     this.clusterExists.clear();
@@ -398,7 +399,8 @@ export class GraphService implements IGraphService {
       this.cy.endBatch();
     }
 
-    this.queueNotify(this.cy.elements().jsons() as ElementDefinition[]);
+    const elementDefs = this.cy.elements().jsons() as unknown as ElementDefinition[];
+    this.queueNotify(elementDefs);
   }
 
   public exportToStore() {
@@ -490,7 +492,7 @@ export class GraphService implements IGraphService {
         this.titleIndex.delete(slugTitle);
     }
 
-    const actualRemovedJsons = removedCollection?.jsons() as ElementDefinition[] || [];
+    const actualRemovedJsons = removedCollection?.jsons() as unknown as ElementDefinition[] || [];
     if (actualRemovedJsons.length > 0) {
        this.queueNotify(actualRemovedJsons);
     } else {
