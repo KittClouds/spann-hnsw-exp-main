@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { graphService, NodeType, CyElementJSON } from '../services/GraphService';
+import { graphService } from '../services/GraphService';
+import { NodeType, EdgeType, ElementDefinition, GraphJSON } from '../services/types';
 import { useAtom } from 'jotai';
 import { notesAtom, clustersAtom, Note, Cluster, graphInitializedAtom } from '@/lib/store';
 import { ClusterId } from '@/lib/utils/ids';
@@ -8,10 +9,10 @@ import { ClusterId } from '@/lib/utils/ids';
 interface GraphContextType {
   importNotes: () => void;
   exportNotes: () => { notes: Note[], clusters: Cluster[] };
-  exportGraphJSON: () => any;
-  importGraphJSON: (graphData: any) => void;
-  exportElement: (elementId: string) => CyElementJSON | undefined;
-  importElement: (elementJson: CyElementJSON) => void;
+  exportGraphJSON: () => GraphJSON;
+  importGraphJSON: (graphData: GraphJSON) => void;
+  exportElement: (elementId: string) => ElementDefinition | undefined;
+  importElement: (elementJson: ElementDefinition) => void;
   addNote: (note: Partial<Note>) => string;
   updateNote: (id: string, updates: Partial<Note>) => boolean;
   deleteNote: (id: string) => boolean;
