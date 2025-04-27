@@ -116,11 +116,11 @@ export class GraphService implements IGraphService {
   public undo() { this.ur.undo(); }
   public redo() { this.ur.redo(); }
 
-  public addChangeListener(listener: (elements: ElementDefinition[]) => void): void {
+  public onGraphChange(listener: (elements: ElementDefinition[]) => void): void {
     this.changeListeners.push(listener);
   }
 
-  public removeChangeListener(listener: (elements: ElementDefinition[]) => void): void {
+  public offGraphChange(listener: (elements: ElementDefinition[]) => void): void {
     this.changeListeners = this.changeListeners.filter((l) => l !== listener);
   }
 
@@ -403,7 +403,7 @@ export class GraphService implements IGraphService {
     this.queueNotify(elementDefs);
   }
 
-  public exportToStore() {
+  public exportStoreFormat() {
     const nodes = this.cy.nodes().map(node => node.data());
     const notes = nodes.filter(nodeData => nodeData.type === NodeType.NOTE) as Note[];
     const clusters = nodes.filter(nodeData => nodeData.type === NodeType.CLUSTER) as Cluster[];
@@ -687,6 +687,82 @@ export class GraphService implements IGraphService {
       concept: getConnectedTargets(EdgeType.HAS_CONCEPT),
       mention: getConnectedTargets(EdgeType.MENTIONS)
     };
+  }
+
+  getNoteById(noteId: string): NodeSingular | null {
+    const node = this.cy.getElementById(noteId);
+    if (node.empty() || node.data('type') !== NodeType.NOTE) {
+      return null;
+    }
+    return node as NodeSingular;
+  }
+
+  getNodeData(nodeId: string): Note | null {
+    const node = this.cy.getElementById(nodeId);
+    if (node.empty() || node.data('type') !== NodeType.NOTE) {
+      return null;
+    }
+    return node.data() as Note;
+  }
+
+  getClusterById(clusterId: string): NodeSingular | null {
+    const node = this.cy.getElementById(clusterId);
+    if (node.empty() || node.data('type') !== NodeType.CLUSTER) {
+      return null;
+    }
+    return node as NodeSingular;
+  }
+
+  getGraphElements(): ElementDefinition[] {
+    return this.cy.elements().jsons() as unknown as ElementDefinition[];
+  }
+
+  initializeGraph(container?: HTMLElement, elements?: ElementDefinition[]): void {
+    if (container) {
+      const newCy = cytoscape({
+        container: container,
+        elements: elements || [],
+      });
+      if (this.cy) {
+        const elements = this.cy.elements().jsons();
+        newCy.add(elements);
+      }
+      this.cy = newCy;
+    } else {
+      this.cy.elements().remove();
+      this.titleIndex.clear();
+      this.clusterExists.clear();
+  
+      if (this.cy.$(`node#standard_root`).empty()) {
+        this.cy.add({
+          group: 'nodes' as ElementGroup,
+          data: {
+            id: 'standard_root',
+            type: NodeType.STANDARD_ROOT,
+            title: 'Root',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        });
+      }
+  
+      if (this.cy.$(`node#clusters_root`).empty()) {
+        this.cy.add({
+          group: 'nodes' as ElementGroup,
+          data: {
+            id: 'clusters_root',
+            type: NodeType.CLUSTERS_ROOT,
+            title: 'Clusters',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        });
+      }
+    }
+  }
+
+  getCy(): Core {
+    return this.cy;
   }
 }
 

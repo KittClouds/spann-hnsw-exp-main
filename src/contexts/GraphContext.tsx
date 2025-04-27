@@ -52,8 +52,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     },
     
     exportNotes: () => {
-      const { notes, clusters } = graphService.exportToStore();
-      return { notes, clusters };
+      return graphService.exportStoreFormat();
     },
     
     exportGraphJSON: () => {
@@ -110,8 +109,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     },
     
     moveNode: (nodeId, newParentId) => {
-      const result = graphService.moveNode(nodeId, newParentId);
-      return !!result;
+      return graphService.moveNode(nodeId, newParentId);
     },
     
     searchNotes: (query) => {
@@ -135,8 +133,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     },
     
     tagNote: (noteId, tagName) => {
-      const result = graphService.tagNote(noteId, tagName);
-      return !!result;
+      return graphService.tagNote(noteId, tagName);
     },
     
     getConnections: (noteId) => {
