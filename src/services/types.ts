@@ -1,6 +1,8 @@
 
-import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition, Position, SingularElementArgument } from 'cytoscape';
+import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
+
+export type ElementDefinition = CytoscapeElementDefinition;
 
 export enum NodeType {
   NOTE = 'note',
@@ -37,7 +39,7 @@ export interface GraphJSON {
   elements: ElementDefinition[];
 }
 
-export interface GraphChangeEvent {
+export type GraphChangeEvent = {
   type: 'add' | 'update' | 'remove';
   elements: ElementDefinition[];
 }

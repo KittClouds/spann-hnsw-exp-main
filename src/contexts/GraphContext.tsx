@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { graphService } from '../services/GraphService';
 import { NodeType, EdgeType, ElementDefinition, GraphJSON } from '../services/types';
@@ -58,7 +57,6 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     },
     
     exportGraphJSON: () => {
-      // Fixed: Remove argument to match the updated method signature
       return graphService.exportGraph();
     },
     

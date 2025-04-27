@@ -1,3 +1,4 @@
+
 import cytoscape, { Core, NodeSingular, EdgeSingular, NodeCollection, ElementDefinition, ElementGroup, SingularElementArgument, Position } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
@@ -133,7 +134,7 @@ export class GraphService implements IGraphService {
         exportedAt: new Date().toISOString() 
       },
       data: this.cy.data(),
-      layout: cyJson.layout as Record<string, unknown>,
+      layout: (cyJson.layout as any) as Record<string, unknown>,
       viewport: { zoom: this.cy.zoom(), pan: this.cy.pan() },
       elements: this.cy.elements().jsons() as ElementDefinition[]
     };
@@ -193,12 +194,12 @@ export class GraphService implements IGraphService {
       this.cy.endBatch();
     }
 
-    const elementDefs = this.cy.elements().jsons() as unknown as ElementDefinition[];
+    const elementDefs = this.cy.elements().jsons() as ElementDefinition[];
     this.queueNotify(elementDefs);
   }
 
   public exportElement(ele: SingularElementArgument): ElementDefinition {
-    return ele.json() as unknown as ElementDefinition;
+    return ele.json() as ElementDefinition;
   }
 
   public importElement(json: ElementDefinition): void {
@@ -232,7 +233,7 @@ export class GraphService implements IGraphService {
   }
 
   public clearGraph(): void {
-    const removed = this.cy.elements().jsons() as unknown as ElementDefinition[];
+    const removed = this.cy.elements().jsons() as ElementDefinition[];
     this.cy.elements().remove();
     this.titleIndex.clear();
     this.clusterExists.clear();
@@ -292,11 +293,11 @@ export class GraphService implements IGraphService {
         } else {
             console.warn(`Attempted to add note ${nodeId} to non-existent cluster ${clusterId}. Storing ID in data.`);
             newNode.data('clusterId', clusterId);
-            this.queueNotify([newNode.json() as unknown as ElementDefinition]);
+            this.queueNotify([newNode.json() as ElementDefinition]);
         }
     } else {
         newNode.data('clusterId', undefined);
-        this.queueNotify([newNode.json() as unknown as ElementDefinition]);
+        this.queueNotify([newNode.json() as ElementDefinition]);
     }
 
     return newNode;
@@ -397,7 +398,7 @@ export class GraphService implements IGraphService {
       this.cy.endBatch();
     }
 
-    this.queueNotify(this.cy.elements().jsons() as unknown as ElementDefinition[]);
+    this.queueNotify(this.cy.elements().jsons() as ElementDefinition[]);
   }
 
   public exportToStore() {
@@ -469,7 +470,7 @@ export class GraphService implements IGraphService {
         if (newTitle) this.titleIndex.set(slugTitle, id);
     }
 
-    this.queueNotify([node.json() as unknown as ElementDefinition]);
+    this.queueNotify([node.json() as ElementDefinition]);
     return true;
   }
 
@@ -480,7 +481,7 @@ export class GraphService implements IGraphService {
          return false;
     }
 
-    const removedJson = node.json() as unknown as ElementDefinition;
+    const removedJson = node.json() as ElementDefinition;
     const slugTitle = node.data('slugTitle');
 
     const removedCollection = this.ur.do('remove', node);
@@ -489,7 +490,7 @@ export class GraphService implements IGraphService {
         this.titleIndex.delete(slugTitle);
     }
 
-    const actualRemovedJsons = removedCollection?.jsons() as unknown as ElementDefinition[] || [];
+    const actualRemovedJsons = removedCollection?.jsons() as ElementDefinition[] || [];
     if (actualRemovedJsons.length > 0) {
        this.queueNotify(actualRemovedJsons);
     } else {
@@ -538,7 +539,7 @@ export class GraphService implements IGraphService {
         }
     );
 
-    this.queueNotify([node.json() as unknown as ElementDefinition]);
+    this.queueNotify([node.json() as ElementDefinition]);
 
     return true;
   }
@@ -598,7 +599,6 @@ export class GraphService implements IGraphService {
     }
 
     let tagNode = this.cy.getElementById(tagId);
-    let addedTagJson: ElementDefinition | null = null;
 
     this.ur.action(
         'tagNote',
@@ -646,10 +646,10 @@ export class GraphService implements IGraphService {
     );
 
     const actionResult = this.ur.lastAction()?.result;
-    const changedElements = actionResult?.addedElements || [removedJson];
-     if (changedElements.length > 0) {
-       this.queueNotify(changedElements);
-     }
+    const removedJsons = actionResult?.addedElements || [];
+    if (removedJsons.length > 0) {
+       this.queueNotify(removedJsons);
+    }
     
     return true;
   }
