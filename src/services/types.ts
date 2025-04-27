@@ -1,8 +1,36 @@
 
 import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
-import { Note, Cluster } from '@/lib/store';
 
 export type ElementDefinition = CytoscapeElementDefinition;
+
+export type GraphChangeCallback = (elements: ElementDefinition[]) => void;
+
+export interface StoreFormat {
+  notes: Note[];
+  clusters: Cluster[];
+}
+
+export interface Note {
+  id: string;
+  title: string;
+  content?: any[];
+  createdAt: string;
+  updatedAt: string;
+  parentId?: string | null;
+  type: 'note' | 'folder';
+  clusterId?: string | null;
+  path?: string;
+  tags?: string[];
+  mentions?: string[];
+  concepts?: Array<{ type: string; name: string }>;
+}
+
+export interface Cluster {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export enum NodeType {
   NOTE = 'note',
@@ -39,60 +67,69 @@ export interface GraphJSON {
   elements: ElementDefinition[];
 }
 
-export type GraphChangeEvent = {
-  type: 'add' | 'update' | 'remove';
-  elements: ElementDefinition[];
-}
-
-export type GraphChangeListener = (event: GraphChangeEvent) => void;
-
 export interface IGraphService {
-  // Core operations
-  getGraph(): Core;
+  // Initialization & Core Access
+  initializeGraph(container: HTMLElement, elements?: ElementDefinition[]): void;
+  getCy(): Core | null;
+
+  // Undo/Redo
   undo(): void;
   redo(): void;
-  clearGraph(): void;
-  
-  // Change notifications
-  addChangeListener(listener: (elements: ElementDefinition[]) => void): void;
-  removeChangeListener(listener: (elements: ElementDefinition[]) => void): void;
+  isUndoable(): boolean;
+  isRedoable(): boolean;
+
+  // Change Events
+  onGraphChange(callback: GraphChangeCallback): void;
+  offGraphChange(callback: GraphChangeCallback): void;
 
   // Import/Export
+  importGraph(data: GraphJSON): Promise<void>;
   exportGraph(): GraphJSON;
-  importGraph(data: GraphJSON): void;
-  exportElement(ele: SingularElementArgument): ElementDefinition;
-  importElement(json: ElementDefinition): void;
-  
-  // Note operations
-  addNote(params: { 
-    id?: string;
-    title: string;
-    content?: any[];
-    createdAt?: string;
-    updatedAt?: string;
-    path?: string;
-  }, folderId?: string, clusterId?: string): NodeSingular;
-  updateNote(id: string, updates: Partial<Note>): boolean;
-  deleteNote(id: string): boolean;
+  exportStoreFormat(): Promise<StoreFormat>;
 
-  // Cluster operations
-  addCluster(params: Partial<Cluster>): NodeSingular;
-  updateCluster(id: string, updates: Partial<Cluster>): boolean;
-  deleteCluster(id: string): boolean;
-  moveNodeToCluster(nodeId: string, clusterId?: string): boolean;
-  
-  // Node operations
-  moveNode(nodeId: string, newParentId?: string | null): boolean;
-  getNodesByType(type: NodeType): NodeCollection;
-  
-  // Search and relations
-  searchNodes(query: string, types: NodeType[]): NodeCollection;
+  // CRUD Operations - Notes
+  addNote(note: Partial<Note>, position?: Position): Promise<NodeSingular>;
+  updateNote(noteId: string, data: Partial<Note>): Promise<NodeSingular | null>;
+  deleteNote(noteId: string): Promise<void>;
+  getNoteById(noteId: string): NodeSingular | null;
+  getNodeData(nodeId: string): Note | null;
+
+  // CRUD Operations - Clusters
+  addCluster(cluster: Partial<Cluster>, position?: Position): Promise<NodeSingular>;
+  updateCluster(clusterId: string, data: Partial<Cluster>): Promise<NodeSingular | null>;
+  deleteCluster(clusterId: string): Promise<void>;
+  getClusterById(clusterId: string): NodeSingular | null;
+
+  // Relationships & Traversal
   getRelatedNodes(nodeId: string): NodeCollection;
-  getBacklinks(nodeId: string): any[];
-  tagNote(noteId: string, tagName: string): boolean;
-  getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', any[]>;
-  
-  // Store operations
-  importFromStore(notes: Note[], clusters: Cluster[]): void;
-  exportToStore(): { notes: Note[]; clusters: Cluster[]; };
+  getBacklinks(nodeId: string): NodeCollection;
+  getForwardLinks(nodeId: string): NodeCollection;
+  getConnections(nodeId: string): EdgeCollection;
+  setParent(childId: string, parentId: string): Promise<EdgeSingular | null>;
+  removeParent(childId: string): Promise<void>;
+  addToCluster(noteId: string, clusterId: string): Promise<EdgeSingular | null>;
+  removeFromCluster(noteId: string, clusterId: string): Promise<void>;
+  addTag(noteId: string, tagId: string): Promise<EdgeSingular | null>;
+  removeTag(noteId: string, tagId: string): Promise<void>;
+  addLink(sourceId: string, targetId: string, data?: any): Promise<EdgeSingular | null>;
+  removeLink(linkId: string): Promise<void>;
+  getEdgeData(edgeId: string): any | null;
+
+  // Search
+  searchNotesByTitle(query: string): NodeCollection;
+
+  // Graph State & View
+  getGraphElements(): ElementDefinition[];
+  layoutGraph(layoutName?: string, options?: any): void;
+  centerGraph(): void;
+  fitGraph(padding?: number): void;
+  getNodePosition(nodeId: string): Position | null;
+  setNodePosition(nodeId: string, position: Position): void;
+  selectNodes(nodeIds: string[]): void;
+  unselectNodes(): void;
+  getSelectedNodes(): NodeCollection;
+  zoomIn(level?: number): void;
+  zoomOut(level?: number): void;
+  resetZoom(): void;
+  pan(position: Position): void;
 }
