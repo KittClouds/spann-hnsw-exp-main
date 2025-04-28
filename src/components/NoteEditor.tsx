@@ -123,8 +123,8 @@ export function NoteEditor() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full relative">
-      <div className="flex-1 flex flex-col p-6 pb-16 bg-[#0a0a0d]">
+    <div className="flex-1 flex flex-col h-full">
+      <div className="flex-1 flex flex-col p-6 bg-[#0a0a0d] overflow-hidden">
         <div className="flex items-center justify-between mb-4">
           <div className="flex-1">
             <Input
@@ -144,7 +144,7 @@ export function NoteEditor() {
           </Button>
         </div>
         
-        <div className="flex-1 bg-[#12141f] rounded-md shadow-xl border-[#1a1b23] transition-all duration-200 overflow-auto">
+        <div className="flex-1 bg-[#12141f] rounded-md shadow-xl border-[#1a1b23] transition-all duration-200 mb-12 overflow-auto">
           <BlockNoteView 
             editor={editor} 
             theme={theme}

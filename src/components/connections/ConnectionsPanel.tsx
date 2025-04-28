@@ -19,7 +19,7 @@ export function ConnectionsPanel() {
   const backlinks = activeNote ? getBacklinks(activeNote.id) : [];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-10">
+    <div className="relative bg-[#0a0a0d] border-t border-[#1a1b23]">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -27,7 +27,7 @@ export function ConnectionsPanel() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="bg-[#0a0a0d] border-t border-[#1a1b23] shadow-lg"
+            className="border-t border-[#1a1b23]"
           >
             <div className="p-4 space-y-4 max-h-[300px] overflow-auto">
               <div className="flex justify-center space-x-2">
@@ -168,7 +168,7 @@ export function ConnectionsPanel() {
       
       <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-[#0a0a0d] border-t border-[#1a1b23] rounded-none h-8 flex items-center justify-center hover:bg-[#12141f]"
+        className="w-full bg-[#0a0a0d] rounded-none h-8 flex items-center justify-center hover:bg-[#12141f] border-none"
       >
         <Link className="h-4 w-4 mr-2" />
         <span>Connections</span>
