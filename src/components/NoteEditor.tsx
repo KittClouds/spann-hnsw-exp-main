@@ -125,8 +125,8 @@ export function NoteEditor() {
   }
 
   return (
-    <div className="flex-1 flex h-full">
-      <div className="flex-1 flex flex-col p-6 bg-[#0a0a0d]">
+    <div className="flex-1 flex flex-col h-full">
+      <div className="flex-1 flex flex-col p-6 pb-40 bg-[#0a0a0d]">
         <div className="flex items-center justify-between mb-4">
           <div className="flex-1">
             <Input
