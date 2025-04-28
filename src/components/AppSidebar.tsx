@@ -10,6 +10,7 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGrou
 import { Button } from "./ui/button";
 import { ClusterView } from "./ClusterView";
 import { NoteId, ClusterId } from "@/lib/utils/ids";
+
 export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
@@ -18,6 +19,7 @@ export function AppSidebar({
   const [activeClusterId] = useAtom(activeClusterIdAtom);
   const [activeTab, setActiveTab] = useState<string>("folders");
   const rootNotes = notes.filter(note => note.parentId === null && note.clusterId === activeClusterId);
+
   const handleNewItem = React.useCallback((type: 'note' | 'folder', parentId: NoteId | null = null) => {
     const creator = type === 'note' ? createNote : createFolder;
     const {
@@ -32,6 +34,7 @@ export function AppSidebar({
       description: type === 'note' ? "Start typing to edit your note" : "You can add notes inside this folder"
     });
   }, [setNotes, setActiveNoteId, activeClusterId]);
+
   return <Sidebar className="bg-black border-r border-[#1a1b23]" {...props}>
       <SidebarContent>
         <Tabs defaultValue="folders" className="w-full">
@@ -78,7 +81,7 @@ export function AppSidebar({
       <SidebarFooter className="p-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button className="w-full bg-[#1a1b23] hover:bg-[#272935] text-white border border-[#2a2e3d] shadow-lg">
               <Plus className="h-4 w-4 mr-2" /> New
             </Button>
           </DropdownMenuTrigger>
@@ -105,6 +108,7 @@ export function AppSidebar({
       <SidebarRail />
     </Sidebar>;
 }
+
 interface NoteTreeProps {
   note: Note;
   notes: Note[];
@@ -112,6 +116,7 @@ interface NoteTreeProps {
   onSelect: (id: string) => void;
   onNewItem: (type: 'note' | 'folder', parentId: NoteId | null) => void;
 }
+
 function NoteTree({
   note,
   notes,
@@ -124,6 +129,7 @@ function NoteTree({
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(note.title);
   const childNotes = notes.filter(n => n.parentId === note.id);
+
   const handleRename = () => {
     if (editTitle.trim() === '') {
       toast.error("Folder name cannot be empty");
@@ -138,6 +144,7 @@ function NoteTree({
     setIsEditing(false);
     toast.success("Renamed successfully");
   };
+
   const handleDelete = () => {
     if (notes.filter(n => n.type === 'folder').length <= 1) {
       toast.error("Cannot delete the last folder");
@@ -146,6 +153,7 @@ function NoteTree({
     setNotes(prevNotes => deleteNote(prevNotes, note.id));
     toast.success("Deleted successfully");
   };
+
   if (!isFolder) {
     return <SidebarMenuItem>
         <SidebarMenuButton isActive={activeNoteId === note.id} className="rounded-md transition-colors duration-200 hover:bg-[#12141f] data-[active=true]:sidebar-note-active-dark" onClick={() => onSelect(note.id)}>
@@ -154,6 +162,7 @@ function NoteTree({
         </SidebarMenuButton>
       </SidebarMenuItem>;
   }
+
   return <SidebarMenuItem>
       <Collapsible defaultOpen>
         <div className="flex items-center justify-between pr-2 bg-inherit">

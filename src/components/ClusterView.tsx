@@ -1,4 +1,3 @@
-
 import { useAtom } from 'jotai';
 import { Button } from './ui/button';
 import { Database, File, Folder, ChevronRight, MoreVertical, Plus, PenLine, Trash2 } from 'lucide-react';
@@ -112,8 +111,12 @@ export function ClusterView() {
           </p>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                <Plus className="w-4 h-4 mr-2" />
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-7 bg-[#1a1b23] hover:bg-[#272935] text-white border border-[#2a2e3d] shadow-lg"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
                 New Cluster
               </Button>
             </DialogTrigger>
@@ -149,7 +152,7 @@ export function ClusterView() {
                 <Button 
                   size="sm" 
                   variant="ghost" 
-                  className="h-7 text-[#7C5BF1] hover:bg-[#12141f] hover:text-[#7C5BF1]"
+                  className="h-7 bg-[#1a1b23] hover:bg-[#272935] text-white border border-[#2a2e3d] shadow-lg"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   New Cluster
