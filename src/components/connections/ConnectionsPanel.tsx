@@ -3,160 +3,181 @@ import { useAtom } from 'jotai';
 import { activeNoteAtom } from '@/lib/store';
 import { useGraph } from '@/contexts/GraphContext';
 import { Badge } from '@/components/ui/badge';
-import { Link, ChevronDown, ChevronUp } from 'lucide-react';
+import { Link, ChevronDown, ChevronUp, Hash, AtSign } from 'lucide-react';
 import { useState } from 'react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function ConnectionsPanel() {
   const [activeNote] = useAtom(activeNoteAtom);
   const { getConnections, getBacklinks } = useGraph();
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [activeView, setActiveView] = useState<'links' | 'backlinks'>('links');
   
   const connections = activeNote ? getConnections(activeNote.id) : { tag: [], concept: [], mention: [] };
   const backlinks = activeNote ? getBacklinks(activeNote.id) : [];
-  
+
   return (
-    <Collapsible 
-      open={isOpen} 
-      onOpenChange={setIsOpen}
-      className="fixed bottom-0 left-0 right-0 bg-[#0a0a0d] border-t border-border shadow-lg"
-    >
-      <header className="flex items-center justify-between px-4 py-2 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Link className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-medium">Connections</h2>
-        </div>
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-          </Button>
-        </CollapsibleTrigger>
-      </header>
-
-      <CollapsibleContent>
-        <div className="px-4 py-3 space-y-4">
-          <div className="flex gap-2 mx-auto w-fit bg-[#12141f] rounded-md p-1">
-            <Button
-              variant={activeView === 'links' ? 'secondary' : 'ghost'}
-              onClick={() => setActiveView('links')}
-              className="w-32 text-sm font-medium h-8"
-            >
-              Links ({connections.concept.length})
-            </Button>
-            <Button
-              variant={activeView === 'backlinks' ? 'secondary' : 'ghost'}
-              onClick={() => setActiveView('backlinks')}
-              className="w-32 text-sm font-medium h-8"
-            >
-              Backlinks ({backlinks.length})
-            </Button>
-          </div>
-
-          {activeView === 'links' ? (
-            <div className="grid grid-cols-1 gap-4">
-              <section>
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                  Tags
-                </h3>
-                <div>
-                  {connections.tag.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {connections.tag.map((tag) => (
-                        <Badge
-                          key={tag.id}
-                          variant="secondary"
-                          className="bg-[#12141f] hover:bg-[#1a1b23] border-[#1a1b23]"
-                        >
-                          #{tag.title}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground bg-[#12141f] rounded-md p-3">
-                      No tags. Use <span className="text-purple-400">#tag</span> in your note to add tags.
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              <section>
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                  Mentions
-                </h3>
-                <div>
-                  {connections.mention.length > 0 ? (
-                    <div className="grid gap-1">
-                      {connections.mention.map((mention) => (
-                        <div
-                          key={mention.id}
-                          className="text-sm p-2 rounded-md bg-[#12141f] hover:bg-[#1a1b23] cursor-pointer transition-colors"
-                        >
-                          @{mention.title}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground bg-[#12141f] rounded-md p-3">
-                      No mentions. Use <span className="text-purple-400">@name</span> in your note to add mentions.
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              <section>
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                  Links to Notes
-                </h3>
-                <div>
-                  {connections.concept.length > 0 ? (
-                    <div className="grid gap-1">
-                      {connections.concept.map((link) => (
-                        <div
-                          key={link.id}
-                          className="text-sm p-2 rounded-md bg-[#12141f] hover:bg-[#1a1b23] cursor-pointer transition-colors"
-                        >
-                          [[{link.title}]]
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground bg-[#12141f] rounded-md p-3">
-                      No outgoing links. Use <span className="text-purple-400">[[note title]]</span> to link to other notes.
-                    </div>
-                  )}
-                </div>
-              </section>
-            </div>
-          ) : (
-            <section>
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                Backlinks
-              </h3>
-              <div>
-                {backlinks.length > 0 ? (
-                  <div className="grid gap-1">
-                    {backlinks.map((link) => (
-                      <div
-                        key={link.id}
-                        className="text-sm p-2 rounded-md bg-[#12141f] hover:bg-[#1a1b23] cursor-pointer transition-colors"
-                      >
-                        [[{link.title}]]
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground bg-[#12141f] rounded-md p-3">
-                    No backlinks to this note.
-                  </div>
-                )}
+    <div className="fixed bottom-0 left-0 right-0 z-10">
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="bg-[#0a0a0d] border-t border-[#1a1b23] shadow-lg"
+          >
+            <div className="p-4 space-y-4 max-h-[300px] overflow-auto">
+              <div className="flex justify-center space-x-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setActiveView('links')}
+                  className={`px-6 ${activeView === 'links' ? 'bg-[#1a1b23] text-primary' : 'text-muted-foreground'}`}
+                >
+                  <Link className="mr-2 h-4 w-4" />
+                  Links
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setActiveView('backlinks')}
+                  className={`px-6 ${activeView === 'backlinks' ? 'bg-[#1a1b23] text-primary' : 'text-muted-foreground'}`}
+                >
+                  <Link className="mr-2 h-4 w-4 transform rotate-180" />
+                  Backlinks
+                </Button>
               </div>
-            </section>
-          )}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+
+              {activeView === 'links' ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="bg-[#12141f] border-[#1a1b23]">
+                    <CardContent className="p-4">
+                      <h3 className="flex items-center text-sm font-medium mb-3 text-primary">
+                        <Hash className="h-4 w-4 mr-2" /> 
+                        Tags
+                      </h3>
+                      <div className="space-y-2">
+                        {connections.tag.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {connections.tag.map((tag) => (
+                              <Badge
+                                key={tag.id}
+                                variant="secondary"
+                                className="bg-[#1a1b23] hover:bg-[#22242f] text-primary border-none"
+                              >
+                                #{tag.title}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-muted-foreground">
+                            No tags found
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-[#12141f] border-[#1a1b23]">
+                    <CardContent className="p-4">
+                      <h3 className="flex items-center text-sm font-medium mb-3 text-primary">
+                        <AtSign className="h-4 w-4 mr-2" /> 
+                        Mentions
+                      </h3>
+                      <div className="space-y-2">
+                        {connections.mention.length > 0 ? (
+                          <div className="space-y-1">
+                            {connections.mention.map((mention) => (
+                              <div
+                                key={mention.id}
+                                className="text-sm px-2 py-1 rounded-md bg-[#1a1b23] hover:bg-[#22242f] cursor-pointer transition-colors flex items-center"
+                              >
+                                @{mention.title}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-muted-foreground">
+                            No mentions found
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-[#12141f] border-[#1a1b23]">
+                    <CardContent className="p-4">
+                      <h3 className="flex items-center text-sm font-medium mb-3 text-primary">
+                        <Link className="h-4 w-4 mr-2" /> 
+                        Links
+                      </h3>
+                      <div className="space-y-2">
+                        {connections.concept.length > 0 ? (
+                          <div className="space-y-1">
+                            {connections.concept.map((link) => (
+                              <div
+                                key={link.id}
+                                className="text-sm px-2 py-1 rounded-md bg-[#1a1b23] hover:bg-[#22242f] cursor-pointer transition-colors flex items-center"
+                              >
+                                [[{link.title}]]
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-muted-foreground">
+                            No links found
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <Card className="bg-[#12141f] border-[#1a1b23]">
+                  <CardContent className="p-4">
+                    <h3 className="flex items-center text-sm font-medium mb-3 text-primary">
+                      <Link className="h-4 w-4 mr-2 transform rotate-180" /> 
+                      Backlinks
+                    </h3>
+                    <div className="space-y-2">
+                      {backlinks.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {backlinks.map((link) => (
+                            <div
+                              key={link.id}
+                              className="text-sm px-2 py-1 rounded-md bg-[#1a1b23] hover:bg-[#22242f] cursor-pointer transition-colors flex items-center"
+                            >
+                              [[{link.title}]]
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground">
+                          No backlinks to this note
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      <Button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full bg-[#0a0a0d] border-t border-[#1a1b23] rounded-none h-8 flex items-center justify-center hover:bg-[#12141f]"
+      >
+        <Link className="h-4 w-4 mr-2" />
+        <span>Connections</span>
+        {isOpen ? (
+          <ChevronDown className="h-4 w-4 ml-2" />
+        ) : (
+          <ChevronUp className="h-4 w-4 ml-2" />
+        )}
+      </Button>
+    </div>
   );
 }
