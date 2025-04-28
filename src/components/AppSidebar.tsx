@@ -81,7 +81,7 @@ export function AppSidebar({
       <SidebarFooter className="p-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button className="w-full bg-[#1a1b23] hover:bg-[#272935] text-white border border-[#2a2e3d] shadow-lg">
+            <Button className="w-full bg-gradient-to-r from-[#1A1F2C] to-[#2A1F3D] hover:from-[#2A1F3D] hover:to-[#1A1F2C] text-white border border-[#7E69AB]/20 shadow-lg transition-all duration-300">
               <Plus className="h-4 w-4 mr-2" /> New
             </Button>
           </DropdownMenuTrigger>

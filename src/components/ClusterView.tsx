@@ -114,7 +114,7 @@ export function ClusterView() {
               <Button 
                 size="sm" 
                 variant="ghost" 
-                className="h-7 bg-[#1a1b23] hover:bg-[#272935] text-white border border-[#2a2e3d] shadow-lg"
+                className="h-7 bg-gradient-to-r from-[#1A1F2C] to-[#2A1F3D] hover:from-[#2A1F3D] hover:to-[#1A1F2C] text-white border border-[#7E69AB]/20 shadow-lg transition-all duration-300"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 New Cluster
@@ -152,7 +152,7 @@ export function ClusterView() {
                 <Button 
                   size="sm" 
                   variant="ghost" 
-                  className="h-7 bg-[#1a1b23] hover:bg-[#272935] text-white border border-[#2a2e3d] shadow-lg"
+                  className="h-7 bg-gradient-to-r from-[#1A1F2C] to-[#2A1F3D] hover:from-[#2A1F3D] hover:to-[#1A1F2C] text-white border border-[#7E69AB]/20 shadow-lg transition-all duration-300"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   New Cluster
