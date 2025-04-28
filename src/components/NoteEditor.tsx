@@ -1,4 +1,3 @@
-
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/store';
 import { Input } from "@/components/ui/input";
@@ -63,14 +62,12 @@ export function NoteEditor() {
   useEffect(() => {
     if (!editor) return;
     
-    // Subscribe to editor content changes
     editor.onEditorContentChange(() => {
       saveChanges();
     });
     
     return () => {
       saveChanges.cancel();
-      // No need to manually unsubscribe - BlockNote handles this internally
     };
   }, [editor, saveChanges, activeNote]);
 
@@ -126,7 +123,7 @@ export function NoteEditor() {
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      <div className="flex-1 flex flex-col p-6 pb-40 bg-[#0a0a0d]">
+      <div className="flex-1 flex flex-col p-6 pb-32 bg-[#0a0a0d]">
         <div className="flex items-center justify-between mb-4">
           <div className="flex-1">
             <Input
