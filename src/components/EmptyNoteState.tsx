@@ -4,13 +4,16 @@ import { Button } from "./ui/button";
 import { useAtom } from "jotai";
 import { activeClusterIdAtom, createNote, notesAtom } from "@/lib/store";
 import { toast } from "sonner";
+import { ClusterId } from "@/lib/utils/ids";
 
 export function EmptyNoteState() {
   const [notes, setNotes] = useAtom(notesAtom);
   const [activeClusterId] = useAtom(activeClusterIdAtom);
 
   const handleCreateNote = () => {
-    const { id, note } = createNote(null, activeClusterId);
+    // Make sure activeClusterId is properly cast to ClusterId type if not null
+    const clusterId = activeClusterId ? activeClusterId as ClusterId : null;
+    const { id, note } = createNote(null, clusterId);
     setNotes(prevNotes => [...prevNotes, note]);
     toast("New note created", {
       description: "Start typing to edit your note"
