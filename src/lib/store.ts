@@ -1,8 +1,8 @@
-
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
 import { generateClusterId, generateNoteId, ClusterId, NoteId } from './utils/ids';
+import { createParagraphBlock } from './utils/blockUtils';
 
 export interface Cluster {
   id: ClusterId;
@@ -49,11 +49,9 @@ const initialNotes: Note[] = [
   { 
     id: generateNoteId(),
     title: 'Welcome Note',
-    content: [{ 
-      type: 'paragraph',
-      content: 'Welcome to Galaxy Notes! Start typing here...',
-      id: 'welcome-block-1'
-    }] as Block[],
+    content: [
+      createParagraphBlock('Welcome to Galaxy Notes! Start typing here...', 'welcome-block-1')
+    ],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
     parentId: 'note-folder-1' as NoteId,
@@ -63,11 +61,9 @@ const initialNotes: Note[] = [
   { 
     id: generateNoteId(),
     title: 'How to Use',
-    content: [{ 
-      type: 'paragraph',
-      content: 'Click on a note title to edit it. Create new notes with the + button.',
-      id: 'how-to-use-block-1'
-    }] as Block[],
+    content: [
+      createParagraphBlock('Click on a note title to edit it. Create new notes with the + button.', 'how-to-use-block-1')
+    ],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
     parentId: 'note-folder-1' as NoteId,

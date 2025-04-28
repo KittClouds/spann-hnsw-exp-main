@@ -6,14 +6,13 @@ import { useNoteInterface } from '../hooks/useNoteInterface';
 import { Button } from './ui/button';
 import { useGraph } from '../contexts/GraphContext';
 import { Block } from '@blocknote/core';
+import { createParagraphBlock } from '../lib/utils/blockUtils';
 
 export const NoteInterfaceExample = () => {
   const editor = useBlockNote({
-    initialContent: [{
-      type: "paragraph",
-      content: "Try out the note interface!",
-      id: "example-block-1"
-    }] as Block[],
+    initialContent: [
+      createParagraphBlock("Try out the note interface!", "example-block-1")
+    ],
   });
   
   const noteInterface = useNoteInterface(editor);
@@ -26,7 +25,12 @@ export const NoteInterfaceExample = () => {
     
     noteInterface.insertBlocks([{
       type: "paragraph",
-      content: "New block added programmatically!"
+      props: {},
+      content: [{
+        type: "text",
+        text: "New block added programmatically!",
+        styles: {}
+      }]
     }], lastBlockId, 'after');
   };
   
@@ -43,7 +47,6 @@ export const NoteInterfaceExample = () => {
   };
   
   const handleExportGraph = () => {
-    // Fix: Remove the argument as exportGraphJSON doesn't accept any arguments
     const exportedGraph = graph.exportGraphJSON();
     setGraphJson(JSON.stringify(exportedGraph, null, 2));
   };

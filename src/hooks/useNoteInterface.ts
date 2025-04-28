@@ -1,5 +1,6 @@
 
 import { BlockNoteEditor, Block } from '@blocknote/core';
+import { createStyledText } from '@/lib/utils/blockUtils';
 
 export interface NoteInterface {
   // Document & Block Operations
@@ -76,13 +77,12 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     
     insertText: (text) => {
       // Since we can't directly use transact, we can use another approach
-      // BlockNote doesn't have a direct insertText method on the editor instance
-      // Instead, we can create a paragraph block at the current cursor position
       const cursorPosition = editor.getTextCursorPosition();
       if (cursorPosition) {
         editor.insertBlocks([{
           type: "paragraph",
-          content: text
+          props: {},
+          content: [createStyledText(text)]
         }], cursorPosition.block.id, 'after');
       }
     },
