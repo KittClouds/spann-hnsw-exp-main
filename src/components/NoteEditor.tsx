@@ -1,4 +1,3 @@
-
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/store';
 import { Input } from "@/components/ui/input";
@@ -13,6 +12,7 @@ import { Button } from './ui/button';
 import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConnectionsPanel } from './connections/ConnectionsPanel';
+import { EmptyNoteState } from './EmptyNoteState';
 
 export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
@@ -115,11 +115,7 @@ export function NoteEditor() {
   }, [notes, activeNoteId, setNotes, setActiveNoteId]);
 
   if (!activeNote) {
-    return (
-      <div className="flex-1 p-4 flex items-center justify-center text-muted-foreground">
-        No note selected
-      </div>
-    );
+    return <EmptyNoteState />;
   }
 
   return (
