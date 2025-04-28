@@ -1,11 +1,11 @@
 
-import { BlockNoteEditor, Block, PartialBlock } from '@blocknote/core';
+import { BlockNoteEditor, Block } from '@blocknote/core';
 
 export interface NoteInterface {
   // Document & Block Operations
   getDocument: () => Block[];
-  insertBlocks: (blocks: PartialBlock[], referenceBlockId: string, placement?: 'before' | 'after') => void;
-  updateBlock: (blockId: string, update: PartialBlock) => void;
+  insertBlocks: (blocks: Partial<Block>[], referenceBlockId: string, placement?: 'before' | 'after') => void;
+  updateBlock: (blockId: string, update: Partial<Block>) => void;
   removeBlocks: (blockIds: string[]) => void;
   moveBlockUp: (blockId: string) => void;
   moveBlockDown: (blockId: string) => void;
@@ -34,7 +34,7 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
   return {
     // Document & Block Operations
     getDocument: () => {
-      return editor.document;
+      return editor.document as Block[];
     },
     
     insertBlocks: (blocks, referenceBlockId, placement = 'before') => {

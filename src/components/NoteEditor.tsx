@@ -1,3 +1,4 @@
+
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/store';
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { useBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
-import { PartialBlock } from '@blocknote/core';
+import { Block } from '@blocknote/core';
 import { debounce } from 'lodash';
 import { Button } from './ui/button';
 import { Trash } from 'lucide-react';
@@ -26,7 +27,7 @@ export function NoteEditor() {
   });
   
   const editor = useBlockNote({
-    initialContent: activeNote?.content as PartialBlock[] || [],
+    initialContent: (activeNote?.content ?? []) as Block[],
   });
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export function NoteEditor() {
 
   const saveChanges = debounce(() => {
     if (editor && activeNote) {
-      const blocks = editor.document;
+      const blocks = editor.document as Block[];
       setActiveNote({
         content: blocks,
       });
@@ -75,7 +76,7 @@ export function NoteEditor() {
   useEffect(() => {
     if (editor && activeNote?.content) {
       try {
-        editor.replaceBlocks(editor.document, activeNote.content as PartialBlock[]);
+        editor.replaceBlocks(editor.document, activeNote.content);
       } catch (error) {
         console.error("Error replacing blocks:", error);
       }

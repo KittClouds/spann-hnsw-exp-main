@@ -5,13 +5,15 @@ import { BlockNoteView } from "@blocknote/mantine";
 import { useNoteInterface } from '../hooks/useNoteInterface';
 import { Button } from './ui/button';
 import { useGraph } from '../contexts/GraphContext';
+import { Block } from '@blocknote/core';
 
 export const NoteInterfaceExample = () => {
   const editor = useBlockNote({
     initialContent: [{
       type: "paragraph",
-      content: "Try out the note interface!"
-    }],
+      content: "Try out the note interface!",
+      id: "example-block-1"
+    }] as Block[],
   });
   
   const noteInterface = useNoteInterface(editor);

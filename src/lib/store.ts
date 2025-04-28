@@ -1,6 +1,7 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
-import { PartialBlock } from '@blocknote/core';
+import { Block } from '@blocknote/core';
 import { generateClusterId, generateNoteId, ClusterId, NoteId } from './utils/ids';
 
 export interface Cluster {
@@ -13,7 +14,7 @@ export interface Cluster {
 export interface Note {
   id: NoteId;
   title: string;
-  content: PartialBlock[];
+  content: Block[];
   createdAt: string;
   updatedAt: string;
   parentId: NoteId | null;
@@ -51,7 +52,8 @@ const initialNotes: Note[] = [
     content: [{ 
       type: 'paragraph',
       content: 'Welcome to Galaxy Notes! Start typing here...',
-    }] as PartialBlock[],
+      id: 'welcome-block-1'
+    }] as Block[],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
     parentId: 'note-folder-1' as NoteId,
@@ -64,7 +66,8 @@ const initialNotes: Note[] = [
     content: [{ 
       type: 'paragraph',
       content: 'Click on a note title to edit it. Create new notes with the + button.',
-    }] as PartialBlock[],
+      id: 'how-to-use-block-1'
+    }] as Block[],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),
     parentId: 'note-folder-1' as NoteId,
@@ -115,7 +118,7 @@ export const createNote = (parentId: NoteId | null = null, clusterId: ClusterId 
   const newNote: Note = {
     id: newId,
     title: 'Untitled Note',
-    content: [{ type: 'paragraph', content: '' }] as PartialBlock[],
+    content: [],
     createdAt: now,
     updatedAt: now,
     parentId,
