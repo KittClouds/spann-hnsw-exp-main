@@ -21,78 +21,82 @@ export function ConnectionsPanel() {
     <Collapsible 
       open={isOpen} 
       onOpenChange={setIsOpen}
-      className="fixed bottom-0 left-0 right-0 bg-[#0a0a0d] border-t border-border"
+      className="fixed bottom-0 left-0 right-0 bg-[#0a0a0d] border-t border-border shadow-lg"
     >
-      <header className="flex items-center justify-between px-4 py-2">
-        <div className="flex items-center gap-2">
-          <Link className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">Connections</h2>
+      <header className="flex items-center justify-between px-6 py-3 border-b border-border">
+        <div className="flex items-center gap-3">
+          <Link className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-medium">Connections</h2>
         </div>
         <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
             {isOpen ? '▼' : '▲'}
           </Button>
         </CollapsibleTrigger>
       </header>
 
       <CollapsibleContent>
-        <div className="p-4 space-y-6">
-          <div className="flex gap-2">
+        <div className="p-6 space-y-6">
+          <div className="flex gap-2 justify-center">
             <Button
               variant={activeView === 'links' ? 'secondary' : 'ghost'}
               onClick={() => setActiveView('links')}
-              className="flex-1 text-sm"
+              className="w-32 text-sm font-medium"
             >
               Links ({connections.concept.length})
             </Button>
             <Button
               variant={activeView === 'backlinks' ? 'secondary' : 'ghost'}
               onClick={() => setActiveView('backlinks')}
-              className="flex-1 text-sm"
+              className="w-32 text-sm font-medium"
             >
               Backlinks ({backlinks.length})
             </Button>
           </div>
 
           {activeView === 'links' ? (
-            <>
+            <div className="grid grid-cols-1 gap-6">
               <section>
-                <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
-                  # TAGS
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                  Tags
                 </h3>
                 <div className="space-y-2">
                   {connections.tag.length > 0 ? (
-                    connections.tag.map((tag) => (
-                      <Badge
-                        key={tag.id}
-                        variant="secondary"
-                        className="mr-2 bg-[#12141f] hover:bg-[#1a1b23] border-[#1a1b23]"
-                      >
-                        #{tag.title}
-                      </Badge>
-                    ))
+                    <div className="flex flex-wrap gap-2">
+                      {connections.tag.map((tag) => (
+                        <Badge
+                          key={tag.id}
+                          variant="secondary"
+                          className="bg-[#12141f] hover:bg-[#1a1b23] border-[#1a1b23]"
+                        >
+                          #{tag.title}
+                        </Badge>
+                      ))}
+                    </div>
                   ) : (
                     <div className="text-sm text-muted-foreground bg-[#12141f] rounded-md p-4">
-                      No tags. Use <span className="text-purple-400">@tag</span> in your note to add tags.
+                      No tags. Use <span className="text-purple-400">#tag</span> in your note to add tags.
                     </div>
                   )}
                 </div>
               </section>
 
               <section>
-                <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
-                  @ MENTIONS
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                  Mentions
                 </h3>
                 <div className="space-y-2">
                   {connections.mention.length > 0 ? (
-                    connections.mention.map((mention) => (
-                      <div
-                        key={mention.id}
-                        className="text-sm p-2 rounded-md bg-[#12141f] hover:bg-[#1a1b23] cursor-pointer"
-                      >
-                        @{mention.title}
-                      </div>
-                    ))
+                    <div className="grid gap-2">
+                      {connections.mention.map((mention) => (
+                        <div
+                          key={mention.id}
+                          className="text-sm p-3 rounded-md bg-[#12141f] hover:bg-[#1a1b23] cursor-pointer transition-colors"
+                        >
+                          @{mention.title}
+                        </div>
+                      ))}
+                    </div>
                   ) : (
                     <div className="text-sm text-muted-foreground bg-[#12141f] rounded-md p-4">
                       No mentions. Use <span className="text-purple-400">@name</span> in your note to add mentions.
@@ -102,19 +106,21 @@ export function ConnectionsPanel() {
               </section>
 
               <section>
-                <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
-                  LINKS TO NOTES
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                  Links to Notes
                 </h3>
                 <div className="space-y-2">
                   {connections.concept.length > 0 ? (
-                    connections.concept.map((link) => (
-                      <div
-                        key={link.id}
-                        className="text-sm p-2 rounded-md bg-[#12141f] hover:bg-[#1a1b23] cursor-pointer"
-                      >
-                        [[{link.title}]]
-                      </div>
-                    ))
+                    <div className="grid gap-2">
+                      {connections.concept.map((link) => (
+                        <div
+                          key={link.id}
+                          className="text-sm p-3 rounded-md bg-[#12141f] hover:bg-[#1a1b23] cursor-pointer transition-colors"
+                        >
+                          [[{link.title}]]
+                        </div>
+                      ))}
+                    </div>
                   ) : (
                     <div className="text-sm text-muted-foreground bg-[#12141f] rounded-md p-4">
                       No outgoing links. Use <span className="text-purple-400">[[note title]]</span> to link to other notes.
@@ -122,22 +128,24 @@ export function ConnectionsPanel() {
                   )}
                 </div>
               </section>
-            </>
+            </div>
           ) : (
-            <section>
-              <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
-                BACKLINKS
+            <section className="mt-6">
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                Backlinks
               </h3>
               <div className="space-y-2">
                 {backlinks.length > 0 ? (
-                  backlinks.map((link) => (
-                    <div
-                      key={link.id}
-                      className="text-sm p-2 rounded-md bg-[#12141f] hover:bg-[#1a1b23] cursor-pointer"
-                    >
-                      [[{link.title}]]
-                    </div>
-                  ))
+                  <div className="grid gap-2">
+                    {backlinks.map((link) => (
+                      <div
+                        key={link.id}
+                        className="text-sm p-3 rounded-md bg-[#12141f] hover:bg-[#1a1b23] cursor-pointer transition-colors"
+                      >
+                        [[{link.title}]]
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div className="text-sm text-muted-foreground bg-[#12141f] rounded-md p-4">
                     No backlinks to this note.
