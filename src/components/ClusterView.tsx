@@ -59,7 +59,7 @@ export function ClusterView() {
     toast.success('Cluster created successfully');
   };
 
-  const handleClusterClick = (clusterId: string) => {
+  const handleClusterClick = (clusterId: ClusterId) => {
     setActiveClusterId(clusterId);
   };
 

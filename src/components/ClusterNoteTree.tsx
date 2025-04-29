@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
 import { useAtom } from "jotai";
@@ -29,7 +28,7 @@ interface ClusterNoteTreeProps {
   clusterId: string;
 }
 
-export function ClusterNoteTree({ clusterId }: ClusterNoteTreeProps) {
+export function ClusterNoteTree({ clusterId }: { clusterId: string }) {
   const [notes, setNotes] = useAtom(notesAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   

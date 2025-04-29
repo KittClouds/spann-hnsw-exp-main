@@ -1,4 +1,3 @@
-
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/store';
 import { Input } from "@/components/ui/input";
