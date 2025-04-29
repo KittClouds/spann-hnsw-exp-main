@@ -26,14 +26,14 @@ export function AppSidebar({
       id,
       note
     } = creator(parentId, activeClusterId as ClusterId);
-    setNotes(prevNotes => [...prevNotes, note]);
+    setNotes([...notes, note]);
     if (type === 'note') {
       setActiveNoteId(id);
     }
     toast(`New ${type} created`, {
       description: type === 'note' ? "Start typing to edit your note" : "You can add notes inside this folder"
     });
-  }, [setNotes, setActiveNoteId, activeClusterId]);
+  }, [setNotes, setActiveNoteId, activeClusterId, notes]);
 
   return <Sidebar className="bg-black border-r border-[#1a1b23]" {...props}>
       <SidebarContent>
@@ -136,7 +136,7 @@ function NoteTree({
       setEditTitle(note.title);
       return;
     }
-    setNotes(prevNotes => prevNotes.map(n => n.id === note.id ? {
+    setNotes(notes_.map(n => n.id === note.id ? {
       ...n,
       title: editTitle,
       updatedAt: new Date().toISOString()
@@ -150,7 +150,7 @@ function NoteTree({
       toast.error("Cannot delete the last folder");
       return;
     }
-    setNotes(prevNotes => deleteNote(prevNotes, note.id));
+    setNotes(deleteNote(notes_, note.id));
     toast.success("Deleted successfully");
   };
 

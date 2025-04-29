@@ -14,7 +14,7 @@ export function EmptyNoteState() {
     // Make sure activeClusterId is properly cast to ClusterId type if not null
     const clusterId = activeClusterId ? activeClusterId as ClusterId : null;
     const { id, note } = createNote(null, clusterId);
-    setNotes(prevNotes => [...prevNotes, note]);
+    setNotes([...notes, note]);
     toast("New note created", {
       description: "Start typing to edit your note"
     });

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
 import { useAtom } from "jotai";
@@ -38,7 +37,7 @@ export function ClusterNoteTree({ clusterId }: ClusterNoteTreeProps) {
   const handleNewItem = useCallback((type: 'note' | 'folder', parentId: NoteId | null = null) => {
     const creator = type === 'note' ? createNote : createFolder;
     const { id, note } = creator(parentId, clusterId as ClusterId);
-    setNotes(prevNotes => [...prevNotes, note]);
+    setNotes([...notes, note]);
     if (type === 'note') {
       setActiveNoteId(id);
     }
@@ -46,7 +45,7 @@ export function ClusterNoteTree({ clusterId }: ClusterNoteTreeProps) {
     toast(`New ${type} created`, {
       description: type === 'note' ? "Start typing to edit your note" : "You can add notes inside this folder",
     });
-  }, [setNotes, setActiveNoteId, clusterId]);
+  }, [setNotes, setActiveNoteId, clusterId, notes]);
 
   if (rootNotes.length === 0) {
     return (
@@ -141,13 +140,11 @@ function ClusterNoteTreeItem({ note, notes, activeNoteId, onSelect, onNewItem, c
       return;
     }
     
-    setNotes(prevNotes => 
-      prevNotes.map(n => 
-        n.id === note.id 
-          ? { ...n, title: editTitle, updatedAt: new Date().toISOString() }
-          : n
-      )
-    );
+    setNotes(notes_.map(n => 
+      n.id === note.id 
+        ? { ...n, title: editTitle, updatedAt: new Date().toISOString() }
+        : n
+    ));
     setIsEditing(false);
     toast.success("Renamed successfully");
   };
@@ -158,7 +155,7 @@ function ClusterNoteTreeItem({ note, notes, activeNoteId, onSelect, onNewItem, c
       return;
     }
     
-    setNotes(prevNotes => deleteNote(prevNotes, note.id));
+    setNotes(deleteNote(notes_, note.id));
     toast.success("Deleted successfully");
   };
 

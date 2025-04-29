@@ -1,3 +1,4 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
@@ -107,7 +108,8 @@ export const activeNoteAtom = atom(
   }
 );
 
-export const createNote = (parentId: NoteId | null = null, clusterId: ClusterId | null = null) => {
+// Function implementations to maintain backward compatibility with components
+export function createNote(parentId: NoteId | null = null, clusterId: ClusterId | null = null) {
   const newId = generateNoteId();
   const now = getCurrentDate();
   
@@ -125,7 +127,7 @@ export const createNote = (parentId: NoteId | null = null, clusterId: ClusterId 
   return { id: newId, note: newNote };
 };
 
-export const createFolder = (parentId: NoteId | null = null, clusterId: ClusterId | null = null) => {
+export function createFolder(parentId: NoteId | null = null, clusterId: ClusterId | null = null) {
   const newId = generateNoteId();
   const now = getCurrentDate();
   
@@ -143,7 +145,7 @@ export const createFolder = (parentId: NoteId | null = null, clusterId: ClusterI
   return { id: newId, note: newFolder };
 };
 
-export const createCluster = (title: string) => {
+export function createCluster(title: string) {
   const newId = generateClusterId();
   const now = getCurrentDate();
   
@@ -174,7 +176,7 @@ export const createCluster = (title: string) => {
   };
 };
 
-export const deleteNote = (notes: Note[], id: string): Note[] => {
+export function deleteNote(notes: Note[], id: string): Note[] {
   const noteToDelete = notes.find(note => note.id === id);
   if (!noteToDelete) return notes;
 
@@ -208,3 +210,10 @@ export const getNotesByClusterId = (notes: Note[], clusterId: string | null): No
 export const getRootNotesByClusterId = (notes: Note[], clusterId: string | null): Note[] => {
   return notes.filter(note => note.clusterId === clusterId && note.parentId === null);
 };
+
+// Wrapper function for useAtom(activeNoteIdAtom) to fix type issues
+export function useActiveNoteId() {
+  const [noteId, setNoteId] = useAtom(activeNoteIdAtom);
+  const setActiveId = (id: string) => setNoteId(id);
+  return [noteId, setActiveId];
+}
