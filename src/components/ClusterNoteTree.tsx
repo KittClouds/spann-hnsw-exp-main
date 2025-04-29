@@ -29,7 +29,7 @@ interface ClusterNoteTreeProps {
   clusterId: string;
 }
 
-export function ClusterNoteTree({ clusterId }: { clusterId: string }) {
+export function ClusterNoteTree({ clusterId }: ClusterNoteTreeProps) {
   const [notes, setNotes] = useAtom(notesAtom);
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   

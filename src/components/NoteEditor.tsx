@@ -101,7 +101,7 @@ export function NoteEditor() {
     
     const noteIndex = notes.findIndex(note => note.id === activeNoteId);
     
-    setNotes(prevNotes => deleteNote(prevNotes, activeNoteId!));
+    setNotes(prevNotes => deleteNote(prevNotes, activeNoteId));
     
     const nextNoteIndex = noteIndex < notes.length - 1 ? noteIndex : noteIndex - 1;
     const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
