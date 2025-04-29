@@ -1,3 +1,4 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
@@ -35,8 +36,6 @@ const initialCluster: Cluster = {
   updatedAt: getCurrentDate(),
 };
 
-// Updated initialNotes to have clusterId: null instead of initialCluster.id
-// so they appear in the "Folders" tab by default
 const initialNotes: Note[] = [
   {
     id: 'note-folder-1' as NoteId,
@@ -46,7 +45,7 @@ const initialNotes: Note[] = [
     updatedAt: getCurrentDate(),
     parentId: null,
     type: 'folder',
-    clusterId: null // Changed from initialCluster.id to null
+    clusterId: initialCluster.id
   },
   { 
     id: generateNoteId(),
@@ -58,7 +57,7 @@ const initialNotes: Note[] = [
     updatedAt: getCurrentDate(),
     parentId: 'note-folder-1' as NoteId,
     type: 'note',
-    clusterId: null // Changed from initialCluster.id to null
+    clusterId: initialCluster.id
   },
   { 
     id: generateNoteId(),
@@ -70,7 +69,7 @@ const initialNotes: Note[] = [
     updatedAt: getCurrentDate(),
     parentId: 'note-folder-1' as NoteId,
     type: 'note',
-    clusterId: null // Changed from initialCluster.id to null
+    clusterId: initialCluster.id
   },
 ];
 
@@ -218,3 +217,4 @@ export const setActiveNoteId = (id: string) => {
   // This function will be used in components with the useAtom hook
   return id;
 };
+

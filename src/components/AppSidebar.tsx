@@ -18,16 +18,14 @@ export function AppSidebar({
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [activeClusterId] = useAtom(activeClusterIdAtom);
   const [activeTab, setActiveTab] = useState<string>("folders");
-  
-  // Updated filter to show only root notes with clusterId === null in the Folders tab
-  const rootNotes = notes.filter(note => note.parentId === null && note.clusterId === null);
+  const rootNotes = notes.filter(note => note.parentId === null && note.clusterId === activeClusterId);
 
   const handleNewItem = React.useCallback((type: 'note' | 'folder', parentId: NoteId | null = null) => {
     const creator = type === 'note' ? createNote : createFolder;
     const {
       id,
       note
-    } = creator(parentId, null); // Explicitly passing null as clusterId
+    } = creator(parentId, activeClusterId as ClusterId);
     setNotes([...notes, note]);
     if (type === 'note') {
       setActiveNoteId(id);
@@ -35,7 +33,7 @@ export function AppSidebar({
     toast(`New ${type} created`, {
       description: type === 'note' ? "Start typing to edit your note" : "You can add notes inside this folder"
     });
-  }, [setNotes, setActiveNoteId, notes]);
+  }, [setNotes, setActiveNoteId, activeClusterId, notes]);
 
   return <Sidebar className="bg-black border-r border-[#1a1b23]" {...props}>
       <SidebarContent>
