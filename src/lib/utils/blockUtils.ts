@@ -1,23 +1,10 @@
 
-import { 
-  Block, 
-  PartialInlineContent,
-  defaultInlineContentSpecs,
-  defaultStyleSpecs
-} from "@blocknote/core";
-
-/**
- * Type alias for default PartialInlineContent with proper generics
- */
-export type DefaultPartialInlineContent = PartialInlineContent<
-  typeof defaultInlineContentSpecs,
-  typeof defaultStyleSpecs
->;
+import { Block, PartialInlineContent } from "@blocknote/core";
 
 /**
  * Creates a text object for BlockNote content
  */
-export const createStyledText = (text: string): DefaultPartialInlineContent => ({
+export const createStyledText = (text: string): PartialInlineContent => ({
   type: "text",
   text,
   styles: {},
