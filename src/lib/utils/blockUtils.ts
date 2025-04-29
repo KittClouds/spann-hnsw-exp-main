@@ -1,20 +1,10 @@
 
 import { 
   Block, 
-  PartialInlineContent,
   InlineContent,
-  StyledText,
   defaultInlineContentSpecs,
   defaultStyleSpecs
 } from "@blocknote/core";
-
-/**
- * Type alias for PartialInlineContent with default BlockNote specs
- */
-export type DefaultPartialInlineContent = PartialInlineContent<
-  typeof defaultInlineContentSpecs,
-  typeof defaultStyleSpecs
->;
 
 /**
  * Creates a text object for BlockNote content
