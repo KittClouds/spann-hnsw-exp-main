@@ -1,8 +1,9 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { graphService } from '../services/GraphService';
 import { NodeType, EdgeType, ElementDefinition, GraphJSON } from '../services/types';
 import { useAtom } from 'jotai';
-import { notesAtom, clustersAtom, Note, Cluster, graphInitializedAtom } from '@/lib/store';
+import { notesAtom, clustersAtom, Note, Cluster, graphInitializedAtom, STANDARD_ROOT_ID } from '@/lib/store';
 import { ClusterId } from '@/lib/utils/ids';
 
 interface GraphContextType {
@@ -36,10 +37,14 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   useEffect(() => {
     if (!initialized) {
       console.log("Initializing graph with notes and clusters", { notes, clusters });
+      console.log(`Standard root node ID: ${STANDARD_ROOT_ID} - Notes with clusterId: null will be associated with this node`);
       
       if (!clusters.some(c => c.id === 'cluster-default')) {
         console.warn("Default cluster missing from store during initialization");
       }
+      
+      const standardNotes = notes.filter(note => note.clusterId === null);
+      console.log(`Found ${standardNotes.length} notes associated with standard_root`);
       
       graphService.importFromStore(notes, clusters);
       setInitialized(true);
