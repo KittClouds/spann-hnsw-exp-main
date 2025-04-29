@@ -1,7 +1,7 @@
 
 import { atom } from 'jotai';
 import { atomWithStorage, atomFamily } from 'jotai/utils';
-import { atomWithImmer } from 'jotai-immer'; // Import Immer integration
+import { atomWithImmer } from 'jotai-immer'; 
 import { Block } from '@blocknote/core';
 import { generateClusterId, generateNoteId, ClusterId, NoteId } from './utils/ids';
 import { createParagraphBlock } from './utils/blockUtils';
@@ -130,8 +130,6 @@ function loadWithMigration<T>(
 }
 
 // --- Core Atoms ---
-
-// For backward compatibility - export notesAtom that maps to allNotesAtom
 export const clustersAtom = atomWithStorage<Cluster[]>('galaxy-notes-clusters', [initialCluster]);
 export const activeClusterIdAtom = atom<ClusterId | null>(initialCluster.id);
 
@@ -155,9 +153,17 @@ export const notesMapAtom = atomWithImmer(
   )
 );
 
-// Export for backward compatibility
+// Export a compatible notesAtom for backward compatibility
 export const notesAtom = atom(
-  (get) => Object.values(get(notesMapAtom))
+  (get) => Object.values(get(notesMapAtom)),
+  (get, set, newNotes: Note[]) => {
+    // Convert array to map for updating
+    const notesMap: NotesMap = {};
+    newNotes.forEach(note => {
+      notesMap[note.id] = note;
+    });
+    set(notesMapAtom, notesMap);
+  }
 );
 
 // Active Note ID Atom
@@ -469,3 +475,4 @@ export const notesByTagAtom = atomFamily((tag: string) =>
 
 export const graphInitializedAtom = atom<boolean>(false);
 export const graphLayoutAtom = atom<string>('dagre');
+
