@@ -19,8 +19,8 @@ export type DefaultPartialInlineContent = PartialInlineContent<
 /**
  * Creates a text object for BlockNote content
  */
-export const createStyledText = (text: string): StyledText<typeof defaultStyleSpecs> => ({
-  type: "text",
+export const createStyledText = (text: string) => ({
+  type: "text" as const,
   text,
   styles: {}
 });
