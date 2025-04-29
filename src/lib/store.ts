@@ -1,11 +1,9 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
 import { generateClusterId, generateNoteId, ClusterId, NoteId } from './utils/ids';
 import { createParagraphBlock } from './utils/blockUtils';
-
-// Define standard root ID constant to make it explicit throughout the codebase
-export const STANDARD_ROOT_ID = 'standard_root';
 
 export interface Cluster {
   id: ClusterId;
@@ -38,8 +36,6 @@ const initialCluster: Cluster = {
   updatedAt: getCurrentDate(),
 };
 
-// Initial notes are now explicitly associated with null clusterId
-// This ensures they belong to standard_root and not any cluster
 const initialNotes: Note[] = [
   {
     id: 'note-folder-1' as NoteId,
@@ -49,7 +45,7 @@ const initialNotes: Note[] = [
     updatedAt: getCurrentDate(),
     parentId: null,
     type: 'folder',
-    clusterId: null // This note belongs to standard_root, not any cluster
+    clusterId: initialCluster.id
   },
   { 
     id: generateNoteId(),
@@ -61,7 +57,7 @@ const initialNotes: Note[] = [
     updatedAt: getCurrentDate(),
     parentId: 'note-folder-1' as NoteId,
     type: 'note',
-    clusterId: null // This note belongs to standard_root, not any cluster
+    clusterId: initialCluster.id
   },
   { 
     id: generateNoteId(),
@@ -73,7 +69,7 @@ const initialNotes: Note[] = [
     updatedAt: getCurrentDate(),
     parentId: 'note-folder-1' as NoteId,
     type: 'note',
-    clusterId: null // This note belongs to standard_root, not any cluster
+    clusterId: initialCluster.id
   },
 ];
 
@@ -210,19 +206,9 @@ export const getNotesByClusterId = (notes: Note[], clusterId: string | null): No
   return notes.filter(note => note.clusterId === clusterId);
 };
 
-// Helper to get root notes by cluster or associated with standard_root
+// Helper to get root notes by cluster
 export const getRootNotesByClusterId = (notes: Note[], clusterId: string | null): Note[] => {
   return notes.filter(note => note.clusterId === clusterId && note.parentId === null);
-};
-
-// Helper to get standard notes (notes not associated with any cluster)
-export const getStandardNotes = (notes: Note[]): Note[] => {
-  return notes.filter(note => note.clusterId === null);
-};
-
-// Helper to get root standard notes (notes not associated with any cluster and with no parent)
-export const getRootStandardNotes = (notes: Note[]): Note[] => {
-  return notes.filter(note => note.clusterId === null && note.parentId === null);
 };
 
 // Create a type-safe atom wrapper for activeNoteIdAtom
@@ -231,3 +217,4 @@ export const setActiveNoteId = (id: string) => {
   // This function will be used in components with the useAtom hook
   return id;
 };
+
