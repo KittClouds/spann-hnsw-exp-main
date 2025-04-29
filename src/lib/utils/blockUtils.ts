@@ -1,10 +1,10 @@
 
-import { Block, InlineContent } from "@blocknote/core";
+import { Block, PartialInlineContent } from "@blocknote/core";
 
 /**
  * Creates a text object for BlockNote content
  */
-export const createStyledText = (text: string): InlineContent => ({
+export const createStyledText = (text: string): PartialInlineContent => ({
   type: "text",
   text,
   styles: {},
