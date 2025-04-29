@@ -1,10 +1,11 @@
 
 import { 
   Block, 
-  PartialInlineContent, 
-  defaultInlineContentSpecs, 
-  defaultStyleSpecs,
-  StyledText
+  PartialInlineContent,
+  InlineContent,
+  StyledText,
+  defaultInlineContentSpecs,
+  defaultStyleSpecs
 } from "@blocknote/core";
 
 /**
@@ -21,7 +22,7 @@ export type DefaultPartialInlineContent = PartialInlineContent<
 export const createStyledText = (text: string): StyledText<typeof defaultStyleSpecs> => ({
   type: "text",
   text,
-  styles: {},
+  styles: {}
 });
 
 /**
