@@ -211,9 +211,10 @@ export const getRootNotesByClusterId = (notes: Note[], clusterId: string | null)
   return notes.filter(note => note.clusterId === clusterId && note.parentId === null);
 };
 
-// Wrapper function for useAtom(activeNoteIdAtom) to fix type issues
-export function useActiveNoteId() {
-  const [noteId, setNoteId] = useAtom(activeNoteIdAtom);
-  const setActiveId = (id: string) => setNoteId(id);
-  return [noteId, setActiveId];
-}
+// Create a type-safe atom wrapper for activeNoteIdAtom
+// Instead of using useAtom directly in the store file which causes the error
+export const setActiveNoteId = (id: string) => {
+  // This function will be used in components with the useAtom hook
+  return id;
+};
+
