@@ -1,7 +1,18 @@
+
 import React, { useState } from "react";
 import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
 import { useAtom } from "jotai";
-import { notesAtom, activeNoteIdAtom, createNote, createFolder, Note, clustersAtom, activeClusterIdAtom, deleteNote } from "@/lib/store";
+import { 
+  notesAtom, 
+  activeNoteIdAtom, 
+  createNote, 
+  createFolder, 
+  Note, 
+  clustersAtom, 
+  activeClusterIdAtom, 
+  deleteNote,
+  STANDARD_ROOT_ID 
+} from "@/lib/store";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -18,26 +29,36 @@ export function AppSidebar({
   const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
   const [activeClusterId] = useAtom(activeClusterIdAtom);
   const [activeTab, setActiveTab] = useState<string>("folders");
-  const rootNotes = notes.filter(note => note.parentId === null && note.clusterId === activeClusterId);
+  
+  // For the Folders tab, only show notes that belong to standard_root (clusterId === null)
+  // This ensures complete separation between standard notes and cluster notes
+  const rootStandardNotes = notes.filter(note => note.parentId === null && note.clusterId === null);
 
   const handleNewItem = React.useCallback((type: 'note' | 'folder', parentId: NoteId | null = null) => {
     const creator = type === 'note' ? createNote : createFolder;
+    
+    // When creating notes/folders in Folders tab, explicitly use null clusterId
+    // When creating notes/folders in Clusters tab, use activeClusterId
+    const clusterId = activeTab === "folders" ? null : activeClusterId as ClusterId;
+    
     const {
       id,
       note
-    } = creator(parentId, activeClusterId as ClusterId);
+    } = creator(parentId, clusterId);
+    
     setNotes([...notes, note]);
     if (type === 'note') {
       setActiveNoteId(id);
     }
+    
     toast(`New ${type} created`, {
       description: type === 'note' ? "Start typing to edit your note" : "You can add notes inside this folder"
     });
-  }, [setNotes, setActiveNoteId, activeClusterId, notes]);
+  }, [setNotes, setActiveNoteId, activeClusterId, notes, activeTab]);
 
   return <Sidebar className="bg-black border-r border-[#1a1b23]" {...props}>
       <SidebarContent>
-        <Tabs defaultValue="folders" className="w-full">
+        <Tabs defaultValue="folders" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="w-full grid grid-cols-2 bg-transparent border-b border-[#1a1b23] rounded-none p-0 h-auto">
             <TabsTrigger value="folders" className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 sidebar-tab-inactive data-[state=active]:sidebar-tab-active">
               Folders
@@ -48,7 +69,9 @@ export function AppSidebar({
           </TabsList>
           <TabsContent value="folders" className="mt-0">
             <SidebarGroup>
-              <SidebarGroupLabel className="text-xs text-muted-foreground uppercase tracking-wider">Notes</SidebarGroupLabel>
+              <SidebarGroupLabel className="text-xs text-muted-foreground uppercase tracking-wider">
+                Notes ({STANDARD_ROOT_ID})
+              </SidebarGroupLabel>
               <SidebarGroupAction>
                 <DropdownMenu>
                   <DropdownMenuTrigger>
@@ -68,7 +91,16 @@ export function AppSidebar({
               </SidebarGroupAction>
               <SidebarGroupContent>
                 <SidebarMenu className="px-1">
-                  {rootNotes.map(note => <NoteTree key={note.id} note={note} notes={notes} activeNoteId={activeNoteId} onSelect={setActiveNoteId} onNewItem={handleNewItem} />)}
+                  {rootStandardNotes.map(note => (
+                    <NoteTree 
+                      key={note.id} 
+                      note={note} 
+                      notes={notes} 
+                      activeNoteId={activeNoteId} 
+                      onSelect={setActiveNoteId} 
+                      onNewItem={handleNewItem} 
+                    />
+                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
