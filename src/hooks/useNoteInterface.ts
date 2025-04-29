@@ -1,4 +1,3 @@
-
 import { BlockNoteEditor, Block } from '@blocknote/core';
 import { createStyledText } from '@/lib/utils/blockUtils';
 
@@ -34,6 +33,7 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
 
   return {
     // Document & Block Operations
+    
     getDocument: () => {
       return editor.document as Block[];
     },

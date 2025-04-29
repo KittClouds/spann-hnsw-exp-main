@@ -6,7 +6,7 @@ import { useNoteInterface } from '../hooks/useNoteInterface';
 import { Button } from './ui/button';
 import { useGraph } from '../contexts/GraphContext';
 import { Block } from '@blocknote/core';
-import { createParagraphBlock, createStyledText } from '../lib/utils/blockUtils';
+import { createParagraphBlock } from '../lib/utils/blockUtils';
 
 export const NoteInterfaceExample = () => {
   const editor = useBlockNote({
