@@ -76,12 +76,15 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     },
     
     insertText: (text) => {
-      // Since we can't directly use transact, we can use another approach
       const cursorPosition = editor.getTextCursorPosition();
       if (cursorPosition) {
         editor.insertBlocks([{
           type: "paragraph",
-          props: {},
+          props: {
+            backgroundColor: "default",
+            textColor: "default",
+            textAlignment: "left"
+          },
           content: [createStyledText(text)]
         }], cursorPosition.block.id, 'after');
       }

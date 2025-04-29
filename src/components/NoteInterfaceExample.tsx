@@ -6,7 +6,7 @@ import { useNoteInterface } from '../hooks/useNoteInterface';
 import { Button } from './ui/button';
 import { useGraph } from '../contexts/GraphContext';
 import { Block } from '@blocknote/core';
-import { createParagraphBlock } from '../lib/utils/blockUtils';
+import { createParagraphBlock, createStyledText } from '../lib/utils/blockUtils';
 
 export const NoteInterfaceExample = () => {
   const editor = useBlockNote({
@@ -25,7 +25,11 @@ export const NoteInterfaceExample = () => {
     
     noteInterface.insertBlocks([{
       type: "paragraph",
-      props: {},
+      props: {
+        backgroundColor: "default",
+        textColor: "default",
+        textAlignment: "left"
+      },
       content: [{
         type: "text",
         text: "New block added programmatically!",

@@ -1,10 +1,10 @@
 
-import { Block, StyledText } from "@blocknote/core";
+import { Block, InlineContent } from "@blocknote/core";
 
 /**
- * Creates a StyledText object for BlockNote content
+ * Creates a text object for BlockNote content
  */
-export const createStyledText = (text: string): StyledText => ({
+export const createStyledText = (text: string): InlineContent => ({
   type: "text",
   text,
   styles: {},
@@ -16,7 +16,11 @@ export const createStyledText = (text: string): StyledText => ({
 export const createParagraphBlock = (text: string, id?: string): Block => ({
   id: id || `block-${Math.random().toString(36).substring(2, 9)}`,
   type: "paragraph",
-  props: {},
+  props: {
+    backgroundColor: "default",
+    textColor: "default",
+    textAlignment: "left"
+  },
   content: [createStyledText(text)],
   children: [],
 });
@@ -38,7 +42,11 @@ export const convertSimpleBlockToProperBlock = (block: any): Block => {
   return {
     id: block.id || `block-${Math.random().toString(36).substring(2, 9)}`,
     type: block.type || "paragraph",
-    props: block.props || {},
+    props: block.type === "paragraph" ? {
+      backgroundColor: "default",
+      textColor: "default",
+      textAlignment: "left"
+    } : block.props || {},
     content: typeof block.content === 'string' 
       ? [createStyledText(block.content)] 
       : [],
