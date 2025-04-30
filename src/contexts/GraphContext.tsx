@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { graphService } from '../services/GraphService';
 import { syncManager } from '../services/SyncManager';
@@ -24,10 +25,7 @@ interface GraphContextType {
   getRelatedNotes: (noteId: string) => any[];
   getBacklinks: (noteId: string) => any[];
   tagNote: (noteId: string, tagName: string) => boolean;
-  getConnections: (nodeId: string) => Record<'tag' | 'concept' | 'mention', any[]>;
-  addConceptLink: (sourceId: string, targetId: string) => boolean;
-  registerConcept: (noteId: string, conceptName: string) => boolean;
-  addMention: (sourceId: string, targetId: string) => boolean;
+  getConnections: (noteId: string) => Record<'tag' | 'concept' | 'mention', any[]>;
 }
 
 const GraphContext = createContext<GraphContextType | undefined>(undefined);
@@ -152,46 +150,6 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     
     getConnections: (noteId) => {
       return graphService.getConnections(noteId);
-    },
-    
-    addConceptLink: (sourceId: string, targetId: string) => {
-      return graphService.addEdge(
-        sourceId,
-        targetId,
-        EdgeType.HAS_CONCEPT
-      );
-    },
-    
-    registerConcept: (noteId: string, conceptName: string) => {
-      const conceptId = `concept-${conceptName.toLowerCase().replace(/\s+/g, '-')}`;
-      let conceptNode = graphService.getGraph().getElementById(conceptId);
-      
-      if (conceptNode.empty()) {
-        graphService.getGraph().add({
-          group: 'nodes',
-          data: {
-            id: conceptId,
-            type: NodeType.CONCEPT,
-            title: conceptName
-          }
-        });
-        
-        conceptNode = graphService.getGraph().getElementById(conceptId);
-      }
-      
-      return graphService.addEdge(
-        noteId,
-        conceptId,
-        EdgeType.HAS_CONCEPT
-      );
-    },
-    
-    addMention: (sourceId: string, targetId: string) => {
-      return graphService.addEdge(
-        sourceId,
-        targetId,
-        EdgeType.MENTIONS
-      );
     }
   };
 

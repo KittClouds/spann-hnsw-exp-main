@@ -3,7 +3,6 @@ import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/s
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback } from 'react';
 import { useBlockNote } from "@blocknote/react";
-import { defaultBlockSchema } from "@blocknote/core"; // Fix: import defaultBlockSchema instead of createSchema
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
@@ -14,8 +13,6 @@ import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConnectionsPanel } from './connections/ConnectionsPanel';
 import { EmptyNoteState } from './EmptyNoteState';
-import { useNoteConnections } from '@/hooks/useNoteConnections';
-import { useNoteInterface } from '@/hooks/useNoteInterface';
 
 export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
@@ -28,35 +25,9 @@ export function NoteEditor() {
     return 'dark';
   });
   
-  // Initialize the editor with customized styling for wiki links, tags, and mentions
   const editor = useBlockNote({
     initialContent: (activeNote?.content ?? []) as Block[],
-    // We'll use a simpler approach with customized styling instead of a custom schema
-    onStyleText: (textBlock) => {
-      const text = textBlock.text || "";
-      // Add different styling for different types of connections
-      if (/\[\[.+?\]\]/.test(text)) {
-        return { class: "bg-blue-100 dark:bg-blue-900 rounded px-1" };
-      }
-      if (/#[\w-]+/.test(text)) {
-        return { class: "text-green-600 dark:text-green-400 font-medium" };
-      } 
-      if (/@[\w-]+/.test(text)) {
-        return { class: "text-purple-600 dark:text-purple-400 font-medium" };
-      }
-      return {};
-    },
-    // Add basic styling for the editor
-    domAttributes: {
-      editor: {
-        class: "prose dark:prose-invert"
-      }
-    }
   });
-
-  // Initialize hooks for note connections and interface
-  const { updateConnections } = useNoteConnections();
-  const noteInterface = useNoteInterface(editor);
 
   useEffect(() => {
     const handleThemeChange = () => {
@@ -86,11 +57,6 @@ export function NoteEditor() {
       setActiveNote({
         content: blocks,
       });
-      
-      // Update connections when content changes
-      if (activeNoteId) {
-        updateConnections(activeNoteId, blocks);
-      }
     }
   }, 500);
 
@@ -104,7 +70,7 @@ export function NoteEditor() {
     return () => {
       saveChanges.cancel();
     };
-  }, [editor, saveChanges, activeNote, activeNoteId]);
+  }, [editor, saveChanges, activeNote]);
 
   useEffect(() => {
     if (editor && activeNote?.content) {

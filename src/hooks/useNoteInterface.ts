@@ -1,3 +1,4 @@
+
 import { BlockNoteEditor, Block } from '@blocknote/core';
 import { createStyledText } from '@/lib/utils/blockUtils';
 
@@ -24,44 +25,12 @@ export interface NoteInterface {
   setCursorToBlock: (blockId: string, placement?: 'start' | 'end') => void;
   getSelection: () => { blocks: Block[] } | undefined;
   setSelection: (startBlockId: string, endBlockId: string) => void;
-  
-  // Connection Operations
-  insertWikiLink: (title: string) => void;
-  insertTag: (tagName: string) => void;
-  insertMention: (username: string) => void;
 }
 
 export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
   if (!editor) {
     throw new Error('BlockNoteEditor instance is required');
   }
-
-  const insertAtCursor = (text: string) => {
-    editor.focus();
-    
-    // For BlockNote API versions, we need to use different approaches
-    // for inserting text at the cursor position
-    try {
-      // Get the current position
-      const position = editor.getTextCursorPosition();
-      
-      // Create a new text block with the content
-      const newBlock = {
-        type: "paragraph",
-        props: {
-          backgroundColor: "default",
-          textColor: "default",
-          textAlignment: "left"
-        },
-        content: [createStyledText(text)]
-      };
-      
-      // Insert at cursor position
-      editor.insertBlocks([newBlock], position.block.id, 'after');
-    } catch (error) {
-      console.error("Error inserting text at cursor:", error);
-    }
-  };
 
   return {
     // Document & Block Operations
@@ -154,19 +123,6 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     
     setSelection: (startBlockId, endBlockId) => {
       editor.setSelection(startBlockId, endBlockId);
-    },
-    
-    // Connection Operations
-    insertWikiLink: (title: string) => {
-      insertAtCursor(`[[${title}]]`);
-    },
-    
-    insertTag: (tagName: string) => {
-      insertAtCursor(`#${tagName}`);
-    },
-    
-    insertMention: (username: string) => {
-      insertAtCursor(`@${username}`);
     }
   };
 };
