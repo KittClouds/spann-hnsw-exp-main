@@ -1,12 +1,11 @@
-
-import { BlockNoteEditor, Block, PartialBlock } from '@blocknote/core';
+import { BlockNoteEditor, Block } from '@blocknote/core';
 import { createStyledText } from '@/lib/utils/blockUtils';
 
 export interface NoteInterface {
   // Document & Block Operations
   getDocument: () => Block[];
-  insertBlocks: (blocks: PartialBlock[], referenceBlockId: string, placement?: 'before' | 'after') => void;
-  updateBlock: (blockId: string, update: PartialBlock) => void;
+  insertBlocks: (blocks: Partial<Block>[], referenceBlockId: string, placement?: 'before' | 'after') => void;
+  updateBlock: (blockId: string, update: Partial<Block>) => void;
   removeBlocks: (blockIds: string[]) => void;
   moveBlockUp: (blockId: string) => void;
   moveBlockDown: (blockId: string) => void;
@@ -40,20 +39,27 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
   const insertAtCursor = (text: string) => {
     editor.focus();
     
+    // For BlockNote API versions, we need to use different approaches
+    // for inserting text at the cursor position
     try {
-      // Insert text using editor's transaction API instead of directly creating blocks
-      editor.transact((tr) => {
-        tr.insertText(text);
-      });
+      // Get the current position
+      const position = editor.getTextCursorPosition();
+      
+      // Create a new text block with the content
+      const newBlock = {
+        type: "paragraph",
+        props: {
+          backgroundColor: "default",
+          textColor: "default",
+          textAlignment: "left"
+        },
+        content: [createStyledText(text)]
+      };
+      
+      // Insert at cursor position
+      editor.insertBlocks([newBlock], position.block.id, 'after');
     } catch (error) {
       console.error("Error inserting text at cursor:", error);
-      // Fallback method - alternative approach if the above fails
-      try {
-        const position = editor.getTextCursorPosition();
-        editor.insertText(text);
-      } catch (e) {
-        console.error("Fallback insertion also failed:", e);
-      }
     }
   };
 
@@ -102,24 +108,17 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     },
     
     insertText: (text) => {
-      try {
-        // First try to insert at the current position
-        editor.focus();
-        editor.transact((tr) => {
-          tr.insertText(text);
-        });
-      } catch (error) {
-        console.error("Error inserting text:", error);
-        // Fallback to a different method if needed
-        try {
-          const cursorPosition = editor.getTextCursorPosition();
-          if (cursorPosition) {
-            // Use editor.insertText if available
-            editor.insertText(text);
-          }
-        } catch (e) {
-          console.error("Fallback text insertion failed:", e);
-        }
+      const cursorPosition = editor.getTextCursorPosition();
+      if (cursorPosition) {
+        editor.insertBlocks([{
+          type: "paragraph",
+          props: {
+            backgroundColor: "default",
+            textColor: "default",
+            textAlignment: "left"
+          },
+          content: [createStyledText(text)]
+        }], cursorPosition.block.id, 'after');
       }
     },
     

@@ -3,10 +3,11 @@ import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/s
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback } from 'react';
 import { useBlockNote } from "@blocknote/react";
-import { defaultBlockSchema, Block } from "@blocknote/core";
+import { defaultBlockSchema } from "@blocknote/core"; // Fix: import defaultBlockSchema instead of createSchema
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
+import { Block } from '@blocknote/core';
 import { debounce } from 'lodash';
 import { Button } from './ui/button';
 import { Trash } from 'lucide-react';
@@ -27,17 +28,28 @@ export function NoteEditor() {
     return 'dark';
   });
   
-  // Initialize the editor with content and custom styling through CSS
+  // Initialize the editor with customized styling for wiki links, tags, and mentions
   const editor = useBlockNote({
     initialContent: (activeNote?.content ?? []) as Block[],
+    // We'll use a simpler approach with customized styling instead of a custom schema
+    onStyleText: (textBlock) => {
+      const text = textBlock.text || "";
+      // Add different styling for different types of connections
+      if (/\[\[.+?\]\]/.test(text)) {
+        return { class: "bg-blue-100 dark:bg-blue-900 rounded px-1" };
+      }
+      if (/#[\w-]+/.test(text)) {
+        return { class: "text-green-600 dark:text-green-400 font-medium" };
+      } 
+      if (/@[\w-]+/.test(text)) {
+        return { class: "text-purple-600 dark:text-purple-400 font-medium" };
+      }
+      return {};
+    },
     // Add basic styling for the editor
     domAttributes: {
       editor: {
         class: "prose dark:prose-invert"
-      },
-      blockContent: {
-        // Apply special styling for wiki links, tags, and mentions via CSS selectors
-        class: "wiki-links tags-and-mentions"
       }
     }
   });
@@ -163,36 +175,6 @@ export function NoteEditor() {
         </div>
         
         <div className="flex-1 bg-[#12141f] rounded-md shadow-xl border-[#1a1b23] transition-all duration-200 mb-12 overflow-auto">
-          <style jsx global>{`
-            /* Custom styling for wiki links, tags and mentions */
-            .wiki-links .bn-text:has(:is(span, div):not(.bn-link):-webkit-any(:contains("[["), :contains("]]"))) {
-              background-color: rgba(59, 130, 246, 0.1);
-              border-radius: 0.25rem;
-              padding: 0 0.25rem;
-            }
-            
-            .tags-and-mentions .bn-text:has(:is(span, div):not(.bn-link):-webkit-any(:contains("#"))) {
-              color: rgb(22, 163, 74);
-              font-weight: 500;
-            }
-            
-            .tags-and-mentions .bn-text:has(:is(span, div):not(.bn-link):-webkit-any(:contains("@"))) {
-              color: rgb(147, 51, 234);
-              font-weight: 500;
-            }
-            
-            @media (prefers-color-scheme: dark) {
-              .wiki-links .bn-text:has(:is(span, div):not(.bn-link):-webkit-any(:contains("[["), :contains("]]"))) {
-                background-color: rgba(30, 64, 175, 0.3);
-              }
-              .tags-and-mentions .bn-text:has(:is(span, div):not(.bn-link):-webkit-any(:contains("#"))) {
-                color: rgb(74, 222, 128);
-              }
-              .tags-and-mentions .bn-text:has(:is(span, div):not(.bn-link):-webkit-any(:contains("@"))) {
-                color: rgb(192, 132, 252);
-              }
-            }
-          `}</style>
           <BlockNoteView 
             editor={editor} 
             theme={theme}
