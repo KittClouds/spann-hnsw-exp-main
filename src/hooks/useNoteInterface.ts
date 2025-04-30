@@ -37,35 +37,23 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     throw new Error('BlockNoteEditor instance is required');
   }
 
-  // Helper function to insert text at the current cursor position
   const insertAtCursor = (text: string) => {
     editor.focus();
     
     try {
-      // Use the currently selected block to insert text
-      const position = editor.getTextCursorPosition();
-      if (position && position.block) {
-        const blockId = position.block.id;
-        
-        // Get the current block
-        const currentBlock = editor.getBlock(blockId);
-        if (currentBlock) {
-          // Prepare the content with the new text
-          let newContent;
-          if (Array.isArray(currentBlock.content)) {
-            newContent = [...currentBlock.content, createStyledText(text)];
-          } else {
-            newContent = [createStyledText(text)];
-          }
-          
-          // Update the block with the new content
-          editor.updateBlock(blockId, { 
-            content: newContent
-          });
-        }
-      }
+      // Insert text using editor's transaction API instead of directly creating blocks
+      editor.transact((tr) => {
+        tr.insertText(text);
+      });
     } catch (error) {
       console.error("Error inserting text at cursor:", error);
+      // Fallback method - alternative approach if the above fails
+      try {
+        const position = editor.getTextCursorPosition();
+        editor.insertText(text);
+      } catch (e) {
+        console.error("Fallback insertion also failed:", e);
+      }
     }
   };
 
@@ -114,32 +102,24 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     },
     
     insertText: (text) => {
-      editor.focus();
-      
       try {
-        // Get the current cursor position
-        const cursorPosition = editor.getTextCursorPosition();
-        if (cursorPosition) {
-          const blockId = cursorPosition.block.id;
-          const currentBlock = editor.getBlock(blockId);
-          
-          if (currentBlock) {
-            // Create new content array with the additional text
-            let newContent;
-            if (Array.isArray(currentBlock.content)) {
-              newContent = [...currentBlock.content, createStyledText(text)];
-            } else {
-              newContent = [createStyledText(text)];
-            }
-            
-            // Update the block with the new content
-            editor.updateBlock(blockId, { 
-              content: newContent
-            });
-          }
-        }
+        // First try to insert at the current position
+        editor.focus();
+        editor.transact((tr) => {
+          tr.insertText(text);
+        });
       } catch (error) {
         console.error("Error inserting text:", error);
+        // Fallback to a different method if needed
+        try {
+          const cursorPosition = editor.getTextCursorPosition();
+          if (cursorPosition) {
+            // Use editor.insertText if available
+            editor.insertText(text);
+          }
+        } catch (e) {
+          console.error("Fallback text insertion failed:", e);
+        }
       }
     },
     
