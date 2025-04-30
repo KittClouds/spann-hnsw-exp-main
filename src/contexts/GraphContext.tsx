@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { graphService } from '../services/GraphService';
+import { syncManager } from '../services/SyncManager';
 import { NodeType, EdgeType, ElementDefinition, GraphJSON } from '../services/types';
 import { useAtom } from 'jotai';
 import { notesAtom, clustersAtom, Note, Cluster, graphInitializedAtom, STANDARD_ROOT_ID } from '@/lib/store';
@@ -46,19 +47,18 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
       const standardNotes = notes.filter(note => note.clusterId === null);
       console.log(`Found ${standardNotes.length} notes associated with standard_root`);
       
-      graphService.importFromStore(notes, clusters);
+      syncManager.importFromStore(notes, clusters);
       setInitialized(true);
     }
   }, [notes, clusters, initialized, setInitialized]);
 
   const value: GraphContextType = {
     importNotes: () => {
-      graphService.importFromStore(notes, clusters);
+      syncManager.importFromStore(notes, clusters);
     },
     
     exportNotes: () => {
-      const { notes, clusters } = graphService.exportToStore();
-      return { notes, clusters };
+      return syncManager.exportToStore();
     },
     
     exportGraphJSON: () => {
@@ -82,40 +82,44 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     addNote: (note) => {
       let clusterId = note.clusterId || undefined;
       
-      const node = graphService.addNote({
-        title: note.title || 'Untitled Note',
-        content: note.content || [],
-        ...note
-      }, note.parentId, clusterId);
+      const id = syncManager.addNoteToGraph(
+        {
+          title: note.title || 'Untitled Note',
+          content: note.content || [],
+          ...note
+        },
+        note.parentId || null, 
+        note.clusterId || null
+      );
       
-      return node.id();
+      return id;
     },
     
     updateNote: (id, updates) => {
-      return graphService.updateNote(id, updates);
+      return syncManager.updateNoteInGraph(id, updates);
     },
     
     deleteNote: (id) => {
-      return graphService.deleteNote(id);
+      return syncManager.deleteNoteFromGraph(id);
     },
     
     addCluster: (cluster) => {
-      return graphService.addCluster({
+      return syncManager.addClusterToGraph({
         title: cluster.title || 'Untitled Cluster',
         ...cluster
-      }).id();
+      });
     },
     
     updateCluster: (id, updates) => {
-      return graphService.updateCluster(id, updates);
+      return syncManager.updateClusterInGraph(id, updates);
     },
     
     deleteCluster: (id) => {
-      return graphService.deleteCluster(id);
+      return syncManager.deleteClusterFromGraph(id);
     },
     
     moveNode: (nodeId, newParentId) => {
-      const result = graphService.moveNode(nodeId, newParentId);
+      const result = syncManager.moveNoteInGraph(nodeId, newParentId);
       return !!result;
     },
     
