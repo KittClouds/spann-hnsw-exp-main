@@ -41,16 +41,39 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     editor.focus();
     
     try {
-      // Insert text using editor's transaction API instead of directly creating blocks
-      editor.transact((tr) => {
-        tr.insertText(text);
+      // Use exec as an alternative to transact
+      editor.exec((state, dispatch) => {
+        if (dispatch) {
+          const tr = state.tr;
+          tr.insertText(text);
+          dispatch(tr);
+        }
+        return true;
       });
     } catch (error) {
       console.error("Error inserting text at cursor:", error);
-      // Fallback method - alternative approach if the above fails
+      // Fallback method - using a different approach
       try {
+        // Create a new block with the text and insert it
         const position = editor.getTextCursorPosition();
-        editor.insertText(text);
+        if (position && position.block) {
+          const blockId = position.block.id;
+          
+          // Insert text by adding it to the current block's content
+          const currentBlock = editor.getBlock(blockId);
+          if (currentBlock) {
+            let newContent;
+            if (Array.isArray(currentBlock.content)) {
+              newContent = [...currentBlock.content, createStyledText(text)];
+            } else {
+              newContent = [createStyledText(text)];
+            }
+            
+            editor.updateBlock(blockId, { 
+              content: newContent
+            });
+          }
+        }
       } catch (e) {
         console.error("Fallback insertion also failed:", e);
       }
@@ -103,10 +126,15 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     
     insertText: (text) => {
       try {
-        // First try to insert at the current position
+        // Use exec instead of transact
         editor.focus();
-        editor.transact((tr) => {
-          tr.insertText(text);
+        editor.exec((state, dispatch) => {
+          if (dispatch) {
+            const tr = state.tr;
+            tr.insertText(text);
+            dispatch(tr);
+          }
+          return true;
         });
       } catch (error) {
         console.error("Error inserting text:", error);
@@ -114,8 +142,21 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
         try {
           const cursorPosition = editor.getTextCursorPosition();
           if (cursorPosition) {
-            // Use editor.insertText if available
-            editor.insertText(text);
+            const blockId = cursorPosition.block.id;
+            const currentBlock = editor.getBlock(blockId);
+            
+            if (currentBlock) {
+              let newContent;
+              if (Array.isArray(currentBlock.content)) {
+                newContent = [...currentBlock.content, createStyledText(text)];
+              } else {
+                newContent = [createStyledText(text)];
+              }
+              
+              editor.updateBlock(blockId, { 
+                content: newContent
+              });
+            }
           }
         } catch (e) {
           console.error("Fallback text insertion failed:", e);

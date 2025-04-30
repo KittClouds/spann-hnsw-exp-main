@@ -163,7 +163,8 @@ export function NoteEditor() {
         </div>
         
         <div className="flex-1 bg-[#12141f] rounded-md shadow-xl border-[#1a1b23] transition-all duration-200 mb-12 overflow-auto">
-          <style jsx global>{`
+          <style>
+            {`
             /* Custom styling for wiki links, tags and mentions */
             .wiki-links .bn-text:has(:is(span, div):not(.bn-link):-webkit-any(:contains("[["), :contains("]]"))) {
               background-color: rgba(59, 130, 246, 0.1);
@@ -192,7 +193,8 @@ export function NoteEditor() {
                 color: rgb(192, 132, 252);
               }
             }
-          `}</style>
+            `}
+          </style>
           <BlockNoteView 
             editor={editor} 
             theme={theme}
