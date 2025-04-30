@@ -6,8 +6,20 @@ const WIKI_LINK_REGEX = /\[\[([^\[\]]+)\]\]/g;
 const TAG_REGEX = /#([a-zA-Z0-9_-]+)/g;
 const MENTION_REGEX = /@([a-zA-Z0-9_-]+)/g;
 
-type InlineContent = any;
-type StyledText = any;
+// Use generic types that match BlockNote's structure without requiring specific imports
+interface StyledText {
+  type: "text";
+  text: string;
+  styles?: Record<string, any>;
+}
+
+interface Link {
+  type: "link";
+  content: any[];
+  href: string;
+}
+
+type InlineContent = StyledText | Link | any;
 
 /**
  * Extracts all wiki links from a block's content
@@ -50,9 +62,11 @@ function extractFromContent(
   regex: RegExp,
   callback: (match: RegExpExecArray) => void
 ) {
+  if (!Array.isArray(content)) return;
+  
   // Go through each content item
   content.forEach((item) => {
-    if (item.type === "text") {
+    if (item && item.type === "text" && typeof item.text === "string") {
       const textItem = item as StyledText;
       let match;
       // Reset regex state
@@ -62,7 +76,7 @@ function extractFromContent(
       while ((match = regex.exec(textItem.text)) !== null) {
         callback(match);
       }
-    } else if (item.type === "link" && Array.isArray(item.content)) {
+    } else if (item && item.type === "link" && Array.isArray(item.content)) {
       // If it's a link with text content, recursively extract from it
       extractFromContent(item.content, regex, callback);
     }

@@ -38,14 +38,28 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
 
   const insertAtCursor = (text: string) => {
     editor.focus();
-    const selectedText = editor.getSelectedText();
     
-    if (selectedText) {
-      // If there's a selection, replace it
-      editor.insertText(text);
-    } else {
-      // Otherwise insert at cursor
-      editor.insertText(text);
+    // For BlockNote API versions, we need to use different approaches
+    // for inserting text at the cursor position
+    try {
+      // Get the current position
+      const position = editor.getTextCursorPosition();
+      
+      // Create a new text block with the content
+      const newBlock = {
+        type: "paragraph",
+        props: {
+          backgroundColor: "default",
+          textColor: "default",
+          textAlignment: "left"
+        },
+        content: [createStyledText(text)]
+      };
+      
+      // Insert at cursor position
+      editor.insertBlocks([newBlock], position.block.id, 'after');
+    } catch (error) {
+      console.error("Error inserting text at cursor:", error);
     }
   };
 

@@ -1,10 +1,9 @@
-
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/store';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback } from 'react';
 import { useBlockNote } from "@blocknote/react";
-import { createSchema } from "@blocknote/core"; // Fix: import createSchema instead of BlockNoteSchema
+import { defaultBlockSchema } from "@blocknote/core"; // Fix: import defaultBlockSchema instead of createSchema
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
@@ -29,55 +28,30 @@ export function NoteEditor() {
     return 'dark';
   });
   
-  // Create a custom schema that highlights wiki links, tags, and mentions
-  const customSchema = createSchema({
-    inlineContentSpecs: {
-      linkPattern: {
-        type: "extension",
-        propSchema: {},
-        converter: {
-          testNode: (domNode) => {
-            // Check if this node might contain a wiki link, tag, or mention
-            const nodeText = domNode.textContent || "";
-            return (
-              /\[\[.+?\]\]/.test(nodeText) || 
-              /#[\w-]+/.test(nodeText) || 
-              /@[\w-]+/.test(nodeText)
-            );
-          },
-          // Just a basic implementation to get started
-          dom: {
-            type: "text",
-          },
-        }
-      }
-    },
-  });
-  
-  // Initialize the editor with the custom schema
+  // Initialize the editor with customized styling for wiki links, tags, and mentions
   const editor = useBlockNote({
     initialContent: (activeNote?.content ?? []) as Block[],
-    schema: customSchema,
-    // Add basic styling for wiki links, tags, and mentions
+    // We'll use a simpler approach with customized styling instead of a custom schema
+    onStyleText: (textBlock) => {
+      const text = textBlock.text || "";
+      // Add different styling for different types of connections
+      if (/\[\[.+?\]\]/.test(text)) {
+        return { class: "bg-blue-100 dark:bg-blue-900 rounded px-1" };
+      }
+      if (/#[\w-]+/.test(text)) {
+        return { class: "text-green-600 dark:text-green-400 font-medium" };
+      } 
+      if (/@[\w-]+/.test(text)) {
+        return { class: "text-purple-600 dark:text-purple-400 font-medium" };
+      }
+      return {};
+    },
+    // Add basic styling for the editor
     domAttributes: {
       editor: {
-        class: "prose dark:prose-invert",
-      },
-      blockContent: (textBlock) => {
-        const text = textBlock.content?.map(item => item.type === "text" ? item.text : "").join("") || "";
-        // Add different styling for different types of connections
-        if (/\[\[.+?\]\]/.test(text)) {
-          return { class: "bg-blue-100 dark:bg-blue-900 rounded px-1" };
-        }
-        if (/#[\w-]+/.test(text)) {
-          return { class: "text-green-600 dark:text-green-400 font-medium" };
-        } 
-        if (/@[\w-]+/.test(text)) {
-          return { class: "text-purple-600 dark:text-purple-400 font-medium" };
-        }
-        return {};
+        class: "prose dark:prose-invert"
       }
-    },
+    }
   });
 
   // Initialize hooks for note connections and interface
