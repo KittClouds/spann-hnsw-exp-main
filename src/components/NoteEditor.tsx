@@ -1,8 +1,10 @@
+
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/store';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback } from 'react';
-import { useBlockNote, BlockNoteSchema } from "@blocknote/react";
+import { useBlockNote } from "@blocknote/react";
+import { createSchema } from "@blocknote/core"; // Fix: import createSchema instead of BlockNoteSchema
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
@@ -28,7 +30,7 @@ export function NoteEditor() {
   });
   
   // Create a custom schema that highlights wiki links, tags, and mentions
-  const customSchema = BlockNoteSchema.create({
+  const customSchema = createSchema({
     inlineContentSpecs: {
       linkPattern: {
         type: "extension",
@@ -61,8 +63,8 @@ export function NoteEditor() {
       editor: {
         class: "prose dark:prose-invert",
       },
-      text: (textBlock) => {
-        const text = textBlock.text;
+      blockContent: (textBlock) => {
+        const text = textBlock.content?.map(item => item.type === "text" ? item.text : "").join("") || "";
         // Add different styling for different types of connections
         if (/\[\[.+?\]\]/.test(text)) {
           return { class: "bg-blue-100 dark:bg-blue-900 rounded px-1" };

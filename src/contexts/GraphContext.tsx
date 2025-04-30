@@ -167,14 +167,16 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
       let conceptNode = graphService.getGraph().getElementById(conceptId);
       
       if (conceptNode.empty()) {
-        conceptNode = graphService.getGraph().add({
+        graphService.getGraph().add({
           group: 'nodes',
           data: {
             id: conceptId,
             type: NodeType.CONCEPT,
             title: conceptName
           }
-        }).first();
+        });
+        
+        conceptNode = graphService.getGraph().getElementById(conceptId);
       }
       
       return graphService.addEdge(

@@ -42,14 +42,10 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     
     if (selectedText) {
       // If there's a selection, replace it
-      editor.transact(tr => {
-        tr.insertText(text);
-      });
+      editor.insertText(text);
     } else {
       // Otherwise insert at cursor
-      editor.transact(tr => {
-        tr.insertText(text);
-      });
+      editor.insertText(text);
     }
   };
 

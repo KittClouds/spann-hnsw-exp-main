@@ -1,10 +1,13 @@
 
-import { Block, InlineContent, StyledText } from "@blocknote/core";
+import { Block } from "@blocknote/core";
 
 // Regular expressions for detecting different types of connections
 const WIKI_LINK_REGEX = /\[\[([^\[\]]+)\]\]/g;
 const TAG_REGEX = /#([a-zA-Z0-9_-]+)/g;
 const MENTION_REGEX = /@([a-zA-Z0-9_-]+)/g;
+
+type InlineContent = any;
+type StyledText = any;
 
 /**
  * Extracts all wiki links from a block's content
