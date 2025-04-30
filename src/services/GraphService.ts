@@ -100,13 +100,45 @@ export class GraphService implements IGraphService {
     }
   }
 
-  private edgeExists(srcId: string, tgtId: string, label: EdgeType): boolean {
+  // Check if an edge exists between two nodes
+  public edgeExists(srcId: string, tgtId: string, label: EdgeType): boolean {
     const src = this.cy.getElementById(srcId);
     if (src.empty()) return false;
 
     return !src
       .connectedEdges(`[label = "${label}"][target = "${tgtId}"]`)
       .empty();
+  }
+
+  // Add an edge between two nodes if it doesn't already exist
+  public addEdge(srcId: string, tgtId: string, edgeType: EdgeType): boolean {
+    // Check if source and target nodes exist
+    const srcNode = this.cy.getElementById(srcId);
+    const tgtNode = this.cy.getElementById(tgtId);
+    
+    if (srcNode.empty() || tgtNode.empty()) {
+      console.warn(`Cannot add edge: source or target node doesn't exist (${srcId} -> ${tgtId})`);
+      return false;
+    }
+    
+    // Check if edge already exists
+    if (this.edgeExists(srcId, tgtId, edgeType)) {
+      return true; // Edge already exists
+    }
+    
+    // Add the edge
+    const edgeId = `${edgeType}_${srcId}_${tgtId}`;
+    this.cy.add({
+      group: 'edges',
+      data: {
+        id: edgeId,
+        source: srcId,
+        target: tgtId,
+        label: edgeType
+      }
+    });
+    
+    return true;
   }
 
   public getGraph(): Core {

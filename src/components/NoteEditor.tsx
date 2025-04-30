@@ -2,7 +2,7 @@ import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/store';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback } from 'react';
-import { useBlockNote } from "@blocknote/react";
+import { useBlockNote, BlockNoteSchema } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
@@ -13,6 +13,8 @@ import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConnectionsPanel } from './connections/ConnectionsPanel';
 import { EmptyNoteState } from './EmptyNoteState';
+import { useNoteConnections } from '@/hooks/useNoteConnections';
+import { useNoteInterface } from '@/hooks/useNoteInterface';
 
 export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
@@ -25,9 +27,60 @@ export function NoteEditor() {
     return 'dark';
   });
   
+  // Create a custom schema that highlights wiki links, tags, and mentions
+  const customSchema = BlockNoteSchema.create({
+    inlineContentSpecs: {
+      linkPattern: {
+        type: "extension",
+        propSchema: {},
+        converter: {
+          testNode: (domNode) => {
+            // Check if this node might contain a wiki link, tag, or mention
+            const nodeText = domNode.textContent || "";
+            return (
+              /\[\[.+?\]\]/.test(nodeText) || 
+              /#[\w-]+/.test(nodeText) || 
+              /@[\w-]+/.test(nodeText)
+            );
+          },
+          // Just a basic implementation to get started
+          dom: {
+            type: "text",
+          },
+        }
+      }
+    },
+  });
+  
+  // Initialize the editor with the custom schema
   const editor = useBlockNote({
     initialContent: (activeNote?.content ?? []) as Block[],
+    schema: customSchema,
+    // Add basic styling for wiki links, tags, and mentions
+    domAttributes: {
+      editor: {
+        class: "prose dark:prose-invert",
+      },
+      text: (textBlock) => {
+        const text = textBlock.text;
+        // Add different styling for different types of connections
+        if (/\[\[.+?\]\]/.test(text)) {
+          return { class: "bg-blue-100 dark:bg-blue-900 rounded px-1" };
+        }
+        if (/#[\w-]+/.test(text)) {
+          return { class: "text-green-600 dark:text-green-400 font-medium" };
+        } 
+        if (/@[\w-]+/.test(text)) {
+          return { class: "text-purple-600 dark:text-purple-400 font-medium" };
+        }
+        return {};
+      }
+    },
   });
+
+  // Initialize hooks for note connections and interface
+  const { updateConnections } = useNoteConnections();
+  const noteInterface = useNoteInterface(editor);
 
   useEffect(() => {
     const handleThemeChange = () => {
@@ -57,6 +110,11 @@ export function NoteEditor() {
       setActiveNote({
         content: blocks,
       });
+      
+      // Update connections when content changes
+      if (activeNoteId) {
+        updateConnections(activeNoteId, blocks);
+      }
     }
   }, 500);
 
@@ -70,7 +128,7 @@ export function NoteEditor() {
     return () => {
       saveChanges.cancel();
     };
-  }, [editor, saveChanges, activeNote]);
+  }, [editor, saveChanges, activeNote, activeNoteId]);
 
   useEffect(() => {
     if (editor && activeNote?.content) {

@@ -1,4 +1,3 @@
-
 import { BlockNoteEditor, Block } from '@blocknote/core';
 import { createStyledText } from '@/lib/utils/blockUtils';
 
@@ -25,12 +24,34 @@ export interface NoteInterface {
   setCursorToBlock: (blockId: string, placement?: 'start' | 'end') => void;
   getSelection: () => { blocks: Block[] } | undefined;
   setSelection: (startBlockId: string, endBlockId: string) => void;
+  
+  // Connection Operations
+  insertWikiLink: (title: string) => void;
+  insertTag: (tagName: string) => void;
+  insertMention: (username: string) => void;
 }
 
 export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
   if (!editor) {
     throw new Error('BlockNoteEditor instance is required');
   }
+
+  const insertAtCursor = (text: string) => {
+    editor.focus();
+    const selectedText = editor.getSelectedText();
+    
+    if (selectedText) {
+      // If there's a selection, replace it
+      editor.transact(tr => {
+        tr.insertText(text);
+      });
+    } else {
+      // Otherwise insert at cursor
+      editor.transact(tr => {
+        tr.insertText(text);
+      });
+    }
+  };
 
   return {
     // Document & Block Operations
@@ -123,6 +144,19 @@ export const useNoteInterface = (editor: BlockNoteEditor): NoteInterface => {
     
     setSelection: (startBlockId, endBlockId) => {
       editor.setSelection(startBlockId, endBlockId);
+    },
+    
+    // Connection Operations
+    insertWikiLink: (title: string) => {
+      insertAtCursor(`[[${title}]]`);
+    },
+    
+    insertTag: (tagName: string) => {
+      insertAtCursor(`#${tagName}`);
+    },
+    
+    insertMention: (username: string) => {
+      insertAtCursor(`@${username}`);
     }
   };
 };
