@@ -1,3 +1,4 @@
+
 import { useAtom } from 'jotai';
 import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/store';
 import { Input } from "@/components/ui/input";
@@ -51,13 +52,17 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
+  // Debounced save function - simpler now!
   const saveChanges = debounce(() => {
     if (editor && activeNote) {
-      const blocks = editor.document as Block[];
+       const currentBlocks = editor.document as Block[];
+       console.log("NoteEditor: Saving changes for", activeNote.id);
+      // Only update the content in the activeNoteAtom
       setActiveNote({
-        content: blocks,
+        content: currentBlocks,
       });
-    }
+      // No need to parse or call graph sync directly here!
+     }
   }, 500);
 
   useEffect(() => {

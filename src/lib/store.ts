@@ -1,8 +1,10 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
 import { generateClusterId, generateNoteId, ClusterId, NoteId } from './utils/ids';
 import { createParagraphBlock } from './utils/blockUtils';
+import { parseAllNotes } from './utils/parsingUtils'; // Import the new utility
 
 // Define standard root ID constant to make it explicit throughout the codebase
 export const STANDARD_ROOT_ID = 'standard_root';
@@ -111,6 +113,43 @@ export const activeNoteAtom = atom(
     set(notesAtom, updatedNotes);
   }
 );
+
+// --- Derived Connection Atoms ---
+
+// Base atom that parses all notes whenever notesAtom changes
+const parsedConnectionsAtom = atom((get) => {
+  const notes = get(notesAtom);
+  console.log("Recalculating all parsed connections"); // Debug log
+  return parseAllNotes(notes);
+});
+
+// Atom for Tags Map (NoteId -> string[])
+export const noteTagsMapAtom = atom(
+  (get) => get(parsedConnectionsAtom).tagsMap
+);
+
+// Atom for Mentions Map (NoteId -> string[])
+export const noteMentionsMapAtom = atom(
+  (get) => get(parsedConnectionsAtom).mentionsMap
+);
+
+// Atom for Links Map (NoteId -> link titles string[])
+export const noteLinksMapAtom = atom(
+  (get) => get(parsedConnectionsAtom).linksMap
+);
+
+// Convenience atom to get connections for the currently active note
+export const activeNoteConnectionsAtom = atom((get) => {
+  const activeId = get(activeNoteIdAtom);
+  if (!activeId) return { tags: [], mentions: [], links: [] };
+
+  // Directly access the specific note's connections from the maps
+  return {
+    tags: get(noteTagsMapAtom).get(activeId) ?? [],
+    mentions: get(noteMentionsMapAtom).get(activeId) ?? [],
+    links: get(noteLinksMapAtom).get(activeId) ?? [], // Returns link titles
+  };
+});
 
 // Function implementations to maintain backward compatibility with components
 export function createNote(parentId: NoteId | null = null, clusterId: ClusterId | null = null) {

@@ -1,7 +1,7 @@
 
 import { useAtom } from 'jotai';
-import { activeNoteAtom } from '@/lib/store';
-import { useGraph } from '@/contexts/GraphContext';
+import { activeNoteIdAtom, activeNoteConnectionsAtom } from '@/lib/store';
+import { useGraph } from '@/contexts/GraphContext'; // Keep for backlinks
 import { Badge } from '@/components/ui/badge';
 import { Link, ChevronDown, ChevronUp, Hash, AtSign } from 'lucide-react';
 import { useState } from 'react';
@@ -10,13 +10,13 @@ import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function ConnectionsPanel() {
-  const [activeNote] = useAtom(activeNoteAtom);
-  const { getConnections, getBacklinks } = useGraph();
+  const [activeNoteId] = useAtom(activeNoteIdAtom);
+  const [{ tags, mentions, links }] = useAtom(activeNoteConnectionsAtom);
+  const { getBacklinks } = useGraph(); // Only need backlinks from graph context now
   const [isOpen, setIsOpen] = useState(false);
   const [activeView, setActiveView] = useState<'links' | 'backlinks'>('links');
   
-  const connections = activeNote ? getConnections(activeNote.id) : { tag: [], concept: [], mention: [] };
-  const backlinks = activeNote ? getBacklinks(activeNote.id) : [];
+  const backlinks = activeNoteId ? getBacklinks(activeNoteId) : [];
 
   return (
     <div className="relative bg-[#0a0a0d] border-t border-[#1a1b23]">
@@ -58,15 +58,15 @@ export function ConnectionsPanel() {
                         Tags
                       </h3>
                       <div className="space-y-2">
-                        {connections.tag.length > 0 ? (
+                        {tags.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
-                            {connections.tag.map((tag) => (
+                            {tags.map((tag) => (
                               <Badge
-                                key={tag.id}
+                                key={tag} // Use tag string as key
                                 variant="secondary"
                                 className="bg-[#1a1b23] hover:bg-[#22242f] text-primary border-none"
                               >
-                                #{tag.title}
+                                #{tag}
                               </Badge>
                             ))}
                           </div>
@@ -86,14 +86,14 @@ export function ConnectionsPanel() {
                         Mentions
                       </h3>
                       <div className="space-y-2">
-                        {connections.mention.length > 0 ? (
+                        {mentions.length > 0 ? (
                           <div className="space-y-1">
-                            {connections.mention.map((mention) => (
+                            {mentions.map((mention) => (
                               <div
-                                key={mention.id}
+                                key={mention} // Use mention string as key
                                 className="text-sm px-2 py-1 rounded-md bg-[#1a1b23] hover:bg-[#22242f] cursor-pointer transition-colors flex items-center"
                               >
-                                @{mention.title}
+                                @{mention}
                               </div>
                             ))}
                           </div>
@@ -113,14 +113,14 @@ export function ConnectionsPanel() {
                         Links
                       </h3>
                       <div className="space-y-2">
-                        {connections.concept.length > 0 ? (
+                        {links.length > 0 ? (
                           <div className="space-y-1">
-                            {connections.concept.map((link) => (
+                            {links.map((linkTitle) => (
                               <div
-                                key={link.id}
+                                key={linkTitle} // Use link title as key
                                 className="text-sm px-2 py-1 rounded-md bg-[#1a1b23] hover:bg-[#22242f] cursor-pointer transition-colors flex items-center"
                               >
-                                [[{link.title}]]
+                                [[{linkTitle}]]
                               </div>
                             ))}
                           </div>

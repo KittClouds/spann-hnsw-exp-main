@@ -6,6 +6,7 @@ import { slug } from '@/lib/utils';
 import { generateNodeId, generateClusterId, generateNoteId } from '@/lib/utils/ids';
 import { IGraphService, NodeType, EdgeType, GraphJSON } from './types';
 import { ClusterHandler } from './handlers/ClusterHandler';
+import { parseAllNotes } from '@/lib/utils/parsingUtils'; // Import the parsing utility
 
 cytoscape.use(automove);
 cytoscape.use(undoRedo);
@@ -392,6 +393,14 @@ export class GraphService implements IGraphService {
          this.cy.add(edgeElements);
       }
 
+      // Parse connections from the initial notes
+      const initialConnections = parseAllNotes(notes);
+      initialConnections.tagsMap.forEach((tags, noteId) => {
+        const mentions = initialConnections.mentionsMap.get(noteId) ?? [];
+        const links = initialConnections.linksMap.get(noteId) ?? [];
+        this.updateNoteConnections(noteId, tags, mentions, links);
+      });
+
     } catch(error) {
         console.error("Error during importFromStore:", error);
     }
@@ -656,37 +665,175 @@ export class GraphService implements IGraphService {
     return true;
   }
 
-  public getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', any[]> {
-    const node = this.cy.getElementById(nodeId);
-    if (node.empty()) return { tag: [], concept: [], mention: [] };
+  /**
+   * Updates the connections (tags, mentions, links) for a specific note in the graph
+   * @param noteId ID of the note to update connections for
+   * @param tags Array of tag strings
+   * @param mentions Array of mention strings (usernames without @)
+   * @param links Array of link title strings (without [[]])
+   */
+  public updateNoteConnections(noteId: string, tags: string[], mentions: string[], links: string[]): void {
+    const noteNode = this.cy.getElementById(noteId);
+    if (noteNode.empty() || noteNode.data('type') !== NodeType.NOTE) {
+      console.warn(`[GraphService] Note ${noteId} not found or not a note type.`);
+      return;
+    }
 
-    const getConnectedTargets = (edgeType: EdgeType): any[] => {
-      if (!node.isNode()) return [];
-
-      const outgoingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][source = "${nodeId}"]`);
-
-      return outgoingEdges.targets().map(target => ({
-        id: target.id(),
-        title: target.data('title') || 'Untitled',
-        type: target.data('type') || undefined
-      }));
+    this.cy.startBatch();
+    
+    try {
+      // Remove existing tag connections
+      this.cy.edges(`[label = "${EdgeType.HAS_TAG}"][source = "${noteId}"]`).remove();
+      
+      // Add new tag connections
+      tags.forEach(tag => {
+        // Check if tag node exists, create if needed
+        const tagSlug = slug(tag);
+        let tagNode = this.cy.getElementById(`tag-${tagSlug}`);
+        
+        if (tagNode.empty()) {
+          tagNode = this.cy.add({
+            group: 'nodes',
+            data: {
+              id: `tag-${tagSlug}`,
+              type: NodeType.TAG,
+              title: tag,
+              createdAt: new Date().toISOString()
+            }
+          });
+        }
+        
+        // Add edge if it doesn't exist
+        if (this.cy.edges(`[source = "${noteId}"][target = "${tagNode.id()}"][label = "${EdgeType.HAS_TAG}"]`).empty()) {
+          this.cy.add({
+            group: 'edges',
+            data: {
+              id: `${noteId}-tag-${tagSlug}`,
+              source: noteId,
+              target: tagNode.id(),
+              label: EdgeType.HAS_TAG
+            }
+          });
+        }
+      });
+      
+      // Handle mentions
+      this.cy.edges(`[label = "${EdgeType.MENTIONS}"][source = "${noteId}"]`).remove();
+      
+      mentions.forEach(mention => {
+        const targetNoteId = this.findNoteIdByTitle(mention);
+        if (targetNoteId && targetNoteId !== noteId) {
+          this.cy.add({
+            group: 'edges',
+            data: {
+              id: `${noteId}-mention-${targetNoteId}`,
+              source: noteId,
+              target: targetNoteId,
+              label: EdgeType.MENTIONS
+            }
+          });
+        }
+      });
+      
+      // Handle links
+      this.cy.edges(`[label = "${EdgeType.LINKS_TO}"][source = "${noteId}"]`).remove();
+      
+      links.forEach(linkTitle => {
+        const targetNoteId = this.findNoteIdByTitle(linkTitle);
+        if (targetNoteId && targetNoteId !== noteId) {
+          this.cy.add({
+            group: 'edges',
+            data: {
+              id: `${noteId}-link-${targetNoteId}`,
+              source: noteId,
+              target: targetNoteId,
+              label: EdgeType.LINKS_TO
+            }
+          });
+        }
+      });
+      
+    } catch (error) {
+      console.error('[GraphService] Error updating note connections:', error);
+    }
+    
+    this.cy.endBatch();
+    console.log(`[GraphService] Updated connections for note ${noteId}`);
+  }
+  
+  // Helper method to find note by title
+  private findNoteIdByTitle(title: string): string | null {
+    const sluggedTitle = slug(title);
+    return this.titleIndex.get(sluggedTitle) || null;
+  }
+  
+  /**
+   * Gets connections for a note
+   */
+  public getConnections(noteId: string): Record<'tag' | 'concept' | 'mention', any[]> {
+    const connections = {
+      tag: [] as { id: string; title: string }[],
+      concept: [] as { id: string; title: string }[],
+      mention: [] as { id: string; title: string }[]
     };
-
-    const getConnectingSources = (edgeType: EdgeType): any[] => {
-      if (!node.isNode()) return [];
-      const incomingEdges = (node as NodeSingular).connectedEdges(`[label = "${edgeType}"][target = "${nodeId}"]`);
-      return incomingEdges.sources().map(source => ({
-        id: source.id(),
-        title: source.data('title') || 'Untitled',
-        type: source.data('type') || undefined
-      }));
-    };
-
-    return {
-      tag: getConnectedTargets(EdgeType.HAS_TAG),
-      concept: getConnectedTargets(EdgeType.HAS_CONCEPT),
-      mention: getConnectedTargets(EdgeType.MENTIONS)
-    };
+    
+    try {
+      // Get tags
+      this.cy.edges(`[label = "${EdgeType.HAS_TAG}"][source = "${noteId}"]`).forEach(edge => {
+        const targetId = edge.target().id();
+        const targetTitle = edge.target().data('title');
+        connections.tag.push({ id: targetId, title: targetTitle });
+      });
+      
+      // Get links (concepts)
+      this.cy.edges(`[label = "${EdgeType.LINKS_TO}"][source = "${noteId}"]`).forEach(edge => {
+        const targetId = edge.target().id();
+        const targetTitle = edge.target().data('title');
+        connections.concept.push({ id: targetId, title: targetTitle });
+      });
+      
+      // Get mentions
+      this.cy.edges(`[label = "${EdgeType.MENTIONS}"][source = "${noteId}"]`).forEach(edge => {
+        const targetId = edge.target().id();
+        const targetTitle = edge.target().data('title');
+        connections.mention.push({ id: targetId, title: targetTitle });
+      });
+      
+    } catch (error) {
+      console.error('[GraphService] Error getting connections:', error);
+    }
+    
+    return connections;
+  }
+  
+  /**
+   * Gets backlinks to a note
+   */
+  public getBacklinks(noteId: string): { id: string; title: string }[] {
+    const backlinks: { id: string; title: string }[] = [];
+    
+    try {
+      // Get notes that link to this note
+      this.cy.edges(`[label = "${EdgeType.LINKS_TO}"][target = "${noteId}"]`).forEach(edge => {
+        const sourceId = edge.source().id();
+        const sourceTitle = edge.source().data('title');
+        backlinks.push({ id: sourceId, title: sourceTitle });
+      });
+      
+      // Get notes that mention this note
+      this.cy.edges(`[label = "${EdgeType.MENTIONS}"][target = "${noteId}"]`).forEach(edge => {
+        const sourceId = edge.source().id();
+        const sourceTitle = edge.source().data('title');
+        if (!backlinks.some(link => link.id === sourceId)) {
+          backlinks.push({ id: sourceId, title: sourceTitle });
+        }
+      });
+      
+    } catch (error) {
+      console.error('[GraphService] Error getting backlinks:', error);
+    }
+    
+    return backlinks;
   }
 }
 
