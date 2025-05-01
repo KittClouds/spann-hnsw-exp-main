@@ -177,9 +177,9 @@ export function createNote(parentId: string | null = null, clusterId: string | n
     content: [],
     createdAt: now,
     updatedAt: now,
-    parentId,
+    parentId: parentId as NoteId | null,
     type: 'note',
-    clusterId
+    clusterId: clusterId as ClusterId | null
   };
   
   return { id: newId, note: newNote };
@@ -195,9 +195,9 @@ export function createFolder(parentId: string | null = null, clusterId: string |
     content: [],
     createdAt: now,
     updatedAt: now,
-    parentId,
+    parentId: parentId as NoteId | null,
     type: 'folder',
-    clusterId
+    clusterId: clusterId as ClusterId | null
   };
   
   return { id: newId, note: newFolder };

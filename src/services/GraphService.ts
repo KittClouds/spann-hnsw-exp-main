@@ -1,10 +1,11 @@
+
 import cytoscape, { Core, NodeSingular, EdgeSingular, NodeCollection, ElementDefinition, ElementGroup, SingularElementArgument, Position } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
 import { generateNodeId, generateClusterId, generateNoteId } from '@/lib/utils/ids';
-import { IGraphService, NodeType, EdgeType, GraphJSON } from './types';
+import { IGraphService, NodeType, EdgeType, GraphJSON, Thread, ThreadMessage } from './types';
 import { ClusterHandler } from './handlers/ClusterHandler';
 import { parseAllNotes } from '@/lib/utils/parsingUtils'; // Import the parsing utility
 
