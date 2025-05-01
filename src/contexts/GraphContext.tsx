@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react'; // Add useRef
 import { graphService } from '../services/GraphService';
 import { syncManager } from '../services/SyncManager';
@@ -211,9 +212,9 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     getConnections: (noteId) => {
       // Use directly from the derived atoms
       return {
-        tag: tagsMap.get(noteId as NoteId)?.map(t => ({ id: t, title: t })) ?? [], // Format to match old structure
-        mention: mentionsMap.get(noteId as NoteId)?.map(m => ({ id: m, title: m })) ?? [],
-        concept: linksMap.get(noteId as NoteId)?.map(l => ({ id: l, title: l })) ?? [], // 'concept' was used for links
+        tag: tagsMap.get(noteId)?.map(t => ({ id: t, title: t })) ?? [], // Format to match old structure
+        mention: mentionsMap.get(noteId)?.map(m => ({ id: m, title: m })) ?? [],
+        concept: linksMap.get(noteId)?.map(l => ({ id: l, title: l })) ?? [], // 'concept' was used for links
       };
     }
   };

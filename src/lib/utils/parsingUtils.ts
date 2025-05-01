@@ -15,7 +15,7 @@ export interface ParsedConnections {
 }
 
 // Helper to extract text from InlineContent[]
-function extractTextFromInlineContent(content: InlineContent<any>[]): string {
+function extractTextFromInlineContent(content: InlineContent<any, any>[]): string {
   return content.map(item => {
     if (item.type === 'text') {
       return item.text;
