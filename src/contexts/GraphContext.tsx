@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react'; // Add useRef
 import { graphService } from '../services/GraphService';
 import { syncManager } from '../services/SyncManager';
-import { NodeType, EdgeType, ElementDefinition, GraphJSON } from '../services/types';
+import { NodeType, EdgeType, ElementDefinition, GraphJSON, Thread, ThreadMessage } from '../services/types';
 import { useAtom } from 'jotai';
 import {
   notesAtom,
@@ -36,6 +36,10 @@ interface GraphContextType {
   getBacklinks: (noteId: string) => any[];
   tagNote: (noteId: string, tagName: string) => boolean;
   getConnections: (noteId: string) => Record<'tag' | 'concept' | 'mention', any[]>;
+  addThread: (thread: Thread) => string;
+  addThreadMessage: (msg: ThreadMessage) => string;
+  updateThreadMessage: (id: string, updates: Partial<ThreadMessage>) => boolean;
+  deleteThreadMessage: (id: string) => boolean;
 }
 
 const GraphContext = createContext<GraphContextType | undefined>(undefined);
@@ -216,7 +220,13 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
         mention: mentionsMap.get(noteId)?.map(m => ({ id: m, title: m })) ?? [],
         concept: linksMap.get(noteId)?.map(l => ({ id: l, title: l })) ?? [], // 'concept' was used for links
       };
-    }
+    },
+    
+    // Thread operations
+    addThread: (thread) => syncManager.addThreadToGraph(thread),
+    addThreadMessage: (msg) => syncManager.addThreadMessageToGraph(msg),
+    updateThreadMessage: (id, updates) => syncManager.updateThreadMessageInGraph(id, updates),
+    deleteThreadMessage: (id) => syncManager.deleteThreadMessageFromGraph(id)
   };
 
   return (

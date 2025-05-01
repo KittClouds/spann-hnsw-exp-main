@@ -1,3 +1,4 @@
+
 import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 
@@ -12,7 +13,9 @@ export enum NodeType {
   STANDARD_ROOT = 'standard_root',
   CLUSTERS_ROOT = 'clusters_root',
   CLUSTER_DEFINITION = 'cluster_definition',
-  CLUSTER_ROOT = 'cluster_root'
+  CLUSTER_ROOT = 'cluster_root',
+  THREAD = 'thread',
+  THREAD_MESSAGE = 'thread_message'
 }
 
 export enum EdgeType {
@@ -22,7 +25,10 @@ export enum EdgeType {
   MENTIONS = 'mentions',
   HAS_CONCEPT = 'has_concept',
   IN_CLUSTER = 'in_cluster',
-  LINKS_TO = 'links_to'
+  LINKS_TO = 'links_to',
+  IN_THREAD = 'in_thread',
+  REPLIES_TO = 'replies_to',
+  HAS_ATTACHMENT = 'has_attachment'
 }
 
 export interface GraphMeta {
@@ -91,8 +97,42 @@ export interface IGraphService {
   getBacklinks(nodeId: string): any[];
   tagNote(noteId: string, tagName: string): boolean;
   getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', any[]>;
+  updateNoteConnections(noteId: string, tags: string[], mentions: string[], links: string[]): void;
   
   // Store operations
   importFromStore(notes: Note[], clusters: Cluster[]): void;
   exportToStore(): { notes: Note[]; clusters: Cluster[]; };
+
+  // Thread operations
+  addThread(thread: Thread): NodeSingular;
+  addThreadMessage(msg: ThreadMessage): NodeSingular;
+  updateThreadMessage(id: string, updates: Partial<ThreadMessage>): boolean;
+  deleteThreadMessage(id: string): boolean;
+}
+
+// Chat thread entities
+export interface Thread {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ChatRole = 'user' | 'assistant' | 'system' | 'tool';
+
+export interface AttachmentMeta {
+  id: string;
+  type: 'image' | 'file' | 'text';
+  name: string;
+  url: string;
+}
+
+export interface ThreadMessage {
+  id: string;
+  threadId: string;
+  role: ChatRole;
+  content: string;
+  createdAt: string;
+  parentId?: string | null;
+  attachments?: AttachmentMeta[];
 }

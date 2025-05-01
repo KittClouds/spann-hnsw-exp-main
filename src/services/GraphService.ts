@@ -820,6 +820,91 @@ export class GraphService implements IGraphService {
     
     return backlinks;
   }
+
+  // Thread operations
+  public addThread(thread: Thread): NodeSingular {
+    const node = this.cy.add({ 
+      group: 'nodes', 
+      data: { 
+        id: thread.id, 
+        type: NodeType.THREAD, 
+        title: thread.title, 
+        createdAt: thread.createdAt,
+        updatedAt: thread.updatedAt
+      } 
+    });
+    this.queueNotify([this.exportElement(node)]);
+    return node;
+  }
+
+  public addThreadMessage(msg: ThreadMessage): NodeSingular {
+    const node = this.cy.add({ 
+      group: 'nodes', 
+      data: { 
+        id: msg.id, 
+        type: NodeType.THREAD_MESSAGE, 
+        role: msg.role, 
+        createdAt: msg.createdAt, 
+        content: msg.content,
+        attachments: msg.attachments
+      } 
+    });
+    
+    // link to thread
+    this.cy.add({ 
+      group: 'edges', 
+      data: { 
+        id: `${msg.id}-in-thread`, 
+        source: msg.threadId, 
+        target: msg.id, 
+        label: EdgeType.IN_THREAD 
+      } 
+    });
+    
+    // optional reply edge
+    if (msg.parentId) {
+      this.cy.add({ 
+        group: 'edges', 
+        data: { 
+          id: `${msg.id}-reply-${msg.parentId}`, 
+          source: msg.id, 
+          target: msg.parentId, 
+          label: EdgeType.REPLIES_TO 
+        } 
+      });
+    }
+    
+    this.queueNotify([this.exportElement(node)]);
+    return node;
+  }
+
+  public updateThreadMessage(id: string, updates: Partial<ThreadMessage>): boolean {
+    const node = this.cy.getElementById(id);
+    if (node.empty()) return false;
+    
+    node.data({ 
+      ...node.data(), 
+      ...updates,
+      updatedAt: new Date().toISOString()
+    });
+    
+    this.queueNotify([this.exportElement(node)]);
+    return true;
+  }
+
+  public deleteThreadMessage(id: string): boolean {
+    const node = this.cy.getElementById(id);
+    if (node.empty()) return false;
+    
+    // Get all edges to remove too
+    const edges = node.connectedEdges();
+    
+    this.cy.remove(node);
+    this.cy.remove(edges);
+    
+    this.queueNotify([{ group: 'nodes', data: { id } }]);
+    return true;
+  }
 }
 
 export const graphService = new GraphService();

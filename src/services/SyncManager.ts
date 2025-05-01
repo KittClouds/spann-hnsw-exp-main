@@ -1,7 +1,7 @@
 
 import { graphService } from './GraphService';
 import { Note, Cluster } from '@/lib/store';
-import { NodeType } from './types';
+import { NodeType, Thread, ThreadMessage } from './types';
 
 /**
  * SyncManager service provides bidirectional synchronization between the store (jotai atoms)
@@ -135,6 +135,43 @@ export class SyncManager {
    */
   public getNodesByType(type: NodeType): any[] {
     return graphService.getNodesByType(type).map(node => node.data());
+  }
+  
+  /**
+   * Adds a thread to the graph
+   * @param thread Thread to add
+   * @returns ID of the added thread node
+   */
+  public addThreadToGraph(thread: Thread): string {
+    return graphService.addThread(thread).id();
+  }
+
+  /**
+   * Adds a thread message to the graph
+   * @param msg ThreadMessage to add
+   * @returns ID of the added message node
+   */
+  public addThreadMessageToGraph(msg: ThreadMessage): string {
+    return graphService.addThreadMessage(msg).id();
+  }
+
+  /**
+   * Updates a thread message in the graph
+   * @param id ID of the message to update
+   * @param updates Partial message updates
+   * @returns Whether the update was successful
+   */
+  public updateThreadMessageInGraph(id: string, updates: Partial<ThreadMessage>): boolean {
+    return graphService.updateThreadMessage(id, updates);
+  }
+
+  /**
+   * Deletes a thread message from the graph
+   * @param id ID of the message to delete
+   * @returns Whether the deletion was successful
+   */
+  public deleteThreadMessageFromGraph(id: string): boolean {
+    return graphService.deleteThreadMessage(id);
   }
 }
 

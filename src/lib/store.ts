@@ -1,9 +1,11 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
-import { generateClusterId, generateNoteId, ClusterId, NoteId } from './utils/ids';
+import { generateClusterId, generateNoteId, generateNodeId, ClusterId, NoteId } from './utils/ids';
 import { createParagraphBlock } from './utils/blockUtils';
 import { parseAllNotes } from './utils/parsingUtils'; // Import the new utility
+import { Thread, ThreadMessage, ChatRole } from '../services/types';
 
 // Define standard root ID constant to make it explicit throughout the codebase
 export const STANDARD_ROOT_ID = 'standard_root';
@@ -153,8 +155,19 @@ export const activeNoteConnectionsAtom = atom((get) => {
   };
 });
 
+// Thread chat state
+export const threadsAtom = atomWithStorage<Thread[]>('galaxy-notes-threads', []);
+export const activeThreadIdAtom = atom<string | null>(null);
+export const threadMessagesAtom = atomWithStorage<ThreadMessage[]>('galaxy-notes-thread-messages', []);
+
+export const activeThreadMessagesAtom = atom((get) => {
+  const tid = get(activeThreadIdAtom);
+  if (!tid) return [];
+  return get(threadMessagesAtom).filter((msg) => msg.threadId === tid);
+});
+
 // Function implementations to maintain backward compatibility with components
-export function createNote(parentId: NoteId | null = null, clusterId: ClusterId | null = null) {
+export function createNote(parentId: string | null = null, clusterId: string | null = null) {
   const newId = generateNoteId();
   const now = getCurrentDate();
   
@@ -172,7 +185,7 @@ export function createNote(parentId: NoteId | null = null, clusterId: ClusterId 
   return { id: newId, note: newNote };
 };
 
-export function createFolder(parentId: NoteId | null = null, clusterId: ClusterId | null = null) {
+export function createFolder(parentId: string | null = null, clusterId: string | null = null) {
   const newId = generateNoteId();
   const now = getCurrentDate();
   
@@ -220,6 +233,21 @@ export function createCluster(title: string) {
     rootFolder
   };
 };
+
+// Helpers to create thread and messages
+export function createThread(title: string = 'New Thread'): Thread {
+  const now = getCurrentDate();
+  return { id: generateNodeId(), title, createdAt: now, updatedAt: now };
+}
+
+export function createThreadMessage(
+  threadId: string,
+  role: ChatRole,
+  content: string,
+  parentId: string | null = null
+): ThreadMessage {
+  return { id: generateNodeId(), threadId, role, content, createdAt: getCurrentDate(), parentId };
+}
 
 export function deleteNote(notes: Note[], id: string): Note[] {
   const noteToDelete = notes.find(note => note.id === id);
