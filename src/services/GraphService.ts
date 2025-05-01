@@ -356,8 +356,6 @@ export class GraphService implements IGraphService {
         }
       });
 
-      this.cy.add(elements);
-
       const edgeElements: ElementDefinition[] = [];
       notes.forEach(note => {
         if (note.parentId && this.cy.getElementById(note.parentId).nonempty()) {
@@ -581,19 +579,6 @@ export class GraphService implements IGraphService {
     if (node.empty()) return this.cy.collection() as NodeCollection;
 
     return node.neighborhood().nodes();
-  }
-
-  public getBacklinks(nodeId: string): any[] {
-    const node = this.cy.getElementById(nodeId);
-    if (node.empty()) return [];
-
-    const backlinkingNodes = node.incomers('edge').sources();
-
-    return backlinkingNodes.map(sourceNode => ({
-      id: sourceNode.id(),
-      title: sourceNode.data('title') || 'Untitled',
-      type: sourceNode.data('type') || undefined
-    }));
   }
 
   public tagNote(noteId: string, tagName: string): boolean {

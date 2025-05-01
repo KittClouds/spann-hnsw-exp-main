@@ -1,4 +1,3 @@
-
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
@@ -30,6 +29,9 @@ export interface Note {
   mentions?: string[];
   concepts?: Array<{ type: string, name: string }>;
 }
+
+// Re-export NoteId and ClusterId types for use elsewhere
+export type { NoteId, ClusterId };
 
 const getCurrentDate = () => new Date().toISOString();
 

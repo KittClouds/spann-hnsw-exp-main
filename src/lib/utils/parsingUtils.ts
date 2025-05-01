@@ -1,6 +1,6 @@
 
 import { Block, InlineContent } from '@blocknote/core';
-import { Note, NoteId } from '../store'; // Assuming store.ts is one level up
+import { Note } from '../store'; // Use Note instead of NoteId
 
 // Regex for tags (#alphanumeric), mentions (@alphanumeric), and links ([[any character except ]]])
 const TAG_REGEX = /#([a-zA-Z0-9_]+)/g;
@@ -15,7 +15,7 @@ export interface ParsedConnections {
 }
 
 // Helper to extract text from InlineContent[]
-function extractTextFromInlineContent(content: InlineContent[]): string {
+function extractTextFromInlineContent(content: InlineContent<any>[]): string {
   return content.map(item => {
     if (item.type === 'text') {
       return item.text;
@@ -87,13 +87,13 @@ export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnect
 
 // Function to parse all notes and return maps
 export function parseAllNotes(notes: Note[]): {
-  tagsMap: Map<NoteId, string[]>;
-  mentionsMap: Map<NoteId, string[]>;
-  linksMap: Map<NoteId, string[]>; // Map note ID to link *titles*
+  tagsMap: Map<string, string[]>;
+  mentionsMap: Map<string, string[]>;
+  linksMap: Map<string, string[]>; // Map note ID to link *titles*
 } {
-  const tagsMap = new Map<NoteId, string[]>();
-  const mentionsMap = new Map<NoteId, string[]>();
-  const linksMap = new Map<NoteId, string[]>();
+  const tagsMap = new Map<string, string[]>();
+  const mentionsMap = new Map<string, string[]>();
+  const linksMap = new Map<string, string[]>();
 
   notes.forEach(note => {
     // Only parse actual notes; folders/other types get empty arrays

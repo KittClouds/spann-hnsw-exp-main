@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react'; // Add useRef
 import { graphService } from '../services/GraphService';
 import { syncManager } from '../services/SyncManager';
@@ -13,8 +12,7 @@ import {
   STANDARD_ROOT_ID,
   noteTagsMapAtom,    // Import derived map atoms
   noteMentionsMapAtom,
-  noteLinksMapAtom,
-  NoteId
+  noteLinksMapAtom
 } from '@/lib/store';
 import { ClusterId } from '@/lib/utils/ids';
 
@@ -72,7 +70,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
 
     console.log("GraphProvider: Checking for connection changes...");
 
-    const changedNoteIds = new Set<NoteId>();
+    const changedNoteIds = new Set<string>();
 
     // Compare Tags
     tagsMap.forEach((currentTags, noteId) => {
@@ -80,7 +78,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
         changedNoteIds.add(noteId);
       }
     });
-     previousTagsMap.current.forEach((_, noteId) => {
+    previousTagsMap.current.forEach((_, noteId) => {
         if (!tagsMap.has(noteId)) changedNoteIds.add(noteId); // Note removed or tags cleared
     });
 

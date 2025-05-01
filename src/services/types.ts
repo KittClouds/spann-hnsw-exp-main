@@ -1,4 +1,3 @@
-
 import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 
@@ -22,7 +21,8 @@ export enum EdgeType {
   HAS_TAG = 'has_tag',
   MENTIONS = 'mentions',
   HAS_CONCEPT = 'has_concept',
-  IN_CLUSTER = 'in_cluster'
+  IN_CLUSTER = 'in_cluster',
+  LINKS_TO = 'links_to'
 }
 
 export interface GraphMeta {
