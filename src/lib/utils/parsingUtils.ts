@@ -18,10 +18,13 @@ export interface ParsedConnections {
 function extractTextFromInlineContent(content: InlineContent<any, any>[]): string {
   return content.map(item => {
     if (item.type === 'text') {
-      return item.text;
+      // For StyledText type
+      return 'text' in item ? item.text : '';
     } else if (item.type === 'link') {
-      // Also extract text from within links if needed, though the [[Link]] regex handles top-level links
-       return extractTextFromInlineContent(item.content);
+      // For Link type - extract text from link content if it exists
+      return 'content' in item && Array.isArray(item.content) 
+        ? extractTextFromInlineContent(item.content) 
+        : '';
     }
     // Add other inline types if necessary
     return '';
