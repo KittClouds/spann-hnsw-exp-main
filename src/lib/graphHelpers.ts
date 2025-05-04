@@ -1,27 +1,22 @@
 
-import { schema } from './schema';
+import { Core } from 'cytoscape';
 import { Entity } from './utils/parsingUtils';
-import { EdgeType, NodeType } from '../services/types';
-import { generateEntityId } from './schema';
-import cytoscape from 'cytoscape';
+import { EdgeType } from '@/services/types';
+import { schema } from './schema';
 
 /**
  * Ensures an entity node exists in the graph
- * @param id Entity ID
- * @param ent Entity data
- * @param cy Cytoscape instance
  */
-export function ensureEntityNode(id: string, ent: Entity, cy: cytoscape.Core): void {
-  if (cy.getElementById(id).empty()) {
-    const def = schema.getNodeDef(ent.kind);
+export function ensureEntityNode(entityId: string, entity: Entity, cy: Core): void {
+  if (cy.getElementById(entityId).empty()) {
+    const def = schema.getNodeDef(entity.kind);
     cy.add({
       group: 'nodes',
       data: { 
-        id: id, 
-        type: ent.kind, 
-        label: ent.label, 
-        kind: ent.kind,
-        title: ent.label // Provide title for compatibility with existing queries
+        id: entityId, 
+        type: entity.kind, 
+        label: entity.label, 
+        kind: entity.kind 
       },
       style: def?.defaultStyle
     });
@@ -29,24 +24,25 @@ export function ensureEntityNode(id: string, ent: Entity, cy: cytoscape.Core): v
 }
 
 /**
- * Adds an edge between source and target if it doesn't already exist
- * @param src Source node ID
- * @param tgt Target node ID
- * @param label Edge type label
- * @param cy Cytoscape instance
- * @param pred Optional predicate text (for labeling)
+ * Adds an edge between two nodes if it doesn't already exist
  */
-export function addEdgeIfMissing(src: string, tgt: string, label: EdgeType, cy: cytoscape.Core, pred?: string): void {
-  const edgeId = `${label}_${src}_${tgt}`;
+export function addEdgeIfMissing(
+  sourceId: string, 
+  targetId: string, 
+  edgeType: EdgeType, 
+  cy: Core,
+  predicate?: string
+): void {
+  const edgeId = `${edgeType}_${sourceId}_${targetId}`;
   if (cy.getElementById(edgeId).empty()) {
     cy.add({
       group: 'edges',
       data: { 
         id: edgeId, 
-        source: src, 
-        target: tgt, 
-        label: label,
-        predicate: pred // Store predicate if provided
+        source: sourceId, 
+        target: targetId, 
+        label: edgeType,
+        predicate: predicate  // optional predicate for certain edge types
       }
     });
   }

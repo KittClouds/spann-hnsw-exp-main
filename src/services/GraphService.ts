@@ -817,7 +817,7 @@ export class GraphService implements IGraphService {
       concept: [] as { id: string; title: string }[],
       mention: [] as { id: string; title: string }[],
       entity: [] as { kind: string; label: string }[],
-      triple: [] as { subject: { kind: string; label: string }; predicate: string; object: { kind: string; label: string } }[]
+      triple: [] as { subject: { kind: string; label: string }; predicate: string; object: { kind: string; label: string }; id?: string }[]
     };
     
     try {

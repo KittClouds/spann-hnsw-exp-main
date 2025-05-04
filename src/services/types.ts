@@ -1,4 +1,3 @@
-
 import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 import { Entity, Triple } from '@/lib/utils/parsingUtils';
@@ -59,6 +58,13 @@ export type GraphChangeEvent = {
 
 export type GraphChangeListener = (event: GraphChangeEvent) => void;
 
+export interface Triple {
+  id?: string;  // Add the optional id field
+  subject: Entity;
+  predicate: string;
+  object: Entity;
+}
+
 export interface IGraphService {
   // Core operations
   getGraph(): Core;
@@ -103,7 +109,7 @@ export interface IGraphService {
   getRelatedNodes(nodeId: string): NodeCollection;
   getBacklinks(nodeId: string): any[];
   tagNote(noteId: string, tagName: string): boolean;
-  getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention' | 'entity' | 'triple', any[]>;
+  getConnections(noteId: string): Record<'tag' | 'concept' | 'mention' | 'entity' | 'triple', any[]>;
   updateNoteConnections(noteId: string, tags: string[], mentions: string[], links: string[], entities?: Entity[], triples?: Triple[]): void;
   
   // Store operations

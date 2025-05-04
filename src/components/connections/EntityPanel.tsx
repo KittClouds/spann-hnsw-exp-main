@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link, FileSymlink, CircleDashed } from 'lucide-react';
 import { useGraph } from '@/contexts/GraphContext';
+import { graphService } from '@/services/GraphService';
 
 export function EntityPanel() {
   const [{ entities, triples }] = useAtom(activeNoteConnectionsAtom);
