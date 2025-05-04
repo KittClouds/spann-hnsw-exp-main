@@ -157,8 +157,10 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
         const links = linksMap.get(noteId) ?? [];
         const entities = entitiesMap.get(noteId) ?? [];
         const triples = triplesMap.get(noteId) ?? [];
-        // Call graph service to update connections for this specific note
-        graphService.updateNoteConnections(noteId, tags, mentions, links, entities, triples);
+        // Fix: updateNoteConnections should match the function signature in GraphService
+        // Instead of passing entities and triples separately, we should update the method call
+        // to match what GraphService expects
+        graphService.updateNoteConnections(noteId, tags, mentions, links);
       });
     }
 

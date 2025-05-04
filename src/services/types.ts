@@ -1,4 +1,3 @@
-
 import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 
@@ -96,8 +95,8 @@ export interface IGraphService {
   getRelatedNodes(nodeId: string): NodeCollection;
   getBacklinks(nodeId: string): any[];
   tagNote(noteId: string, tagName: string): boolean;
-  getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention', any[]>;
-  updateNoteConnections(noteId: string, tags: string[], mentions: string[], links: string[]): void;
+  getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention' | 'entity' | 'triple', any[]>;
+  updateNoteConnections(noteId: string, tags: string[], mentions: string[], links: string[], entities?: any[], triples?: any[]): void;
   
   // Store operations
   importFromStore(notes: Note[], clusters: Cluster[]): void;
