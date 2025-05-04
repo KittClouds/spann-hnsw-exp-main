@@ -1,4 +1,3 @@
-
 import { atomWithStorage } from 'jotai/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { slug } from './utils';
@@ -65,6 +64,13 @@ class SchemaRegistry {
       defaultStyle: { 'shape': 'diamond', 'background-color': '#3498DB' } 
     });
     
+    // Register TRIPLE node
+    this.registerNode('TRIPLE', {
+      kind: 'TRIPLE',
+      labelProp: 'predicate',
+      defaultStyle: { shape: 'rectangle', 'background-color': '#7C5BF1' }
+    });
+    
     // Register built-in edge types
     this.registerEdge('HAS_TAG', { from: 'NOTE', to: 'TAG', directed: true });
     this.registerEdge('MENTIONS', { from: 'NOTE', to: 'MENTION', directed: true });
@@ -90,6 +96,13 @@ class SchemaRegistry {
       defaultStyle: { 'line-color': '#2FA84F' }
     });
     this.registerEdge('RELATED_TO', { from: '*', to: '*', directed: false });
+    
+    // Register reification edges
+    this.registerEdge('SUBJECT_OF', { from: '*', to: 'TRIPLE', directed: true });
+    this.registerEdge('OBJECT_OF', { from: '*', to: 'TRIPLE', directed: true });
+    
+    // Register provenance edge
+    this.registerEdge('MENTIONED_IN', { from: '*', to: 'NOTE', directed: true });
   }
 
   /** public API */

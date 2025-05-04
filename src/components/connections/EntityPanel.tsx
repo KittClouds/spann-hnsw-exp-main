@@ -5,10 +5,12 @@ import { activeNoteConnectionsAtom } from '@/lib/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Link, FileSymlink } from 'lucide-react';
+import { Link, FileSymlink, CircleDashed } from 'lucide-react';
+import { useGraph } from '@/contexts/GraphContext';
 
 export function EntityPanel() {
   const [{ entities, triples }] = useAtom(activeNoteConnectionsAtom);
+  const graph = useGraph();
 
   // Group entities by their kind/type
   const entityGroups = React.useMemo(() => {
@@ -24,12 +26,30 @@ export function EntityPanel() {
     return groups;
   }, [entities]);
 
+  const handleTripleClick = (triple: any) => {
+    if (triple.id) {
+      // If supported by app navigation, focus on this triple in the graph
+      const graphInstance = graph.getGraph?.();
+      if (graphInstance) {
+        try {
+          graphInstance.getElementById(triple.id).select();
+          graphInstance.center(triple.id);
+        } catch (e) {
+          console.error("Could not focus triple in graph", e);
+        }
+      }
+    }
+  };
+
   if (entities.length === 0 && triples.length === 0) {
     return (
       <div className="text-center py-4 text-muted-foreground text-sm">
         <p>No entities or relationships found in this note.</p>
         <p className="mt-2">
           Use <code className="bg-muted px-1 rounded">[TYPE|Label]</code> syntax to create entities.
+        </p>
+        <p className="mt-1">
+          Define relationships with <code className="bg-muted px-1 rounded">[TYPE|Entity1] (RELATIONSHIP) [TYPE|Entity2]</code> syntax.
         </p>
       </div>
     );
@@ -75,10 +95,11 @@ export function EntityPanel() {
             {triples.map((triple, index) => (
               <div 
                 key={index}
-                className="bg-[#12141f] border border-[#1a1b23] p-3 rounded-md"
+                className="bg-[#12141f] border border-[#1a1b23] p-3 rounded-md hover:bg-[#191b28] cursor-pointer transition-colors"
+                onClick={() => handleTripleClick(triple)}
               >
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center">
+                <div className="flex items-center justify-between text-xs flex-wrap">
+                  <div className="flex items-center mb-1 md:mb-0">
                     <Badge variant="outline" className="border-[#7E69AB]/30 mr-1">
                       {triple.subject.kind}
                     </Badge>
@@ -87,7 +108,8 @@ export function EntityPanel() {
                     </span>
                   </div>
                   
-                  <Badge className="mx-2 bg-[#7C5BF1] text-white border-none">
+                  <Badge className="mx-2 bg-[#7C5BF1] text-white border-none flex items-center">
+                    <CircleDashed className="h-3 w-3 mr-1" />
                     {triple.predicate}
                   </Badge>
                   

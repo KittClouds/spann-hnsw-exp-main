@@ -1,7 +1,7 @@
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
-import { generateClusterId, generateNoteId, generateNodeId, ClusterId, NoteId } from './utils/ids';
+import { generateClusterId, generateNoteId, generateNodeId, ClusterId, NoteId, TripleId } from './utils/ids';
 import { createParagraphBlock } from './utils/blockUtils';
 import { parseAllNotes, Entity, Triple } from './utils/parsingUtils'; 
 import { Thread, ThreadMessage, ChatRole } from '../services/types';
@@ -37,8 +37,16 @@ export interface Note {
   triples?: Triple[];   // Derived triples from content
 }
 
+// Update Triple interface to include an optional id
+export interface Triple {
+  id?: TripleId;          // injected when graph materialises
+  subject: Entity;
+  predicate: string;
+  object: Entity;
+}
+
 // Re-export NoteId and ClusterId types for use elsewhere
-export type { NoteId, ClusterId };
+export type { NoteId, ClusterId, TripleId };
 
 const getCurrentDate = () => new Date().toISOString();
 

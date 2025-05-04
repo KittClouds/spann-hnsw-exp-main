@@ -3,10 +3,12 @@ import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
 import { Note, Cluster } from '@/lib/store';
 import { slug } from '@/lib/utils';
-import { generateNodeId, generateClusterId, generateNoteId } from '@/lib/utils/ids';
+import { generateNodeId, generateClusterId, generateNoteId, generateTripleId } from '@/lib/utils/ids';
 import { IGraphService, NodeType, EdgeType, GraphJSON, Thread, ThreadMessage } from './types';
 import { ClusterHandler } from './handlers/ClusterHandler';
-import { parseAllNotes } from '@/lib/utils/parsingUtils'; // Import the parsing utility
+import { parseAllNotes, Entity, Triple } from '@/lib/utils/parsingUtils';
+import { schema, generateEntityId } from '@/lib/schema';
+import { ensureEntityNode, addEdgeIfMissing } from '@/lib/graphHelpers';
 
 cytoscape.use(automove);
 cytoscape.use(undoRedo);
@@ -651,13 +653,22 @@ export class GraphService implements IGraphService {
   }
 
   /**
-   * Updates the connections (tags, mentions, links) for a specific note in the graph
+   * Updates the connections (tags, mentions, links, entities, triples) for a specific note in the graph
    * @param noteId ID of the note to update connections for
    * @param tags Array of tag strings
    * @param mentions Array of mention strings (usernames without @)
    * @param links Array of link title strings (without [[]])
+   * @param entities Array of entities found in the note
+   * @param triples Array of triples (subject-predicate-object) found in the note
    */
-  public updateNoteConnections(noteId: string, tags: string[], mentions: string[], links: string[]): void {
+  public updateNoteConnections(
+    noteId: string, 
+    tags: string[], 
+    mentions: string[], 
+    links: string[],
+    entities: Entity[] = [],
+    triples: Triple[] = []
+  ): void {
     const noteNode = this.cy.getElementById(noteId);
     if (noteNode.empty() || noteNode.data('type') !== NodeType.NOTE) {
       console.warn(`[GraphService] Note ${noteId} not found or not a note type.`);
@@ -738,6 +749,51 @@ export class GraphService implements IGraphService {
         }
       });
       
+      // Handle entities
+      // Remove existing entity mentions
+      this.cy.edges(`[label = "${EdgeType.MENTIONED_IN}"][target = "${noteId}"]`).remove();
+      
+      entities.forEach(ent => {
+        const entId = generateEntityId(ent.kind, ent.label);
+        ensureEntityNode(entId, ent, this.cy);
+
+        // provenance edge (Entity → Note)
+        addEdgeIfMissing(entId, noteId, EdgeType.MENTIONED_IN, this.cy);
+      });
+      
+      // Handle triples
+      triples.forEach(t => {
+        const subjId = generateEntityId(t.subject.kind, t.subject.label);
+        const objId = generateEntityId(t.object.kind, t.object.label);
+
+        // ensure participants exist
+        ensureEntityNode(subjId, t.subject, this.cy);
+        ensureEntityNode(objId, t.object, this.cy);
+
+        // create TRIPLE node
+        const tripleId = t.id ?? generateTripleId();
+        if (this.cy.getElementById(tripleId).empty()) {
+          this.cy.add({
+            group: 'nodes',
+            data: {
+              id: tripleId,
+              type: NodeType.TRIPLE,
+              predicate: t.predicate,
+              createdIn: noteId         // provenance
+            },
+            style: schema.getNodeDef('TRIPLE')?.defaultStyle
+          });
+          t.id = tripleId; // write-back so caller can store it if desired
+        }
+
+        // link subject & object
+        addEdgeIfMissing(subjId, tripleId, EdgeType.SUBJECT_OF, this.cy, t.predicate);
+        addEdgeIfMissing(objId, tripleId, EdgeType.OBJECT_OF, this.cy, t.predicate);
+
+        // provenance edge (Triple node is *mentioned in* this note)
+        addEdgeIfMissing(tripleId, noteId, EdgeType.MENTIONED_IN, this.cy);
+      });
+      
     } catch (error) {
       console.error('[GraphService] Error updating note connections:', error);
     }
@@ -786,8 +842,45 @@ export class GraphService implements IGraphService {
         connections.mention.push({ id: targetId, title: targetTitle });
       });
       
-      // For now, return empty arrays for entities and triples
-      // These will be properly implemented when full entity and triple support is added
+      // Get entities mentioned in this note
+      this.cy.edges(`[label = "${EdgeType.MENTIONED_IN}"][target = "${noteId}"]`).forEach(edge => {
+        const sourceNode = edge.source();
+        if (sourceNode.data('type') !== NodeType.TRIPLE) {
+          const kind = sourceNode.data('kind');
+          const label = sourceNode.data('label');
+          connections.entity.push({ kind, label });
+        }
+      });
+      
+      // Get triples mentioned in this note
+      this.cy.edges(`[label = "${EdgeType.MENTIONED_IN}"][target = "${noteId}"]`).forEach(edge => {
+        const tripleNode = edge.source();
+        if (tripleNode.data('type') === NodeType.TRIPLE) {
+          const predicate = tripleNode.data('predicate');
+          
+          // Find subject
+          const subjectEdge = tripleNode.connectedEdges(`[label = "${EdgeType.SUBJECT_OF}"]`).first();
+          if (subjectEdge.empty()) return;
+          const subjectNode = subjectEdge.source();
+          
+          // Find object
+          const objectEdge = tripleNode.connectedEdges(`[label = "${EdgeType.OBJECT_OF}"]`).first();
+          if (objectEdge.empty()) return;
+          const objectNode = objectEdge.source();
+          
+          connections.triple.push({
+            subject: {
+              kind: subjectNode.data('kind'),
+              label: subjectNode.data('label')
+            },
+            predicate,
+            object: {
+              kind: objectNode.data('kind'),
+              label: objectNode.data('label')
+            }
+          });
+        }
+      });
       
     } catch (error) {
       console.error('[GraphService] Error getting connections:', error);

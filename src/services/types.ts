@@ -1,5 +1,7 @@
+
 import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
+import { Entity, Triple } from '@/lib/utils/parsingUtils';
 
 export type ElementDefinition = CytoscapeElementDefinition;
 
@@ -14,7 +16,8 @@ export enum NodeType {
   CLUSTER_DEFINITION = 'cluster_definition',
   CLUSTER_ROOT = 'cluster_root',
   THREAD = 'thread',
-  THREAD_MESSAGE = 'thread_message'
+  THREAD_MESSAGE = 'thread_message',
+  TRIPLE = 'TRIPLE'          // reified statement
 }
 
 export enum EdgeType {
@@ -27,7 +30,12 @@ export enum EdgeType {
   LINKS_TO = 'links_to',
   IN_THREAD = 'in_thread',
   REPLIES_TO = 'replies_to',
-  HAS_ATTACHMENT = 'has_attachment'
+  HAS_ATTACHMENT = 'has_attachment',
+  // provenance
+  MENTIONED_IN = 'MENTIONED_IN',
+  // reification links
+  SUBJECT_OF = 'SUBJECT_OF',   // Entity ──SUBJECT_OF──► Triple
+  OBJECT_OF = 'OBJECT_OF'     // Entity ──OBJECT_OF──► Triple
 }
 
 export interface GraphMeta {
@@ -96,7 +104,7 @@ export interface IGraphService {
   getBacklinks(nodeId: string): any[];
   tagNote(noteId: string, tagName: string): boolean;
   getConnections(nodeId: string): Record<'tag' | 'concept' | 'mention' | 'entity' | 'triple', any[]>;
-  updateNoteConnections(noteId: string, tags: string[], mentions: string[], links: string[], entities?: any[], triples?: any[]): void;
+  updateNoteConnections(noteId: string, tags: string[], mentions: string[], links: string[], entities?: Entity[], triples?: Triple[]): void;
   
   // Store operations
   importFromStore(notes: Note[], clusters: Cluster[]): void;
