@@ -13,9 +13,13 @@ import {
   STANDARD_ROOT_ID,
   noteTagsMapAtom,    // Import derived map atoms
   noteMentionsMapAtom,
-  noteLinksMapAtom
+  noteLinksMapAtom,
+  noteEntitiesMapAtom,
+  noteTriplesMapAtom,
+  schemaAtom
 } from '@/lib/store';
 import { ClusterId } from '@/lib/utils/ids';
+import { schema } from '@/lib/schema';
 
 interface GraphContextType {
   importNotes: () => void;
@@ -35,11 +39,15 @@ interface GraphContextType {
   getRelatedNotes: (noteId: string) => any[];
   getBacklinks: (noteId: string) => any[];
   tagNote: (noteId: string, tagName: string) => boolean;
-  getConnections: (noteId: string) => Record<'tag' | 'concept' | 'mention', any[]>;
+  getConnections: (noteId: string) => Record<'tag' | 'concept' | 'mention' | 'entity' | 'triple', any[]>;
   addThread: (thread: Thread) => string;
   addThreadMessage: (msg: ThreadMessage) => string;
   updateThreadMessage: (id: string, updates: Partial<ThreadMessage>) => boolean;
   deleteThreadMessage: (id: string) => boolean;
+  registerEntityType: (kind: string, labelProp: string, style?: any) => void;
+  registerRelationshipType: (label: string, from: string | string[], to: string | string[], directed?: boolean, style?: any) => void;
+  getEntityTypes: () => any[];
+  getRelationshipTypes: () => any[];
 }
 
 const GraphContext = createContext<GraphContextType | undefined>(undefined);
@@ -51,10 +59,23 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   const [tagsMap] = useAtom(noteTagsMapAtom);             // Subscribe to maps
   const [mentionsMap] = useAtom(noteMentionsMapAtom);
   const [linksMap] = useAtom(noteLinksMapAtom);
+  const [entitiesMap] = useAtom(noteEntitiesMapAtom);     // Subscribe to entity map
+  const [triplesMap] = useAtom(noteTriplesMapAtom);       // Subscribe to triple map
+  const [schemaDefs, setSchemaDefs] = useAtom(schemaAtom);
 
   const previousTagsMap = useRef(tagsMap);
   const previousMentionsMap = useRef(mentionsMap);
   const previousLinksMap = useRef(linksMap);
+  const previousEntitiesMap = useRef(entitiesMap);
+  const previousTriplesMap = useRef(triplesMap);
+
+  // Load schema from storage on mount
+  useEffect(() => {
+    if (schemaDefs.nodes.length > 0 || schemaDefs.edges.length > 0) {
+      console.log("GraphProvider: Loading schema from storage", schemaDefs);
+      schema.loadDefinitions(schemaDefs);
+    }
+  }, [schemaDefs]);
 
   // Effect for initial graph load from store
   useEffect(() => {
@@ -65,11 +86,13 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
       previousTagsMap.current = tagsMap;
       previousMentionsMap.current = mentionsMap;
       previousLinksMap.current = linksMap;
+      previousEntitiesMap.current = entitiesMap;
+      previousTriplesMap.current = triplesMap;
       setInitialized(true);
     }
-  }, [notes, clusters, initialized, setInitialized, tagsMap, mentionsMap, linksMap]); // Add maps to dependency array
+  }, [notes, clusters, initialized, setInitialized, tagsMap, mentionsMap, linksMap, entitiesMap, triplesMap]); // Add maps to dependency array
 
-   // Effect to synchronize derived connections TO the graph
+  // Effect to synchronize derived connections TO the graph
   useEffect(() => {
     if (!initialized) return; // Don't run if graph isn't ready
 
@@ -106,6 +129,26 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     previousLinksMap.current.forEach((_, noteId) => {
          if (!linksMap.has(noteId)) changedNoteIds.add(noteId);
     });
+    
+    // Compare Entities
+    entitiesMap.forEach((currentEntities, noteId) => {
+       if (previousEntitiesMap.current.get(noteId) !== currentEntities) {
+          changedNoteIds.add(noteId);
+       }
+    });
+    previousEntitiesMap.current.forEach((_, noteId) => {
+         if (!entitiesMap.has(noteId)) changedNoteIds.add(noteId);
+    });
+    
+    // Compare Triples
+    triplesMap.forEach((currentTriples, noteId) => {
+       if (previousTriplesMap.current.get(noteId) !== currentTriples) {
+          changedNoteIds.add(noteId);
+       }
+    });
+    previousTriplesMap.current.forEach((_, noteId) => {
+         if (!triplesMap.has(noteId)) changedNoteIds.add(noteId);
+    });
 
     if (changedNoteIds.size > 0) {
       console.log(`GraphProvider: Detected connection changes in ${changedNoteIds.size} notes. Updating graph...`, Array.from(changedNoteIds));
@@ -113,8 +156,10 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
         const tags = tagsMap.get(noteId) ?? [];
         const mentions = mentionsMap.get(noteId) ?? [];
         const links = linksMap.get(noteId) ?? [];
+        const entities = entitiesMap.get(noteId) ?? [];
+        const triples = triplesMap.get(noteId) ?? [];
         // Call graph service to update connections for this specific note
-        graphService.updateNoteConnections(noteId, tags, mentions, links);
+        graphService.updateNoteConnections(noteId, tags, mentions, links, entities, triples);
       });
     }
 
@@ -122,8 +167,10 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     previousTagsMap.current = tagsMap;
     previousMentionsMap.current = mentionsMap;
     previousLinksMap.current = linksMap;
+    previousEntitiesMap.current = entitiesMap;
+    previousTriplesMap.current = triplesMap;
 
-  }, [tagsMap, mentionsMap, linksMap, initialized]); // Run when maps or initialized state change
+  }, [tagsMap, mentionsMap, linksMap, entitiesMap, triplesMap, initialized]); // Run when maps or initialized state change
 
   const value: GraphContextType = {
     importNotes: () => {
@@ -219,6 +266,13 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
         tag: tagsMap.get(noteId)?.map(t => ({ id: t, title: t })) ?? [], // Format to match old structure
         mention: mentionsMap.get(noteId)?.map(m => ({ id: m, title: m })) ?? [],
         concept: linksMap.get(noteId)?.map(l => ({ id: l, title: l })) ?? [], // 'concept' was used for links
+        entity: entitiesMap.get(noteId)?.map(e => ({ id: e.kind + '|' + e.label, kind: e.kind, label: e.label })) ?? [],
+        triple: triplesMap.get(noteId)?.map(t => ({
+          id: `${t.subject.kind}|${t.subject.label}|${t.predicate}|${t.object.kind}|${t.object.label}`,
+          subject: { kind: t.subject.kind, label: t.subject.label },
+          predicate: t.predicate,
+          object: { kind: t.object.kind, label: t.object.label }
+        })) ?? []
       };
     },
     
@@ -226,7 +280,28 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     addThread: (thread) => syncManager.addThreadToGraph(thread),
     addThreadMessage: (msg) => syncManager.addThreadMessageToGraph(msg),
     updateThreadMessage: (id, updates) => syncManager.updateThreadMessageInGraph(id, updates),
-    deleteThreadMessage: (id) => syncManager.deleteThreadMessageFromGraph(id)
+    deleteThreadMessage: (id) => syncManager.deleteThreadMessageFromGraph(id),
+    
+    // Schema operations
+    registerEntityType: (kind, labelProp, style) => {
+      schema.registerNode(kind, { kind, labelProp, defaultStyle: style });
+      // Update stored schema
+      setSchemaDefs(schema.list());
+    },
+    
+    registerRelationshipType: (label, from, to, directed = true, style) => {
+      schema.registerEdge(label, { from, to, directed, defaultStyle: style });
+      // Update stored schema
+      setSchemaDefs(schema.list());
+    },
+    
+    getEntityTypes: () => {
+      return schema.getAllNodeDefs().map(([kind, def]) => ({ kind, ...def }));
+    },
+    
+    getRelationshipTypes: () => {
+      return schema.getAllEdgeDefs().map(([label, def]) => ({ label, ...def }));
+    }
   };
 
   return (

@@ -3,18 +3,20 @@ import { useAtom } from 'jotai';
 import { activeNoteIdAtom, activeNoteConnectionsAtom } from '@/lib/store';
 import { useGraph } from '@/contexts/GraphContext'; // Keep for backlinks
 import { Badge } from '@/components/ui/badge';
-import { Link, ChevronDown, ChevronUp, Hash, AtSign } from 'lucide-react';
+import { Link, ChevronDown, ChevronUp, Hash, AtSign, Database } from 'lucide-react';
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SchemaManager } from "../schema/SchemaManager";
+import { EntityPanel } from "./EntityPanel";
 
 export function ConnectionsPanel() {
   const [activeNoteId] = useAtom(activeNoteIdAtom);
   const [{ tags, mentions, links }] = useAtom(activeNoteConnectionsAtom);
   const { getBacklinks } = useGraph(); // Only need backlinks from graph context now
   const [isOpen, setIsOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'links' | 'backlinks'>('links');
+  const [activeView, setActiveView] = useState<'links' | 'backlinks' | 'entities'>('links');
   
   const backlinks = activeNoteId ? getBacklinks(activeNoteId) : [];
 
@@ -34,7 +36,7 @@ export function ConnectionsPanel() {
                 <Button
                   variant="ghost"
                   onClick={() => setActiveView('links')}
-                  className={`px-6 ${activeView === 'links' ? 'bg-[#1a1b23] text-primary' : 'text-muted-foreground'}`}
+                  className={`px-4 ${activeView === 'links' ? 'bg-[#1a1b23] text-primary' : 'text-muted-foreground'}`}
                 >
                   <Link className="mr-2 h-4 w-4" />
                   Links
@@ -42,10 +44,18 @@ export function ConnectionsPanel() {
                 <Button
                   variant="ghost"
                   onClick={() => setActiveView('backlinks')}
-                  className={`px-6 ${activeView === 'backlinks' ? 'bg-[#1a1b23] text-primary' : 'text-muted-foreground'}`}
+                  className={`px-4 ${activeView === 'backlinks' ? 'bg-[#1a1b23] text-primary' : 'text-muted-foreground'}`}
                 >
                   <Link className="mr-2 h-4 w-4 transform rotate-180" />
                   Backlinks
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setActiveView('entities')}
+                  className={`px-4 ${activeView === 'entities' ? 'bg-[#1a1b23] text-primary' : 'text-muted-foreground'}`}
+                >
+                  <Database className="mr-2 h-4 w-4" />
+                  Entities
                 </Button>
               </div>
 
@@ -133,7 +143,7 @@ export function ConnectionsPanel() {
                     </CardContent>
                   </Card>
                 </div>
-              ) : (
+              ) : activeView === 'backlinks' ? (
                 <Card className="bg-[#12141f] border-[#1a1b23]">
                   <CardContent className="p-4">
                     <h3 className="flex items-center text-sm font-medium mb-3 text-primary">
@@ -160,24 +170,30 @@ export function ConnectionsPanel() {
                     </div>
                   </CardContent>
                 </Card>
+              ) : (
+                <EntityPanel />
               )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
       
-      <Button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-[#0a0a0d] rounded-none h-8 flex items-center justify-center hover:bg-[#12141f] border-none"
-      >
-        <Link className="h-4 w-4 mr-2" />
-        <span>Connections</span>
-        {isOpen ? (
-          <ChevronDown className="h-4 w-4 ml-2" />
-        ) : (
-          <ChevronUp className="h-4 w-4 ml-2" />
-        )}
-      </Button>
+      <div className="flex items-center justify-between pr-2">
+        <Button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex-grow bg-[#0a0a0d] rounded-none h-8 flex items-center justify-center hover:bg-[#12141f] border-none"
+        >
+          <Link className="h-4 w-4 mr-2" />
+          <span>Connections</span>
+          {isOpen ? (
+            <ChevronDown className="h-4 w-4 ml-2" />
+          ) : (
+            <ChevronUp className="h-4 w-4 ml-2" />
+          )}
+        </Button>
+        
+        <SchemaManager />
+      </div>
     </div>
   );
 }

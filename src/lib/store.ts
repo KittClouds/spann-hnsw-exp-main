@@ -4,11 +4,14 @@ import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
 import { generateClusterId, generateNoteId, generateNodeId, ClusterId, NoteId } from './utils/ids';
 import { createParagraphBlock } from './utils/blockUtils';
-import { parseAllNotes } from './utils/parsingUtils'; // Import the new utility
+import { parseAllNotes, Entity, Triple } from './utils/parsingUtils'; 
 import { Thread, ThreadMessage, ChatRole } from '../services/types';
 
 // Define standard root ID constant to make it explicit throughout the codebase
 export const STANDARD_ROOT_ID = 'standard_root';
+
+// Define node kinds
+export type NodeKind = 'NOTE' | 'FOLDER' | 'TAG' | 'MENTION' | 'CLUSTER' | 'CHARACTER' | 'LOCATION' | 'CONCEPT' | string;
 
 export interface Cluster {
   id: ClusterId;
@@ -30,6 +33,8 @@ export interface Note {
   tags?: string[];
   mentions?: string[];
   concepts?: Array<{ type: string, name: string }>;
+  entities?: Entity[];  // Derived entities from content
+  triples?: Triple[];   // Derived triples from content
 }
 
 // Re-export NoteId and ClusterId types for use elsewhere
@@ -81,6 +86,22 @@ const initialNotes: Note[] = [
     type: 'note',
     clusterId: null // This note belongs to standard_root, not any cluster
   },
+  {
+    id: generateNoteId(),
+    title: 'Dynamic Schema Example',
+    content: [
+      createParagraphBlock('Galaxy Notes now supports dynamic schemas! Try these examples:', 'schema-block-1'),
+      createParagraphBlock('[CHARACTER|Jon Snow] born in [LOCATION|Winterfell]', 'schema-block-2'),
+      createParagraphBlock('[CHARACTER|Jon Snow] (ALLY_OF) [CHARACTER|Arya Stark]', 'schema-block-3'),
+      createParagraphBlock('[CHARACTER|Cersei Lannister] (ENEMY_OF) [CHARACTER|Jon Snow]', 'schema-block-4'),
+      createParagraphBlock('You can create custom entities with [TYPE|Label] syntax and relationships with [TYPE|Entity1] (RELATIONSHIP) [TYPE|Entity2] syntax.', 'schema-block-5')
+    ],
+    createdAt: getCurrentDate(),
+    updatedAt: getCurrentDate(),
+    parentId: 'note-folder-1' as NoteId,
+    type: 'note',
+    clusterId: null
+  }
 ];
 
 export const clustersAtom = atomWithStorage<Cluster[]>('galaxy-notes-clusters', [initialCluster]);
@@ -142,16 +163,27 @@ export const noteLinksMapAtom = atom(
   (get) => get(parsedConnectionsAtom).linksMap
 );
 
+// New atoms for entities and triples
+export const noteEntitiesMapAtom = atom(
+  (get) => get(parsedConnectionsAtom).entitiesMap
+);
+
+export const noteTriplesMapAtom = atom(
+  (get) => get(parsedConnectionsAtom).triplesMap
+);
+
 // Convenience atom to get connections for the currently active note
 export const activeNoteConnectionsAtom = atom((get) => {
   const activeId = get(activeNoteIdAtom);
-  if (!activeId) return { tags: [], mentions: [], links: [] };
+  if (!activeId) return { tags: [], mentions: [], links: [], entities: [], triples: [] };
 
   // Directly access the specific note's connections from the maps
   return {
     tags: get(noteTagsMapAtom).get(activeId) ?? [],
     mentions: get(noteMentionsMapAtom).get(activeId) ?? [],
     links: get(noteLinksMapAtom).get(activeId) ?? [], // Returns link titles
+    entities: get(noteEntitiesMapAtom).get(activeId) ?? [],
+    triples: get(noteTriplesMapAtom).get(activeId) ?? []
   };
 });
 

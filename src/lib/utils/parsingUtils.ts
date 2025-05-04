@@ -8,10 +8,27 @@ const MENTION_REGEX = /@([a-zA-Z0-9_]+)/g;
 // Updated regex to handle potential spaces but capture the core title
 const LINK_REGEX = /\[\[\s*([^\]\s|][^\]|]*?)\s*(?:\|[^\]]*)?\]\]/g; // Capture from `[[Title]]` or `[[Title|Alias]]`
 
+// New regex patterns for entities and triples
+const ENTITY_REGEX = /\[([A-Za-z0-9_]+)\|([^\]]+?)\]/g;
+const TRIPLE_REGEX = /\[([A-Za-z0-9_]+)\|([^\]]+?)\]\s*\(([A-Za-z0-9_]+)\)\s*\[([A-Za-z0-9_]+)\|([^\]]+?)\]/g;
+
+export interface Entity {
+  kind: string;
+  label: string;
+}
+
+export interface Triple {
+  subject: Entity;
+  predicate: string;
+  object: Entity;
+}
+
 export interface ParsedConnections {
   tags: string[];
   mentions: string[];
   links: string[]; // Stores link titles
+  entities: Entity[];
+  triples: Triple[];
 }
 
 // Helper to extract text from InlineContent[]
@@ -48,9 +65,8 @@ function extractTextFromBlock(block: Block): string {
     return blockText;
 }
 
-
 export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnections {
-  const connections: ParsedConnections = { tags: [], mentions: [], links: [] };
+  const connections: ParsedConnections = { tags: [], mentions: [], links: [], entities: [], triples: [] };
   if (!blocks) return connections;
 
   let fullText = '';
@@ -62,6 +78,8 @@ export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnect
   const uniqueTags = new Set<string>();
   const uniqueMentions = new Set<string>();
   const uniqueLinks = new Set<string>();
+  const uniqueEntities = new Map<string, Entity>(); // Use Map to deduplicate by kind+label
+  const triples: Triple[] = [];
 
   // Extract tags
   while ((match = TAG_REGEX.exec(fullText)) !== null) {
@@ -80,10 +98,59 @@ export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnect
         uniqueLinks.add(linkTitle);
     }
   }
+  
+  // First extract triples (to avoid double-matching the entities in triples)
+  const processedTripleRanges: [number, number][] = [];
+  
+  // Process triples
+  while ((match = TRIPLE_REGEX.exec(fullText)) !== null) {
+    const [fullMatch, subjectKind, subjectLabel, predicate, objectKind, objectLabel] = match;
+    const matchStart = match.index;
+    const matchEnd = matchStart + fullMatch.length;
+    
+    // Store this range as processed
+    processedTripleRanges.push([matchStart, matchEnd]);
+    
+    const subject: Entity = { kind: subjectKind, label: subjectLabel };
+    const object: Entity = { kind: objectKind, label: objectLabel };
+    
+    // Add a full triple
+    triples.push({
+      subject,
+      predicate,
+      object
+    });
+    
+    // Also add the entities from this triple
+    const subjectKey = `${subjectKind}|${subjectLabel}`;
+    const objectKey = `${objectKind}|${objectLabel}`;
+    uniqueEntities.set(subjectKey, subject);
+    uniqueEntities.set(objectKey, object);
+  }
+  
+  // Now process standalone entities, checking they don't overlap with triples
+  while ((match = ENTITY_REGEX.exec(fullText)) !== null) {
+    const matchStart = match.index;
+    const matchEnd = matchStart + match[0].length;
+    
+    // Check if this entity is already part of a triple
+    const isPartOfTriple = processedTripleRanges.some(
+      ([start, end]) => matchStart >= start && matchEnd <= end
+    );
+    
+    if (!isPartOfTriple) {
+      const [, kind, label] = match;
+      const entity: Entity = { kind, label };
+      const entityKey = `${kind}|${label}`;
+      uniqueEntities.set(entityKey, entity);
+    }
+  }
 
   connections.tags = Array.from(uniqueTags);
   connections.mentions = Array.from(uniqueMentions);
   connections.links = Array.from(uniqueLinks);
+  connections.entities = Array.from(uniqueEntities.values());
+  connections.triples = triples;
 
   return connections;
 }
@@ -93,24 +160,32 @@ export function parseAllNotes(notes: Note[]): {
   tagsMap: Map<string, string[]>;
   mentionsMap: Map<string, string[]>;
   linksMap: Map<string, string[]>; // Map note ID to link *titles*
+  entitiesMap: Map<string, Entity[]>; // Map note ID to entities
+  triplesMap: Map<string, Triple[]>; // Map note ID to triples
 } {
   const tagsMap = new Map<string, string[]>();
   const mentionsMap = new Map<string, string[]>();
   const linksMap = new Map<string, string[]>();
+  const entitiesMap = new Map<string, Entity[]>();
+  const triplesMap = new Map<string, Triple[]>();
 
   notes.forEach(note => {
     // Only parse actual notes; folders/other types get empty arrays
     if (note.type === 'note') {
-        const { tags, mentions, links } = parseNoteConnections(note.content);
+        const { tags, mentions, links, entities, triples } = parseNoteConnections(note.content);
         tagsMap.set(note.id, tags);
         mentionsMap.set(note.id, mentions);
         linksMap.set(note.id, links);
+        entitiesMap.set(note.id, entities);
+        triplesMap.set(note.id, triples);
     } else {
         tagsMap.set(note.id, []);
         mentionsMap.set(note.id, []);
         linksMap.set(note.id, []);
+        entitiesMap.set(note.id, []);
+        triplesMap.set(note.id, []);
     }
   });
 
-  return { tagsMap, mentionsMap, linksMap };
+  return { tagsMap, mentionsMap, linksMap, entitiesMap, triplesMap };
 }
