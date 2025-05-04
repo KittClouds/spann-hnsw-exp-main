@@ -29,7 +29,7 @@ export function EntityPanel() {
   const handleTripleClick = (triple: any) => {
     if (triple.id) {
       // If supported by app navigation, focus on this triple in the graph
-      const graphInstance = graph.getGraph?.();
+      const graphInstance = graph.exportGraphJSON().meta ? graphService.getGraph?.() : null;
       if (graphInstance) {
         try {
           graphInstance.getElementById(triple.id).select();

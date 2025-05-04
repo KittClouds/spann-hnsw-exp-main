@@ -1,9 +1,10 @@
+
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
 import { generateClusterId, generateNoteId, generateNodeId, ClusterId, NoteId, TripleId } from './utils/ids';
 import { createParagraphBlock } from './utils/blockUtils';
-import { parseAllNotes, Entity, Triple } from './utils/parsingUtils'; 
+import { parseAllNotes, Entity, Triple as ParsedTriple } from './utils/parsingUtils'; 
 import { Thread, ThreadMessage, ChatRole } from '../services/types';
 import { SchemaDefinitions } from './schema';
 
