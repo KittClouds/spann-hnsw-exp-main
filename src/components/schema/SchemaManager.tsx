@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Dialog, 
@@ -60,6 +59,10 @@ const relationshipFormSchema = z.object({
   color: z.string().default("#7C5BF1")
 });
 
+// Define types from the schema to fix the type mismatch
+type EntityFormValues = z.infer<typeof entityFormSchema>;
+type RelationshipFormValues = z.infer<typeof relationshipFormSchema>;
+
 export function SchemaManager() {
   const { getEntityTypes, getRelationshipTypes, registerEntityType, registerRelationshipType } = useGraph();
   const [isOpen, setIsOpen] = useState(false);
@@ -68,7 +71,7 @@ export function SchemaManager() {
   const [relationshipTypes, setRelationshipTypes] = useState(() => getRelationshipTypes());
 
   // Forms
-  const entityForm = useForm({
+  const entityForm = useForm<EntityFormValues>({
     resolver: zodResolver(entityFormSchema),
     defaultValues: {
       kind: "",
@@ -78,7 +81,7 @@ export function SchemaManager() {
     },
   });
 
-  const relationshipForm = useForm({
+  const relationshipForm = useForm<RelationshipFormValues>({
     resolver: zodResolver(relationshipFormSchema),
     defaultValues: {
       label: "",
@@ -90,7 +93,7 @@ export function SchemaManager() {
   });
 
   // Handle entity submission
-  const onSubmitEntity = (values: z.infer<typeof entityFormSchema>) => {
+  const onSubmitEntity = (values: EntityFormValues) => {
     try {
       registerEntityType(values.kind, values.labelProp, {
         'shape': values.shape,
@@ -110,7 +113,7 @@ export function SchemaManager() {
   };
 
   // Handle relationship submission
-  const onSubmitRelationship = (values: z.infer<typeof relationshipFormSchema>) => {
+  const onSubmitRelationship = (values: RelationshipFormValues) => {
     try {
       registerRelationshipType(
         values.label, 

@@ -1,4 +1,3 @@
-
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
@@ -6,6 +5,7 @@ import { generateClusterId, generateNoteId, generateNodeId, ClusterId, NoteId } 
 import { createParagraphBlock } from './utils/blockUtils';
 import { parseAllNotes, Entity, Triple } from './utils/parsingUtils'; 
 import { Thread, ThreadMessage, ChatRole } from '../services/types';
+import { SchemaDefinitions } from './schema';
 
 // Define standard root ID constant to make it explicit throughout the codebase
 export const STANDARD_ROOT_ID = 'standard_root';
@@ -305,6 +305,12 @@ const getAllChildrenIds = (notes: Note[], folderId: string): string[] => {
 
 export const graphInitializedAtom = atom<boolean>(false);
 export const graphLayoutAtom = atom<string>('dagre');
+
+// Add export for schemaAtom (required by GraphContext.tsx)
+export const schemaAtom = atomWithStorage<SchemaDefinitions>('galaxy-schema-defs', {
+  nodes: [],
+  edges: []
+});
 
 // Helper to get notes by cluster
 export const getNotesByClusterId = (notes: Note[], clusterId: string | null): Note[] => {

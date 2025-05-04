@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react'; // Add useRef
 import { graphService } from '../services/GraphService';
 import { syncManager } from '../services/SyncManager';
@@ -260,19 +259,15 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
       return false; // Return false to indicate deprecation/non-implementation
     },
 
+    // Fix the argument count error in getConnections function
     getConnections: (noteId) => {
       // Use directly from the derived atoms
       return {
         tag: tagsMap.get(noteId)?.map(t => ({ id: t, title: t })) ?? [], // Format to match old structure
         mention: mentionsMap.get(noteId)?.map(m => ({ id: m, title: m })) ?? [],
         concept: linksMap.get(noteId)?.map(l => ({ id: l, title: l })) ?? [], // 'concept' was used for links
-        entity: entitiesMap.get(noteId)?.map(e => ({ id: e.kind + '|' + e.label, kind: e.kind, label: e.label })) ?? [],
-        triple: triplesMap.get(noteId)?.map(t => ({
-          id: `${t.subject.kind}|${t.subject.label}|${t.predicate}|${t.object.kind}|${t.object.label}`,
-          subject: { kind: t.subject.kind, label: t.subject.label },
-          predicate: t.predicate,
-          object: { kind: t.object.kind, label: t.object.label }
-        })) ?? []
+        entity: entitiesMap.get(noteId) ?? [],
+        triple: triplesMap.get(noteId) ?? []
       };
     },
     
@@ -283,7 +278,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     deleteThreadMessage: (id) => syncManager.deleteThreadMessageFromGraph(id),
     
     // Schema operations
-    registerEntityType: (kind, labelProp, style) => {
+    registerEntityType: (kind: string, labelProp: string, style) => {
       schema.registerNode(kind, { kind, labelProp, defaultStyle: style });
       // Update stored schema
       setSchemaDefs(schema.list());
