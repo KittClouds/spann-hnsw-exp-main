@@ -1,4 +1,3 @@
-
 import { Block, InlineContent } from '@blocknote/core';
 import { Note } from '../store'; // Use Note instead of NoteId
 
@@ -18,6 +17,7 @@ export interface Entity {
 }
 
 export interface Triple {
+  id?: string;  // Add the optional id field to match with store.ts Triple interface
   subject: Entity;
   predicate: string;
   object: Entity;

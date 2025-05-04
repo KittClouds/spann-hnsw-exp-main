@@ -771,7 +771,7 @@ export class GraphService implements IGraphService {
         ensureEntityNode(objId, t.object, this.cy);
 
         // create TRIPLE node
-        const tripleId = t.id ?? generateTripleId();
+        const tripleId = t.id || generateTripleId();  // Use optional chaining and provide default
         if (this.cy.getElementById(tripleId).empty()) {
           this.cy.add({
             group: 'nodes',
@@ -783,7 +783,11 @@ export class GraphService implements IGraphService {
             },
             style: schema.getNodeDef('TRIPLE')?.defaultStyle
           });
-          t.id = tripleId; // write-back so caller can store it if desired
+          
+          // Assign ID to triple if it doesn't have one already
+          if (!t.id) {
+            t.id = tripleId; // write-back so caller can store it if desired
+          }
         }
 
         // link subject & object
