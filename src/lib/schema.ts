@@ -1,3 +1,4 @@
+
 import { atomWithStorage } from 'jotai/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { slug } from './utils';
@@ -12,7 +13,9 @@ export interface NodeDef {
 export interface EdgeDef {
   from: string | string[];
   to: string | string[];
-  directed?: boolean;
+  /** true ⇒ add mirror edge automatically */
+  symmetric?: boolean;
+  directed?: boolean;          // keep for clarity; symmetric implies directed=false at runtime
   defaultStyle?: any;
 }
 
@@ -81,6 +84,7 @@ class SchemaRegistry {
       from: 'CHARACTER', 
       to: 'CHARACTER', 
       directed: false,
+      symmetric: true,
       defaultStyle: { 'line-color': '#2ECC71', 'width': 3 }
     });
     this.registerEdge('ENEMY_OF', { 
@@ -96,6 +100,15 @@ class SchemaRegistry {
       defaultStyle: { 'line-color': '#2FA84F' }
     });
     this.registerEdge('RELATED_TO', { from: '*', to: '*', directed: false });
+    
+    // Example reflexive predicate
+    this.registerEdge('IDENTICAL_TO', {
+      from: '*',
+      to: '*',
+      directed: false,
+      symmetric: true,
+      defaultStyle: { 'line-color': '#F1C40F', 'width': 2, 'line-style':'dashed' }
+    });
     
     // Register reification edges
     this.registerEdge('SUBJECT_OF', { from: '*', to: 'TRIPLE', directed: true });
