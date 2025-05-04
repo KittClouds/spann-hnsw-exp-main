@@ -111,6 +111,7 @@ export function NoteEditor() {
     const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
     
     if (nextNoteId) {
+      // Fix this line:
       setActiveNoteId(nextNoteId);
     }
     

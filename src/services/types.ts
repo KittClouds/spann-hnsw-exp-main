@@ -1,6 +1,7 @@
+
 import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
-import { Entity, Triple } from '@/lib/utils/parsingUtils';
+import { Entity } from '@/lib/utils/parsingUtils';
 
 export type ElementDefinition = CytoscapeElementDefinition;
 

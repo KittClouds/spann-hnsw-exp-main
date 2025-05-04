@@ -2,10 +2,10 @@
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
-import { generateClusterId, generateNoteId, generateNodeId, TripleId } from './utils/ids';
+import { generateClusterId, generateNoteId, generateNodeId, TripleId, NoteId, ClusterId } from './utils/ids';
 import { createParagraphBlock } from './utils/blockUtils';
 import { parseAllNotes, Entity, Triple as ParsedTriple } from './utils/parsingUtils'; 
-import { Thread, ThreadMessage, ChatRole, Triple } from '../services/types';
+import { Thread, ThreadMessage, ChatRole } from '../services/types';
 import { SchemaDefinitions } from './schema';
 
 // Define standard root ID constant to make it explicit throughout the codebase
