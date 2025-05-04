@@ -1,4 +1,3 @@
-
 import cytoscape, { Core, NodeSingular, EdgeSingular, NodeCollection, ElementDefinition, ElementGroup, SingularElementArgument, Position } from 'cytoscape';
 import automove from 'cytoscape-automove';
 import undoRedo from 'cytoscape-undo-redo';
@@ -756,11 +755,13 @@ export class GraphService implements IGraphService {
   /**
    * Gets connections for a note
    */
-  public getConnections(noteId: string): Record<'tag' | 'concept' | 'mention', any[]> {
+  public getConnections(noteId: string): Record<'tag' | 'concept' | 'mention' | 'entity' | 'triple', any[]> {
     const connections = {
       tag: [] as { id: string; title: string }[],
       concept: [] as { id: string; title: string }[],
-      mention: [] as { id: string; title: string }[]
+      mention: [] as { id: string; title: string }[],
+      entity: [] as { kind: string; label: string }[],
+      triple: [] as { subject: { kind: string; label: string }; predicate: string; object: { kind: string; label: string } }[]
     };
     
     try {
@@ -784,6 +785,9 @@ export class GraphService implements IGraphService {
         const targetTitle = edge.target().data('title');
         connections.mention.push({ id: targetId, title: targetTitle });
       });
+      
+      // For now, return empty arrays for entities and triples
+      // These will be properly implemented when full entity and triple support is added
       
     } catch (error) {
       console.error('[GraphService] Error getting connections:', error);
