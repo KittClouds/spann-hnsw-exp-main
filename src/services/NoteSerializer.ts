@@ -1,6 +1,6 @@
 
 import { NoteDocument } from '../serializable/NoteDocument';
-import { Note } from '@/lib/store';
+import { Note, NoteId } from '@/lib/store';
 
 export class NoteSerializer {
   /**
@@ -21,7 +21,7 @@ export class NoteSerializer {
    */
   static fromDocument(doc: NoteDocument): Note {
     return {
-      id: doc.id,
+      id: doc.id as NoteId, // Cast to NoteId type
       title: doc.title,
       content: doc.blocks,
       createdAt: doc.createdAt,
