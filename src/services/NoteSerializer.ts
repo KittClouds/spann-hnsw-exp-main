@@ -43,6 +43,7 @@ export class NoteSerializer {
    * Directly deserialize JSON to a Note
    */
   static fromJSON(json: Record<string, any>): Note {
+    // Use NoteDocument's fromJSON method directly instead of the base class
     const doc = NoteDocument.fromJSON(json);
     return this.fromDocument(doc);
   }

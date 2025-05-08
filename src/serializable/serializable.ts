@@ -27,13 +27,10 @@ export abstract class Serializable {
   
   /**
    * Recreates a Serializable object from its JSON representation
+   * This method should be implemented by each subclass
    * @param json JSON object previously created with toJSON
    */
-  static fromJSON<T extends Serializable>(
-    this: new (...args: any[]) => T,
-    json: Record<string, any>
-  ): T {
-    // Implementation would be specific to each subclass
+  static fromJSON(json: Record<string, any>): Serializable {
     throw new Error('fromJSON must be implemented by subclass');
   }
 }
