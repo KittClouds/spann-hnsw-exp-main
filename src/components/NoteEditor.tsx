@@ -14,6 +14,7 @@ import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConnectionsPanel } from './connections/ConnectionsPanel';
 import { EmptyNoteState } from './EmptyNoteState';
+import { NoteSerializer } from '@/services/NoteSerializer';
 
 export function NoteEditor() {
   const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
@@ -52,16 +53,32 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Debounced save function - simpler now!
+  // Debounced save function with serialization
   const saveChanges = debounce(() => {
     if (editor && activeNote) {
        const currentBlocks = editor.document as Block[];
        console.log("NoteEditor: Saving changes for", activeNote.id);
-      // Only update the content in the activeNoteAtom
+      
+      // Update the content in the activeNoteAtom
+      const updatedNote = {
+        ...activeNote,
+        content: currentBlocks
+      };
+      
       setActiveNote({
         content: currentBlocks,
       });
-      // No need to parse or call graph sync directly here!
+      
+      // Serialize the note for potential external usage
+      try {
+        const doc = NoteSerializer.toDocument(updatedNote);
+        const json = doc.toJSON();
+        console.log("NoteEditor: Serialized note:", json);
+        // The serialized JSON can now be sent to external systems
+        // For example: localStorage.setItem(`note-${activeNote.id}`, JSON.stringify(json));
+      } catch (err) {
+        console.error("Error serializing note:", err);
+      }
      }
   }, 500);
 
@@ -89,9 +106,23 @@ export function NoteEditor() {
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
+      const updatedNote = {
+        ...activeNote,
+        title: e.target.value
+      };
+      
       setActiveNote({
         title: e.target.value
       });
+      
+      // Serialize the updated note
+      try {
+        const doc = NoteSerializer.toDocument(updatedNote);
+        const json = doc.toJSON();
+        console.log("NoteEditor: Serialized note with updated title:", json);
+      } catch (err) {
+        console.error("Error serializing note:", err);
+      }
     }
   };
 
@@ -111,7 +142,6 @@ export function NoteEditor() {
     const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
     
     if (nextNoteId) {
-      // Fix this line:
       setActiveNoteId(nextNoteId);
     }
     
