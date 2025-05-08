@@ -3,7 +3,7 @@ import { Serializable } from './serializable';
 import { Block } from '@blocknote/core';
 
 export class NoteDocument extends Serializable {
-  gn_namespace = ['app', 'note'];
+  gn_namespace = ['app', 'note'] as const;
 
   constructor(
     public id: string,
@@ -15,24 +15,9 @@ export class NoteDocument extends Serializable {
     super({ id, title, blocks, createdAt, updatedAt });
   }
   
-  /**
-   * Recreates a NoteDocument from its JSON representation
-   */
-  static fromJSON(json: Record<string, any>): NoteDocument {
-    // Verify namespace matches
-    const namespace = json.gn_namespace || [];
-    if (!Array.isArray(namespace) || 
-        namespace[0] !== 'app' || 
-        namespace[1] !== 'note') {
-      throw new Error('Invalid namespace for NoteDocument');
-    }
-    
-    return new NoteDocument(
-      json.id,
-      json.title,
-      json.blocks,
-      json.createdAt,
-      json.updatedAt
-    );
+  /** Narrow helper that *wraps* the generic base method */
+  static deserialize(json: Record<string, unknown>): NoteDocument {
+    // Cast because Serializable.fromJSON() returns `Serializable`
+    return Serializable.fromJSON(json) as NoteDocument;
   }
 }
