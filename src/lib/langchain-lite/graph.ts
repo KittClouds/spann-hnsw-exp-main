@@ -10,8 +10,8 @@ export class Node extends Serializable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties: Record<string, any>;
 
-  // Update namespace to reflect our app rather than LangChain
-  lc_namespace = ["graphion", "graph", "node"];
+  // Update namespace to reflect our app
+  gn_namespace = ["graphion", "graph", "node"];
 
   constructor({
     id,
@@ -39,8 +39,8 @@ export class Relationship extends Serializable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties: Record<string, any>;
 
-  // Update namespace to reflect our app rather than LangChain
-  lc_namespace = ["graphion", "graph", "relationship"];
+  // Update namespace to reflect our app
+  gn_namespace = ["graphion", "graph", "relationship"];
 
   constructor({
     id,
@@ -70,8 +70,8 @@ export class GraphDocument extends Serializable {
   relationships: Relationship[];
   source: Document;
 
-  // Update namespace to reflect our app rather than LangChain
-  lc_namespace = ["graphion", "graph", "document"];
+  // Update namespace to reflect our app
+  gn_namespace = ["graphion", "graph", "document"];
 
   constructor({
     nodes,

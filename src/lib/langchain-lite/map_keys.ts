@@ -1,5 +1,5 @@
 
-// A simplified version of the map_keys utility from LangChain
+// A simplified version of the map_keys utility for serialization
 
 export type SerializedFields = Record<string, unknown>;
 

@@ -2,7 +2,7 @@
 import { type SerializedFields, keyToJson, mapKeys } from "./map_keys";
 
 export interface BaseSerialized<T extends string> {
-  lc: number;
+  gn: number;
   type: T;
   id: string[];
   name?: string;
@@ -35,7 +35,7 @@ function replaceSecrets(
   const result = shallowCopy(root);
   for (const [path, secretId] of Object.entries(secretsMap)) {
     const [last, ...partsReverse] = path.split(".").reverse();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-this-alias, @typescript-eslint/no-explicit-any
     let current: any = result;
     for (const part of partsReverse.reverse()) {
       if (current[part] === undefined) {
@@ -46,7 +46,7 @@ function replaceSecrets(
     }
     if (current[last] !== undefined) {
       current[last] = {
-        lc: 1,
+        gn: 1,
         type: "secret",
         id: [secretId],
       };
@@ -57,40 +57,40 @@ function replaceSecrets(
 
 /**
  * Get a unique name for the module, rather than parent class implementations.
- * Should not be subclassed, subclass lc_name above instead.
+ * Should not be subclassed, subclass gn_name above instead.
  */
-export function get_lc_unique_name(
+export function get_gn_unique_name(
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   serializableClass: typeof Serializable
 ): string {
   // "super" here would refer to the parent class of Serializable,
   // when we want the parent class of the module actually calling this method.
   const parentClass = Object.getPrototypeOf(serializableClass);
-  const lcNameIsSubclassed =
-    typeof serializableClass.lc_name === "function" &&
-    (typeof parentClass.lc_name !== "function" ||
-      serializableClass.lc_name() !== parentClass.lc_name());
-  if (lcNameIsSubclassed) {
-    return serializableClass.lc_name();
+  const gnNameIsSubclassed =
+    typeof serializableClass.gn_name === "function" &&
+    (typeof parentClass.gn_name !== "function" ||
+      serializableClass.gn_name() !== parentClass.gn_name());
+  if (gnNameIsSubclassed) {
+    return serializableClass.gn_name();
   } else {
     return serializableClass.name;
   }
 }
 
 export interface SerializableInterface {
-  get lc_id(): string[];
+  get gn_id(): string[];
 }
 
 export abstract class Serializable implements SerializableInterface {
-  lc_serializable = true; // Changed from false to true as we want serialization enabled
+  gn_serializable = true;
 
-  lc_kwargs: SerializedFields;
+  gn_kwargs: SerializedFields;
 
   /**
    * A path to the module that contains the class, eg. ["graphion", "graph"]
    * Usually should be the same as the entrypoint the class is exported from.
    */
-  abstract lc_namespace: string[];
+  abstract gn_namespace: string[];
 
   /**
    * The name of the serializable. Override to provide an alias or
@@ -98,17 +98,17 @@ export abstract class Serializable implements SerializableInterface {
    *
    * Implemented as a static method to support loading logic.
    */
-  static lc_name(): string {
+  static gn_name(): string {
     return this.name;
   }
 
   /**
    * The final serialized identifier for the module.
    */
-  get lc_id(): string[] {
+  get gn_id(): string[] {
     return [
-      ...this.lc_namespace,
-      get_lc_unique_name(this.constructor as typeof Serializable),
+      ...this.gn_namespace,
+      get_gn_unique_name(this.constructor as typeof Serializable),
     ];
   }
 
@@ -117,7 +117,7 @@ export abstract class Serializable implements SerializableInterface {
    * Keys are paths to the secret in constructor args, e.g. "foo.bar.baz".
    * Values are the secret ids, which will be used when deserializing.
    */
-  get lc_secrets(): { [key: string]: string } | undefined {
+  get gn_secrets(): { [key: string]: string } | undefined {
     return undefined;
   }
 
@@ -127,7 +127,7 @@ export abstract class Serializable implements SerializableInterface {
    * Values are the attribute values, which will be serialized.
    * These attributes need to be accepted by the constructor as arguments.
    */
-  get lc_attributes(): SerializedFields | undefined {
+  get gn_attributes(): SerializedFields | undefined {
     return undefined;
   }
 
@@ -137,7 +137,7 @@ export abstract class Serializable implements SerializableInterface {
    * Values are the alias that will replace the key in serialization.
    * This is used to eg. make argument names match Python.
    */
-  get lc_aliases(): { [key: string]: string } | undefined {
+  get gn_aliases(): { [key: string]: string } | undefined {
     return undefined;
   }
 
@@ -145,31 +145,31 @@ export abstract class Serializable implements SerializableInterface {
    * A manual list of keys that should be serialized.
    * If not overridden, all fields passed into the constructor will be serialized.
    */
-  get lc_serializable_keys(): string[] | undefined {
+  get gn_serializable_keys(): string[] | undefined {
     return undefined;
   }
 
   constructor(kwargs?: SerializedFields, ..._args: never[]) {
-    if (this.lc_serializable_keys !== undefined) {
-      this.lc_kwargs = Object.fromEntries(
+    if (this.gn_serializable_keys !== undefined) {
+      this.gn_kwargs = Object.fromEntries(
         Object.entries(kwargs || {}).filter(([key]) =>
-          this.lc_serializable_keys?.includes(key)
+          this.gn_serializable_keys?.includes(key)
         )
       );
     } else {
-      this.lc_kwargs = kwargs ?? {};
+      this.gn_kwargs = kwargs ?? {};
     }
   }
 
   toJSON(): Serialized {
-    if (!this.lc_serializable) {
+    if (!this.gn_serializable) {
       return this.toJSONNotImplemented();
     }
     if (
       // eslint-disable-next-line no-instanceof/no-instanceof
-      this.lc_kwargs instanceof Serializable ||
-      typeof this.lc_kwargs !== "object" ||
-      Array.isArray(this.lc_kwargs)
+      this.gn_kwargs instanceof Serializable ||
+      typeof this.gn_kwargs !== "object" ||
+      Array.isArray(this.gn_kwargs)
     ) {
       // We do not support serialization of classes with arg not a POJO
       // I'm aware the check above isn't as strict as it could be
@@ -178,8 +178,8 @@ export abstract class Serializable implements SerializableInterface {
 
     const aliases: { [key: string]: string } = {};
     const secrets: { [key: string]: string } = {};
-    const kwargs = Object.keys(this.lc_kwargs).reduce((acc, key) => {
-      acc[key] = key in this ? this[key as keyof this] : this.lc_kwargs[key];
+    const kwargs = Object.keys(this.gn_kwargs).reduce((acc, key) => {
+      acc[key] = key in this ? this[key as keyof this] : this.gn_kwargs[key];
       return acc;
     }, {} as SerializedFields);
     // get secrets, attributes and aliases from all superclasses
@@ -189,9 +189,9 @@ export abstract class Serializable implements SerializableInterface {
       current;
       current = Object.getPrototypeOf(current)
     ) {
-      Object.assign(aliases, Reflect.get(current, "lc_aliases", this));
-      Object.assign(secrets, Reflect.get(current, "lc_secrets", this));
-      Object.assign(kwargs, Reflect.get(current, "lc_attributes", this));
+      Object.assign(aliases, Reflect.get(current, "gn_aliases", this));
+      Object.assign(secrets, Reflect.get(current, "gn_secrets", this));
+      Object.assign(kwargs, Reflect.get(current, "gn_attributes", this));
     }
 
     // include all secrets used, even if not in kwargs,
@@ -224,9 +224,9 @@ export abstract class Serializable implements SerializableInterface {
     });
 
     return {
-      lc: 1,
+      gn: 1,
       type: "constructor",
-      id: this.lc_id,
+      id: this.gn_id,
       kwargs: mapKeys(
         Object.keys(secrets).length ? replaceSecrets(kwargs, secrets) : kwargs,
         keyToJson,
@@ -237,9 +237,9 @@ export abstract class Serializable implements SerializableInterface {
 
   toJSONNotImplemented(): SerializedNotImplemented {
     return {
-      lc: 1,
+      gn: 1,
       type: "not_implemented",
-      id: this.lc_id,
+      id: this.gn_id,
     };
   }
 }
