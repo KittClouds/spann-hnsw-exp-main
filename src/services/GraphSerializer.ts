@@ -1,5 +1,5 @@
 
-import { Core } from 'cytoscape';
+import { Core, NodeCollection, EdgeCollection, ElementDefinition } from 'cytoscape';
 import { 
   Node, 
   Relationship, 
@@ -42,7 +42,7 @@ export class GraphSerializer {
           type: nodeType,
           properties
         });
-      }).toArray();
+      });
       
       // Get a Map of node IDs to Node objects for quick lookup when creating relationships
       const nodeMap = new Map<string, Node>();
@@ -73,7 +73,7 @@ export class GraphSerializer {
           type: edgeData.label || "RELATED_TO",
           properties
         });
-      }).toArray();
+      });
       
       // Create and return GraphDocument
       return new GraphDocument({
@@ -114,7 +114,7 @@ export class GraphSerializer {
         const nodeId = n.id.startsWith("node-") ? n.id.substring(5) : n.id;
         const { position, ...otherProperties } = n.properties;
         
-        const nodeDefinition = {
+        const nodeDefinition: ElementDefinition = {
           group: 'nodes',
           data: {
             id: nodeId,
@@ -133,7 +133,7 @@ export class GraphSerializer {
         const targetId = r.target.id.startsWith("node-") ? r.target.id.substring(5) : r.target.id;
         const edgeId = r.id.startsWith("rel-") ? r.id.substring(4) : r.id;
         
-        const edgeDefinition = {
+        const edgeDefinition: ElementDefinition = {
           group: 'edges',
           data: {
             id: edgeId,
