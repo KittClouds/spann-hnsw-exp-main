@@ -82,12 +82,12 @@ export interface SerializableInterface {
 }
 
 export abstract class Serializable implements SerializableInterface {
-  lc_serializable = false;
+  lc_serializable = true; // Changed from false to true as we want serialization enabled
 
   lc_kwargs: SerializedFields;
 
   /**
-   * A path to the module that contains the class, eg. ["langchain", "llms"]
+   * A path to the module that contains the class, eg. ["graphion", "graph"]
    * Usually should be the same as the entrypoint the class is exported from.
    */
   abstract lc_namespace: string[];
