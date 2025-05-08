@@ -1,6 +1,7 @@
 import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 import { Entity } from '@/lib/utils/parsingUtils';
+import { GraphDocument } from '@/lib/langchain-lite';
 
 export type ElementDefinition = CytoscapeElementDefinition;
 
@@ -81,6 +82,10 @@ export interface IGraphService {
   importGraph(data: GraphJSON): void;
   exportElement(ele: SingularElementArgument): ElementDefinition;
   importElement(json: ElementDefinition): void;
+  
+  // Serializable graph operations
+  toSerializableGraph(sourceText?: string, metadata?: Record<string, any>): GraphDocument;
+  fromSerializableGraph(graphDoc: GraphDocument): boolean;
   
   // Note operations
   addNote(params: { 

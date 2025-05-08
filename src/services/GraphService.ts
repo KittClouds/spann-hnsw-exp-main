@@ -9,6 +9,9 @@ import { ClusterHandler } from './handlers/ClusterHandler';
 import { parseAllNotes, Entity, Triple } from '@/lib/utils/parsingUtils';
 import { schema, generateEntityId } from '@/lib/schema';
 import { ensureEntityNode, addEdgeIfMissing } from '@/lib/graphHelpers';
+import { GraphSerializer } from './GraphSerializer';
+import { GraphDocument } from '@/lib/langchain-lite';
+import { graphSerializationMethods } from './graphSerializationMethods';
 
 cytoscape.use(automove);
 cytoscape.use(undoRedo);
@@ -1006,6 +1009,46 @@ export class GraphService implements IGraphService {
     
     this.queueNotify([{ group: 'nodes', data: { id } }]);
     return true;
+  }
+
+  /**
+   * Converts the current graph to a serializable GraphDocument
+   * @param sourceText Optional text content for the source document
+   * @param metadata Optional metadata for the source document
+   * @returns A GraphDocument containing the serialized graph
+   */
+  public toSerializableGraph(sourceText: string = "", metadata: Record<string, any> = {}): GraphDocument {
+    return graphSerializationMethods.toSerializableGraph(this.cy, sourceText, metadata);
+  }
+  
+  /**
+   * Imports a GraphDocument into the graph
+   * @param graphDoc The GraphDocument to import
+   * @returns True if import was successful
+   */
+  public fromSerializableGraph(graphDoc: GraphDocument): boolean {
+    const result = graphSerializationMethods.fromSerializableGraph(this.cy, graphDoc);
+    if (result) {
+      // Re-index node titles and cluster IDs
+      this.titleIndex.clear();
+      this.clusterExists.clear();
+      
+      this.cy.nodes().forEach(node => {
+        const type = node.data('type');
+        const title = node.data('title');
+        const id = node.id();
+        
+        if (type === NodeType.NOTE && title && id) {
+          this.titleIndex.set(slug(title), id);
+        } else if (type === NodeType.CLUSTER && id) {
+          this.clusterExists.add(id);
+        }
+      });
+      
+      const elementDefs = this.cy.elements().jsons() as unknown as ElementDefinition[];
+      this.queueNotify(elementDefs);
+    }
+    return result;
   }
 }
 
