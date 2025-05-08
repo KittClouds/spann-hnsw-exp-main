@@ -106,7 +106,7 @@ export class GraphSerializer {
       
       // Re-add root nodes if they existed
       rootNodes.forEach(rootNode => {
-        if (rootNode) this.cy.add(rootNode);
+        if (rootNode) this.cy.add(rootNode as ElementDefinition);
       });
       
       // Add nodes
