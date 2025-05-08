@@ -5,7 +5,7 @@ import { Document } from "./document";
 export class Node extends Serializable {
   id: string | number;
 
-  kind: string; // Changed from type to kind
+  type: string;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties: Record<string, any>;
@@ -14,17 +14,17 @@ export class Node extends Serializable {
 
   constructor({
     id,
-    kind = "Node", // Changed from type to kind, and parameter name
+    type = "Node",
     properties = {},
   }: {
     id: string | number;
-    kind?: string; // Changed from type to kind
+    type?: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     properties?: Record<string, any>;
   }) {
     super();
     this.id = id;
-    this.kind = kind; // Changed from this.type = type to this.kind = kind
+    this.type = type;
     this.properties = properties;
   }
 }
