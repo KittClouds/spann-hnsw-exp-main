@@ -1,12 +1,25 @@
 
-import { Core, NodeCollection, EdgeCollection, ElementDefinition } from 'cytoscape';
+import { Core, ElementDefinition } from 'cytoscape';
 import { 
-  Node, 
-  Relationship, 
   GraphDocument,
   Document
 } from '@/lib/langchain-lite';
 import { toNodeId, toRelationshipId, toDocumentId } from '@/lib/langchain-lite/adapters';
+
+// Define Node and Relationship types locally since they're not exported from langchain-lite
+interface Node {
+  id: string;
+  type: string;
+  properties: Record<string, any>;
+}
+
+interface Relationship {
+  id: string;
+  source: Node;
+  target: Node;
+  type: string;
+  properties: Record<string, any>;
+}
 
 /**
  * GraphSerializer adapter handles conversion between Cytoscape's graph format
@@ -37,11 +50,11 @@ export class GraphSerializer {
         };
         
         // Create Node object
-        return new Node({
+        return {
           id: toNodeId(n.id()),
           type: nodeType,
           properties
-        });
+        };
       });
       
       // Get a Map of node IDs to Node objects for quick lookup when creating relationships
@@ -66,21 +79,31 @@ export class GraphSerializer {
         const properties = { ...edgeData };
         
         // Create Relationship object
-        return new Relationship({
+        return {
           id: toRelationshipId(e.id()),
           source: sourceNode,
           target: targetNode,
           type: edgeData.label || "RELATED_TO",
           properties
-        });
+        };
       });
       
-      // Create and return GraphDocument
-      return new GraphDocument({
-        nodes,
-        relationships,
-        source: doc
-      });
+      // Create and return GraphDocument with the appropriate structure
+      return new GraphDocument(
+        nodes.map(node => ({
+          id: node.id,
+          type: node.type,
+          properties: node.properties
+        })), 
+        relationships.map(rel => ({
+          source: rel.source.id,
+          target: rel.target.id,
+          type: rel.type,
+          properties: rel.properties
+        })),
+        {},
+        doc
+      );
     } catch (error) {
       console.error("Error converting graph to GraphDocument:", error);
       throw error;
@@ -109,8 +132,8 @@ export class GraphSerializer {
         if (rootNode) this.cy.add(rootNode as ElementDefinition);
       });
       
-      // Add nodes
-      gd.nodes.forEach(n => {
+      // Add nodes from vertices
+      gd.vertices.forEach(n => {
         const nodeId = n.id.startsWith("node-") ? n.id.substring(5) : n.id;
         const { position, ...otherProperties } = n.properties;
         
@@ -127,11 +150,11 @@ export class GraphSerializer {
         this.cy.add(nodeDefinition);
       });
       
-      // Add edges
-      gd.relationships.forEach(r => {
-        const sourceId = r.source.id.startsWith("node-") ? r.source.id.substring(5) : r.source.id;
-        const targetId = r.target.id.startsWith("node-") ? r.target.id.substring(5) : r.target.id;
-        const edgeId = r.id.startsWith("rel-") ? r.id.substring(4) : r.id;
+      // Add edges from the graph document
+      gd.edges.forEach(r => {
+        const sourceId = r.source.startsWith("node-") ? r.source.substring(5) : r.source;
+        const targetId = r.target.startsWith("node-") ? r.target.substring(5) : r.target;
+        const edgeId = r.type + "-" + sourceId + "-" + targetId;
         
         const edgeDefinition: ElementDefinition = {
           group: 'edges',
@@ -140,7 +163,7 @@ export class GraphSerializer {
             source: sourceId,
             target: targetId,
             label: r.type,
-            ...r.properties
+            ...(r.properties || {})
           }
         };
         

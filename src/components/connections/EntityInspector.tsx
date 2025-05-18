@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Entity } from '@/lib/utils/parsingUtils';
 import { schema } from '@/lib/schema';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { EntityAttributesForm } from './EntityAttributesForm';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useGraph } from '@/contexts/GraphContext';
+import { graphContextExtensionMethods } from '@/contexts/GraphContextExtension';
 
 interface EntityInspectorProps {
   entity: Entity;
@@ -18,7 +19,14 @@ export function EntityInspector({ entity, closeDialog }: EntityInspectorProps) {
   const { kind, label } = entity;
   const [activeTab, setActiveTab] = useState("info");
   const [attributes, setAttributes] = useState<Record<string, any>>({});
-  const { updateEntityAttributes } = useGraph();
+  const graph = useGraph();
+  const { updateEntityAttributes } = graphContextExtensionMethods;
+  
+  useEffect(() => {
+    // Load attributes when component mounts
+    const existingAttributes = graph.getEntityAttributes?.(kind, label) || {};
+    setAttributes(existingAttributes);
+  }, [kind, label, graph]);
   
   const nodeDef = schema.getNodeDef(kind);
   const hasAttributes = nodeDef?.attributes && Object.keys(nodeDef.attributes).length > 0;

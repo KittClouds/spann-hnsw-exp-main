@@ -13,6 +13,11 @@ export abstract class Serializable {
   abstract gn_namespace: string[];
 
   constructor(gn_id?: string) {
+    // Ensure this constructor is only called from subclasses
+    if (this.constructor === Serializable) {
+      throw new Error('Serializable is an abstract class and cannot be instantiated directly');
+    }
+    
     this.gn_id = gn_id || uuidv4();
   }
 
@@ -40,7 +45,7 @@ export abstract class Serializable {
    * Creates a shallow copy of this object
    */
   copy(): this {
-    const Constructor = this.constructor as typeof Serializable;
+    const Constructor = this.constructor as any;
     const result = new Constructor() as this;
     Object.assign(result, this);
     return result;

@@ -69,7 +69,7 @@ export class GraphDocument extends Serializable {
       vertices: this.vertices,
       edges: this.edges,
       metadata: this.metadata,
-      source: this.source ? this.source.toJSON() : undefined
+      source: this.source ? JSON.parse(JSON.stringify(this.source)) : undefined
     };
   }
 
@@ -83,7 +83,7 @@ export class GraphDocument extends Serializable {
     let source: Document | undefined;
     
     if (data.source) {
-      source = Document.fromJSON(data.source);
+      source = Document.fromJSON ? Document.fromJSON(data.source) : new Document(data.source.pageContent, data.source.metadata);
     }
     
     const result = new GraphDocument(vertices, edges, metadata, source);
@@ -133,20 +133,23 @@ export class GraphDocument extends Serializable {
   renameProperties(mapping: Record<string, string>): GraphDocument {
     const result = this.copy() as GraphDocument;
     
+    // Convert Record mapping to key mapper function
+    const keyMapper = (key: string) => mapping[key] || key;
+    
     // Map vertex properties
     result.vertices = this.vertices.map(v => ({
       ...v,
-      properties: mapKeys(v.properties, mapping)
+      properties: mapKeys(v.properties, keyMapper)
     }));
     
     // Map edge properties
     result.edges = this.edges.map(e => ({
       ...e,
-      properties: e.properties ? mapKeys(e.properties, mapping) : undefined
+      properties: e.properties ? mapKeys(e.properties, keyMapper) : undefined
     }));
     
     // Map metadata
-    result.metadata = mapKeys(this.metadata, mapping);
+    result.metadata = mapKeys(this.metadata, keyMapper);
     
     return result;
   }
