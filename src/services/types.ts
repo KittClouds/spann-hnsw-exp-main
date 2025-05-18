@@ -1,8 +1,8 @@
-
 import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 import { Entity } from '@/lib/utils/parsingUtils';
 import { GraphDocument } from '@/lib/langchain-lite';
+import { EntityWithReferences } from "@/components/entity-browser/EntityBrowser";
 
 export type ElementDefinition = CytoscapeElementDefinition;
 
@@ -171,4 +171,13 @@ export interface ThreadMessage {
   createdAt: string;
   parentId?: string | null;
   attachments?: AttachmentMeta[];
+}
+
+declare module './GraphService' {
+  interface GraphService {
+    getAllEntities(): EntityWithReferences[];
+    createEntity(entity: Entity): boolean;
+    getEntityReferences(kind: string, label: string): {id: string, title: string}[];
+    getEntityRelationships(kind: string, label: string): any[];
+  }
 }

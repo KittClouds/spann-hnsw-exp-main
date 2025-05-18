@@ -12,6 +12,7 @@ import { ensureEntityNode, addEdgeIfMissing } from '@/lib/graphHelpers';
 import { GraphSerializer } from './GraphSerializer';
 import { GraphDocument } from '@/lib/langchain-lite';
 import { graphSerializationMethods } from './graphSerializationMethods';
+import { extendGraphService } from './GraphServiceExtension';
 
 cytoscape.use(automove);
 cytoscape.use(undoRedo);
@@ -46,6 +47,9 @@ export class GraphService implements IGraphService {
     });
 
     this.initializeGraph();
+    
+    // Initialize extensions for entity browser
+    extendGraphService(this);
   }
 
   private initializeGraph() {

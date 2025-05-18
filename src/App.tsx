@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GraphProvider } from "./contexts/GraphContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import EntityBrowserPage from "./pages/EntityBrowser";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +20,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/entities" element={<EntityBrowserPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
