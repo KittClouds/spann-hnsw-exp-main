@@ -1,3 +1,4 @@
+
 import { Block, InlineContent } from '@blocknote/core';
 import { Note } from '../store'; // Use Note instead of NoteId
 
@@ -8,12 +9,14 @@ const MENTION_REGEX = /@([a-zA-Z0-9_]+)/g;
 const LINK_REGEX = /\[\[\s*([^\]\s|][^\]|]*?)\s*(?:\|[^\]]*)?\]\]/g; // Capture from `[[Title]]` or `[[Title|Alias]]`
 
 // New regex patterns for entities and triples
-const ENTITY_REGEX = /\[([A-Za-z0-9_]+)\|([^\]]+?)\]/g;
-const TRIPLE_REGEX = /\[([A-Za-z0-9_]+)\|([^\]]+?)\]\s*\(([A-Za-z0-9_]+)\)\s*\[([A-Za-z0-9_]+)\|([^\]]+?)\]/g;
+// Updated to potentially capture attributes in JSON format after the label
+const ENTITY_REGEX = /\[([A-Za-z0-9_]+)\|([^\]]+?)(?:\|({.*?}))?\]/g;
+const TRIPLE_REGEX = /\[([A-Za-z0-9_]+)\|([^\]]+?)(?:\|({.*?}))?\]\s*\(([A-Za-z0-9_]+)\)\s*\[([A-Za-z0-9_]+)\|([^\]]+?)(?:\|({.*?}))?\]/g;
 
 export interface Entity {
   kind: string;
   label: string;
+  attributes?: Record<string, any>;
 }
 
 export interface Triple {
@@ -65,6 +68,20 @@ function extractTextFromBlock(block: Block): string {
     return blockText;
 }
 
+// Helper to parse JSON attributes string safely
+function parseAttributesJSON(jsonStr: string | undefined): Record<string, any> | undefined {
+  if (!jsonStr) return undefined;
+  
+  try {
+    // Replace single quotes with double quotes for valid JSON
+    const normalizedJson = jsonStr.replace(/'/g, '"');
+    return JSON.parse(normalizedJson);
+  } catch (e) {
+    console.warn(`Failed to parse entity attributes: ${jsonStr}`);
+    return undefined;
+  }
+}
+
 export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnections {
   const connections: ParsedConnections = { tags: [], mentions: [], links: [], entities: [], triples: [] };
   if (!blocks) return connections;
@@ -104,15 +121,24 @@ export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnect
   
   // Process triples
   while ((match = TRIPLE_REGEX.exec(fullText)) !== null) {
-    const [fullMatch, subjectKind, subjectLabel, predicate, objectKind, objectLabel] = match;
+    const [fullMatch, subjectKind, subjectLabel, subjectAttrs, predicate, objectKind, objectLabel, objectAttrs] = match;
     const matchStart = match.index;
     const matchEnd = matchStart + fullMatch.length;
     
     // Store this range as processed
     processedTripleRanges.push([matchStart, matchEnd]);
     
-    const subject: Entity = { kind: subjectKind, label: subjectLabel };
-    const object: Entity = { kind: objectKind, label: objectLabel };
+    const subject: Entity = { 
+      kind: subjectKind, 
+      label: subjectLabel,
+      attributes: parseAttributesJSON(subjectAttrs)
+    };
+    
+    const object: Entity = { 
+      kind: objectKind, 
+      label: objectLabel,
+      attributes: parseAttributesJSON(objectAttrs)
+    };
     
     // Add a full triple
     triples.push({
@@ -139,8 +165,12 @@ export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnect
     );
     
     if (!isPartOfTriple) {
-      const [, kind, label] = match;
-      const entity: Entity = { kind, label };
+      const [, kind, label, attrsJSON] = match;
+      const entity: Entity = { 
+        kind, 
+        label,
+        attributes: parseAttributesJSON(attrsJSON)
+      };
       const entityKey = `${kind}|${label}`;
       uniqueEntities.set(entityKey, entity);
     }

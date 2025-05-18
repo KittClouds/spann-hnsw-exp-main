@@ -1050,6 +1050,35 @@ export class GraphService implements IGraphService {
     }
     return result;
   }
+
+  // New methods to handle entity attributes
+  public updateEntityAttributes(kind: string, label: string, attributes: Record<string, any>): boolean {
+    const entityId = generateEntityId(kind, label);
+    const entity = this.cy.getElementById(entityId);
+    
+    if (entity.empty()) {
+      console.warn(`Entity ${entityId} not found.`);
+      return false;
+    }
+    
+    const currentAttributes = entity.data('attributes') || {};
+    entity.data('attributes', { ...currentAttributes, ...attributes });
+    
+    this.queueNotify([entity.json() as ElementDefinition]);
+    return true;
+  }
+  
+  public getEntityAttributes(kind: string, label: string): Record<string, any> | null {
+    const entityId = generateEntityId(kind, label);
+    const entity = this.cy.getElementById(entityId);
+    
+    if (entity.empty()) {
+      console.warn(`Entity ${entityId} not found.`);
+      return null;
+    }
+    
+    return entity.data('attributes') || {};
+  }
 }
 
 export const graphService = new GraphService();

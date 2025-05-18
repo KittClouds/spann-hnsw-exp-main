@@ -1,4 +1,3 @@
-
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { Block } from '@blocknote/core';
@@ -104,6 +103,35 @@ const initialNotes: Note[] = [
       createParagraphBlock('[CHARACTER|Jon Snow] (ALLY_OF) [CHARACTER|Arya Stark]', 'schema-block-3'),
       createParagraphBlock('[CHARACTER|Cersei Lannister] (ENEMY_OF) [CHARACTER|Jon Snow]', 'schema-block-4'),
       createParagraphBlock('You can create custom entities with [TYPE|Label] syntax and relationships with [TYPE|Entity1] (RELATIONSHIP) [TYPE|Entity2] syntax.', 'schema-block-5')
+    ],
+    createdAt: getCurrentDate(),
+    updatedAt: getCurrentDate(),
+    parentId: 'note-folder-1' as NoteId,
+    type: 'note',
+    clusterId: null
+  },
+  {
+    id: generateNoteId(),
+    title: 'Story Entities Example',
+    content: [
+      createParagraphBlock('# Enhanced Entity Types for Storytelling', 'story-block-1'),
+      createParagraphBlock('Galaxy Notes now supports specialized entity types for creative writing and storytelling!', 'story-block-2'),
+      createParagraphBlock('## Characters and NPCs', 'story-block-3'),
+      createParagraphBlock('[CHARACTER|Gandalf|{"role":"Wizard","alignment":"Good"}] is a powerful wizard.', 'story-block-4'),
+      createParagraphBlock('[NPC|Barkeeper|{"role":"Innkeeper","motivation":"Make money"}] runs the local inn.', 'story-block-5'),
+      createParagraphBlock('## Locations and Scenes', 'story-block-6'),
+      createParagraphBlock('[LOCATION|Rivendell|{"type":"City","description":"Elven outpost"}] is an elven sanctuary.', 'story-block-7'),
+      createParagraphBlock('[SCENE|Council Meeting|{"mood":"Tense","time":"Morning"}] takes place in Rivendell.', 'story-block-8'),
+      createParagraphBlock('## Items and Factions', 'story-block-9'),
+      createParagraphBlock('[ITEM|One Ring|{"rarity":"Legendary","power":10}] must be destroyed.', 'story-block-10'),
+      createParagraphBlock('[FACTION|The Fellowship|{"alignment":"Good","power":8}] is formed to destroy the ring.', 'story-block-11'),
+      createParagraphBlock('## Events and Relationships', 'story-block-12'),
+      createParagraphBlock('[EVENT|Ring Destruction|{"impact":"Major","date":"Third Age 3019"}] is the climax of the story.', 'story-block-13'),
+      createParagraphBlock('[CHARACTER|Frodo] (OWNS) [ITEM|One Ring]', 'story-block-14'),
+      createParagraphBlock('[CHARACTER|Gandalf] (PART_OF) [FACTION|The Fellowship]', 'story-block-15'),
+      createParagraphBlock('[SCENE|Council Meeting] (OCCURS_IN) [LOCATION|Rivendell]', 'story-block-16'),
+      createParagraphBlock('[CHARACTER|Frodo] (PARTICIPATES_IN) [SCENE|Council Meeting]', 'story-block-17'),
+      createParagraphBlock('[EVENT|Ring Destruction] (FOLLOWS) [EVENT|Battle at Black Gate]', 'story-block-18')
     ],
     createdAt: getCurrentDate(),
     updatedAt: getCurrentDate(),

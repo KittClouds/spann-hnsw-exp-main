@@ -1,3 +1,4 @@
+
 import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 import { Entity } from '@/lib/utils/parsingUtils';
@@ -17,7 +18,13 @@ export enum NodeType {
   CLUSTER_ROOT = 'cluster_root',
   THREAD = 'thread',
   THREAD_MESSAGE = 'thread_message',
-  TRIPLE = 'TRIPLE'          // reified statement
+  TRIPLE = 'TRIPLE',         // reified statement
+  // Story-specific entity types
+  SCENE = 'SCENE',
+  FACTION = 'FACTION',
+  ITEM = 'ITEM',
+  NPC = 'NPC',
+  EVENT = 'EVENT'
 }
 
 export enum EdgeType {
@@ -35,7 +42,14 @@ export enum EdgeType {
   MENTIONED_IN = 'MENTIONED_IN',
   // reification links
   SUBJECT_OF = 'SUBJECT_OF',   // Entity ──SUBJECT_OF──► Triple
-  OBJECT_OF = 'OBJECT_OF'     // Entity ──OBJECT_OF──► Triple
+  OBJECT_OF = 'OBJECT_OF',     // Entity ──OBJECT_OF──► Triple
+  // Story-specific relationships
+  PART_OF = 'PART_OF',
+  OCCURS_IN = 'OCCURS_IN',
+  PARTICIPATES_IN = 'PARTICIPATES_IN',
+  OWNS = 'OWNS',
+  PRECEDES = 'PRECEDES',
+  FOLLOWS = 'FOLLOWS'
 }
 
 export interface GraphMeta {
@@ -116,6 +130,10 @@ export interface IGraphService {
   tagNote(noteId: string, tagName: string): boolean;
   getConnections(noteId: string): Record<'tag' | 'concept' | 'mention' | 'entity' | 'triple', any[]>;
   updateNoteConnections(noteId: string, tags: string[], mentions: string[], links: string[], entities?: Entity[], triples?: Triple[]): void;
+  
+  // Entity operations
+  updateEntityAttributes(kind: string, label: string, attributes: Record<string, any>): boolean;
+  getEntityAttributes(kind: string, label: string): Record<string, any> | null;
   
   // Store operations
   importFromStore(notes: Note[], clusters: Cluster[]): void;

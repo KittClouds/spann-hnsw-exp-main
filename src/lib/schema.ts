@@ -8,6 +8,12 @@ export interface NodeDef {
   labelProp: string;
   defaultStyle?: any;
   allowedOut?: string[];
+  attributes?: Record<string, {
+    type: 'string' | 'number' | 'boolean' | 'enum';
+    label: string;
+    default?: any;
+    options?: string[]; // For enum type
+  }>;
 }
 
 export interface EdgeDef {
@@ -54,12 +60,21 @@ class SchemaRegistry {
     this.registerNode('CHARACTER', { 
       kind: 'CHARACTER', 
       labelProp: 'title', 
-      defaultStyle: { 'shape': 'ellipse', 'background-color': '#E74C3C' } 
+      defaultStyle: { 'shape': 'ellipse', 'background-color': '#E74C3C' },
+      attributes: {
+        'role': { type: 'string', label: 'Role', default: '' },
+        'alignment': { type: 'enum', label: 'Alignment', options: ['Good', 'Neutral', 'Evil'], default: 'Neutral' },
+        'description': { type: 'string', label: 'Description', default: '' }
+      }
     });
     this.registerNode('LOCATION', { 
       kind: 'LOCATION', 
       labelProp: 'title', 
-      defaultStyle: { 'shape': 'hexagon', 'background-color': '#2FA84F' } 
+      defaultStyle: { 'shape': 'hexagon', 'background-color': '#2FA84F' },
+      attributes: {
+        'description': { type: 'string', label: 'Description', default: '' },
+        'type': { type: 'enum', label: 'Type', options: ['City', 'Dungeon', 'Wilderness', 'Building', 'Other'], default: 'City' }
+      }
     });
     this.registerNode('CONCEPT', { 
       kind: 'CONCEPT', 
@@ -72,6 +87,65 @@ class SchemaRegistry {
       kind: 'TRIPLE',
       labelProp: 'predicate',
       defaultStyle: { shape: 'rectangle', 'background-color': '#7C5BF1' }
+    });
+    
+    // Register new story-specific entity types
+    this.registerNode('SCENE', {
+      kind: 'SCENE',
+      labelProp: 'title',
+      defaultStyle: { shape: 'roundrectangle', 'background-color': '#9B59B6' },
+      attributes: {
+        'mood': { type: 'enum', label: 'Mood', options: ['Tense', 'Calm', 'Mysterious', 'Joyful', 'Sad'], default: 'Calm' },
+        'time': { type: 'string', label: 'Time', default: '' },
+        'weather': { type: 'enum', label: 'Weather', options: ['Clear', 'Rainy', 'Stormy', 'Foggy', 'Snowy'], default: 'Clear' },
+        'description': { type: 'string', label: 'Description', default: '' }
+      }
+    });
+    
+    this.registerNode('FACTION', {
+      kind: 'FACTION',
+      labelProp: 'title',
+      defaultStyle: { shape: 'pentagon', 'background-color': '#F39C12' },
+      attributes: {
+        'alignment': { type: 'enum', label: 'Alignment', options: ['Good', 'Neutral', 'Evil'], default: 'Neutral' },
+        'power': { type: 'number', label: 'Power (1-10)', default: 5 },
+        'territory': { type: 'string', label: 'Territory', default: '' },
+        'description': { type: 'string', label: 'Description', default: '' }
+      }
+    });
+    
+    this.registerNode('ITEM', {
+      kind: 'ITEM',
+      labelProp: 'title',
+      defaultStyle: { shape: 'triangle', 'background-color': '#1ABC9C' },
+      attributes: {
+        'rarity': { type: 'enum', label: 'Rarity', options: ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'], default: 'Common' },
+        'power': { type: 'number', label: 'Power (1-10)', default: 1 },
+        'description': { type: 'string', label: 'Description', default: '' }
+      }
+    });
+    
+    this.registerNode('NPC', {
+      kind: 'NPC',
+      labelProp: 'title',
+      defaultStyle: { shape: 'ellipse', 'background-color': '#F1C40F' },
+      attributes: {
+        'role': { type: 'string', label: 'Role', default: '' },
+        'motivation': { type: 'string', label: 'Motivation', default: '' },
+        'alignment': { type: 'enum', label: 'Alignment', options: ['Good', 'Neutral', 'Evil'], default: 'Neutral' },
+        'description': { type: 'string', label: 'Description', default: '' }
+      }
+    });
+    
+    this.registerNode('EVENT', {
+      kind: 'EVENT',
+      labelProp: 'title',
+      defaultStyle: { shape: 'star', 'background-color': '#E67E22' },
+      attributes: {
+        'date': { type: 'string', label: 'Date/Time', default: '' },
+        'impact': { type: 'enum', label: 'Impact', options: ['Minor', 'Moderate', 'Major', 'Catastrophic'], default: 'Moderate' },
+        'description': { type: 'string', label: 'Description', default: '' }
+      }
     });
     
     // Register built-in edge types
@@ -116,6 +190,49 @@ class SchemaRegistry {
     
     // Register provenance edge
     this.registerEdge('MENTIONED_IN', { from: '*', to: 'NOTE', directed: true });
+    
+    // Register new story-specific relationships
+    this.registerEdge('PART_OF', {
+      from: ['CHARACTER', 'NPC'],
+      to: 'FACTION',
+      directed: true,
+      defaultStyle: { 'line-color': '#F39C12', 'width': 2 }
+    });
+    
+    this.registerEdge('OCCURS_IN', {
+      from: ['EVENT', 'SCENE'],
+      to: 'LOCATION',
+      directed: true,
+      defaultStyle: { 'line-color': '#9B59B6', 'width': 2 }
+    });
+    
+    this.registerEdge('PARTICIPATES_IN', {
+      from: ['CHARACTER', 'NPC'],
+      to: ['EVENT', 'SCENE'],
+      directed: true,
+      defaultStyle: { 'line-color': '#E67E22', 'width': 2 }
+    });
+    
+    this.registerEdge('OWNS', {
+      from: ['CHARACTER', 'NPC', 'FACTION'],
+      to: 'ITEM',
+      directed: true,
+      defaultStyle: { 'line-color': '#1ABC9C', 'width': 2 }
+    });
+    
+    this.registerEdge('PRECEDES', {
+      from: ['EVENT', 'SCENE'],
+      to: ['EVENT', 'SCENE'],
+      directed: true,
+      defaultStyle: { 'line-color': '#34495E', 'width': 2, 'line-style': 'dashed' }
+    });
+    
+    this.registerEdge('FOLLOWS', {
+      from: ['EVENT', 'SCENE'],
+      to: ['EVENT', 'SCENE'],
+      directed: true,
+      defaultStyle: { 'line-color': '#34495E', 'width': 2, 'line-style': 'dotted' }
+    });
   }
 
   /** public API */
