@@ -42,14 +42,14 @@ export function EntityFilters({
       <div className="flex gap-2 items-center">
         <Label htmlFor="entity-type" className="whitespace-nowrap">Filter by:</Label>
         <Select 
-          value={currentFilter || ''} 
-          onValueChange={(value) => onFilterChange(value || null)}
+          value={currentFilter || 'all'} 
+          onValueChange={(value) => onFilterChange(value === 'all' ? null : value)}
         >
           <SelectTrigger id="entity-type" className="w-[180px]">
             <SelectValue placeholder="All entity types" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All entity types</SelectItem>
+            <SelectItem value="all">All entity types</SelectItem>
             {entityTypes.map(type => (
               <SelectItem key={type.kind} value={type.kind}>{type.kind}</SelectItem>
             ))}
