@@ -19,6 +19,7 @@ export enum NodeType {
   THREAD = 'thread',
   THREAD_MESSAGE = 'thread_message',
   TRIPLE = 'TRIPLE',         // reified statement
+  ENTITY = 'entity',         // Add this line for entity type
   // Story-specific entity types
   SCENE = 'SCENE',
   FACTION = 'FACTION',

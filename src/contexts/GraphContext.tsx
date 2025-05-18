@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react'; // Add useRef
 import { graphService } from '../services/GraphService';
 import { syncManager } from '../services/SyncManager';
@@ -50,6 +49,10 @@ interface GraphContextType {
   getRelationshipTypes: () => any[];
   updateEntityAttributes: (kind: string, label: string, attributes: Record<string, any>) => boolean;
   getEntityAttributes: (kind: string, label: string) => Record<string, any> | null;
+  getAllEntities: () => EntityWithReferences[];
+  createEntity: (entity: Entity) => boolean;
+  getEntityReferences: (kind: string, label: string) => {id: string, title: string}[];
+  getEntityRelationships: (kind: string, label: string) => any[];
 }
 
 const GraphContext = createContext<GraphContextType | undefined>(undefined);
@@ -309,6 +312,23 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     
     getEntityAttributes: (kind: string, label: string) => {
       return graphService.getEntityAttributes(kind, label);
+    },
+    
+    // Add the missing methods for Entity Browser
+    getAllEntities: () => {
+      return graphService.getAllEntities ? graphService.getAllEntities() : [];
+    },
+    
+    createEntity: (entity: Entity) => {
+      return graphService.createEntity ? graphService.createEntity(entity) : false;
+    },
+    
+    getEntityReferences: (kind: string, label: string) => {
+      return graphService.getEntityReferences ? graphService.getEntityReferences(kind, label) : [];
+    },
+    
+    getEntityRelationships: (kind: string, label: string) => {
+      return graphService.getEntityRelationships ? graphService.getEntityRelationships(kind, label) : [];
     }
   };
 
