@@ -13,8 +13,7 @@ export abstract class Serializable {
   abstract gn_namespace: string[];
 
   constructor(gn_id?: string) {
-    // Ensure this constructor is only called from subclasses
-    if (this.constructor === Serializable) {
+    if (new.target === Serializable) {
       throw new Error('Serializable is an abstract class and cannot be instantiated directly');
     }
     

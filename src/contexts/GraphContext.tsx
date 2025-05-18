@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react'; // Add useRef
 import { graphService } from '../services/GraphService';
 import { syncManager } from '../services/SyncManager';
@@ -47,6 +48,8 @@ interface GraphContextType {
   registerRelationshipType: (label: string, from: string | string[], to: string | string[], directed?: boolean, style?: any) => void;
   getEntityTypes: () => any[];
   getRelationshipTypes: () => any[];
+  updateEntityAttributes: (kind: string, label: string, attributes: Record<string, any>) => boolean;
+  getEntityAttributes: (kind: string, label: string) => Record<string, any> | null;
 }
 
 const GraphContext = createContext<GraphContextType | undefined>(undefined);
@@ -297,6 +300,15 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     
     getRelationshipTypes: () => {
       return schema.getAllEdgeDefs().map(([label, def]) => ({ label, ...def }));
+    },
+
+    // Entity attribute methods - add these to fix the error
+    updateEntityAttributes: (kind: string, label: string, attributes: Record<string, any>) => {
+      return graphService.updateEntityAttributes(kind, label, attributes);
+    },
+    
+    getEntityAttributes: (kind: string, label: string) => {
+      return graphService.getEntityAttributes(kind, label);
     }
   };
 
