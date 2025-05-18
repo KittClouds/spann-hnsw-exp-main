@@ -19,6 +19,8 @@ import {
 } from '@/lib/store';
 import { ClusterId } from '@/lib/utils/ids';
 import { schema } from '@/lib/schema';
+import { Entity } from '@/lib/utils/parsingUtils';
+import { EntityWithReferences } from '@/components/entity-browser/EntityBrowser';
 
 interface GraphContextType {
   importNotes: () => void;
