@@ -16,6 +16,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useAtom } from 'jotai';
 import { activeNoteAtom } from '@/lib/store';
+import { ResponsiveEntityBrowserTrigger } from './entity-browser/ResponsiveEntityBrowserTrigger';
 
 export function GalaxyNotes() {
   const [activeNote] = useAtom(activeNoteAtom);
@@ -41,7 +42,8 @@ export function GalaxyNotes() {
               <h1 className="text-2xl font-bold text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]">Galaxy Notes</h1>
               <p className="text-sm text-muted-foreground">Multi-note block editor with automatic saving</p>
             </div>
-            <div>
+            <div className="flex items-center gap-2">
+              <ResponsiveEntityBrowserTrigger />
               <ThemeToggle />
             </div>
           </header>
