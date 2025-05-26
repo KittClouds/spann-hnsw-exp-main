@@ -45,6 +45,7 @@ import { cn } from '@/lib/utils';
 import { BlueprintManager } from './BlueprintManager';
 import { useAtom } from 'jotai';
 import { blueprintsAtom } from '@/lib/store';
+import { EntityBlueprint } from '@/types/blueprints';
 
 // Define zod schemas for validation
 const entityFormSchema = z.object({
