@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useAtom } from 'jotai';
 import { rightSidebarOpenAtom, rightSidebarMobileAtom } from '@/lib/rightSidebarStore';
-import { useSidebar } from '@/components/ui/sidebar';
 
 interface RightSidebarContextType {
   open: boolean;

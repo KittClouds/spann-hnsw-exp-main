@@ -22,6 +22,7 @@ import { useAtom } from 'jotai';
 import { activeNoteAtom } from '@/lib/store';
 import { useRightSidebar } from './RightSidebarProvider';
 import { PanelRight } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
 function RightSidebarTrigger() {
   const { toggleSidebar } = useRightSidebar();
@@ -41,13 +42,19 @@ function RightSidebarTrigger() {
 
 export function GalaxyNotes() {
   const [activeNote] = useAtom(activeNoteAtom);
+  const { open: rightSidebarOpen } = useRightSidebar();
 
   return (
     <SidebarProvider>
       <RightSidebarProvider>
         <div className="flex h-screen w-full bg-gradient-to-b dark:from-[#0f101a] dark:to-[#171926] light:from-white light:to-[#f8f6ff] text-foreground">
           <AppSidebar />
-          <SidebarInset className="flex-1 min-w-0">
+          <SidebarInset 
+            className={cn(
+              "flex-1 min-w-0 transition-all duration-300 ease-in-out",
+              rightSidebarOpen ? "mr-64" : "mr-0"
+            )}
+          >
             <header className="border-b border-border p-4 flex items-center justify-between bg-opacity-95 backdrop-blur-sm dark:bg-black/30 light:bg-white/70">
               <div className="flex items-center gap-2">
                 <SidebarTrigger className="-ml-1" />

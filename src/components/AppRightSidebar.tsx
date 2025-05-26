@@ -4,19 +4,12 @@ import { X } from "lucide-react";
 import { useAtom } from "jotai";
 import { rightSidebarContentAtom } from "@/lib/rightSidebarStore";
 import { useRightSidebar } from "@/components/RightSidebarProvider";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarFooter,
-} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-export function AppRightSidebar({
-  ...props
-}: React.ComponentProps<typeof Sidebar>) {
+export function AppRightSidebar() {
   const [contentType] = useAtom(rightSidebarContentAtom);
-  const { toggleSidebar } = useRightSidebar();
+  const { open, toggleSidebar } = useRightSidebar();
 
   const renderContent = () => {
     switch (contentType) {
@@ -34,12 +27,14 @@ export function AppRightSidebar({
   };
 
   return (
-    <Sidebar 
-      side="right" 
-      className="bg-black border-l border-[#1a1b23]" 
-      {...props}
+    <div 
+      className={cn(
+        "fixed top-0 right-0 h-full w-64 bg-black border-l border-[#1a1b23] z-40 transform transition-transform duration-300 ease-in-out flex flex-col",
+        open ? "translate-x-0" : "translate-x-full"
+      )}
     >
-      <SidebarHeader className="border-b border-[#1a1b23]">
+      {/* Header */}
+      <div className="border-b border-[#1a1b23] p-4">
         <div className="flex items-center justify-between w-full">
           <h2 className="text-sm font-semibold text-foreground">Right Panel</h2>
           <Button
@@ -52,19 +47,21 @@ export function AppRightSidebar({
             <span className="sr-only">Close right sidebar</span>
           </Button>
         </div>
-      </SidebarHeader>
+      </div>
       
-      <SidebarContent>
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
         {renderContent()}
-      </SidebarContent>
+      </div>
       
-      <SidebarFooter className="border-t border-[#1a1b23]">
+      {/* Footer */}
+      <div className="border-t border-[#1a1b23] p-4">
         <div className="w-full">
           <p className="text-xs text-muted-foreground text-center">
             Galaxy Notes - Right Panel
           </p>
         </div>
-      </SidebarFooter>
-    </Sidebar>
+      </div>
+    </div>
   );
 }
