@@ -5,19 +5,18 @@ import { useAtom } from "jotai";
 import { rightSidebarContentAtom } from "@/lib/rightSidebarStore";
 import { useRightSidebar } from "@/components/RightSidebarProvider";
 import {
-  RightSidebar,
-  RightSidebarContent,
-  RightSidebarHeader,
-  RightSidebarFooter,
-} from "@/components/ui/right-sidebar";
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarFooter,
+} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 export function AppRightSidebar({
   ...props
-}: React.ComponentProps<typeof RightSidebar>) {
+}: React.ComponentProps<typeof Sidebar>) {
   const [contentType] = useAtom(rightSidebarContentAtom);
-  const { toggleSidebar, isMobile } = useRightSidebar();
+  const { toggleSidebar } = useRightSidebar();
 
   const renderContent = () => {
     switch (contentType) {
@@ -35,8 +34,12 @@ export function AppRightSidebar({
   };
 
   return (
-    <RightSidebar className="bg-black border-l border-[#1a1b23]" {...props}>
-      <RightSidebarHeader className="border-b border-[#1a1b23]">
+    <Sidebar 
+      side="right" 
+      className="bg-black border-l border-[#1a1b23]" 
+      {...props}
+    >
+      <SidebarHeader className="border-b border-[#1a1b23]">
         <div className="flex items-center justify-between w-full">
           <h2 className="text-sm font-semibold text-foreground">Right Panel</h2>
           <Button
@@ -49,19 +52,19 @@ export function AppRightSidebar({
             <span className="sr-only">Close right sidebar</span>
           </Button>
         </div>
-      </RightSidebarHeader>
+      </SidebarHeader>
       
-      <RightSidebarContent>
+      <SidebarContent>
         {renderContent()}
-      </RightSidebarContent>
+      </SidebarContent>
       
-      <RightSidebarFooter className="border-t border-[#1a1b23]">
+      <SidebarFooter className="border-t border-[#1a1b23]">
         <div className="w-full">
           <p className="text-xs text-muted-foreground text-center">
             Galaxy Notes - Right Panel
           </p>
         </div>
-      </RightSidebarFooter>
-    </RightSidebar>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

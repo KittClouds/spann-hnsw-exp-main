@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useAtom } from 'jotai';
 import { rightSidebarOpenAtom, rightSidebarMobileAtom } from '@/lib/rightSidebarStore';
-import { cn } from '@/lib/utils';
+import { useSidebar } from '@/components/ui/sidebar';
 
 interface RightSidebarContextType {
   open: boolean;
@@ -74,15 +74,7 @@ export function RightSidebarProvider({
 
   return (
     <RightSidebarContext.Provider value={contextValue}>
-      <div 
-        className={cn(
-          "relative w-full h-full",
-          // Mobile overlay
-          isMobile && openMobile && "overflow-hidden"
-        )}
-      >
-        {children}
-      </div>
+      {children}
     </RightSidebarContext.Provider>
   );
 }

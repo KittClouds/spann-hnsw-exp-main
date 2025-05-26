@@ -10,7 +10,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { RightSidebarTrigger } from "@/components/ui/right-sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -18,9 +17,27 @@ import {
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { useAtom } from 'jotai';
 import { activeNoteAtom } from '@/lib/store';
+import { useRightSidebar } from './RightSidebarProvider';
 import { PanelRight } from 'lucide-react';
+
+function RightSidebarTrigger() {
+  const { toggleSidebar } = useRightSidebar();
+  
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggleSidebar}
+      className="h-7 w-7"
+    >
+      <PanelRight className="h-4 w-4" />
+      <span className="sr-only">Toggle right sidebar</span>
+    </Button>
+  );
+}
 
 export function GalaxyNotes() {
   const [activeNote] = useAtom(activeNoteAtom);
@@ -49,10 +66,7 @@ export function GalaxyNotes() {
               </div>
               <div className="flex items-center gap-2">
                 <EntityManagerDrawer />
-                <RightSidebarTrigger>
-                  <PanelRight className="h-4 w-4" />
-                  <span className="sr-only">Toggle right sidebar</span>
-                </RightSidebarTrigger>
+                <RightSidebarTrigger />
                 <ThemeToggle />
               </div>
             </header>
