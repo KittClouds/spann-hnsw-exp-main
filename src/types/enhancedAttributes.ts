@@ -1,5 +1,5 @@
 
-import { AttributeType, AttributeValue } from './attributes';
+import { AttributeType, AttributeValue, TypedAttribute } from './attributes';
 
 export type EnhancedAttributeType = AttributeType | 'Resource' | 'StatBlock' | 'Affiliation' | 'StatusEffect';
 
@@ -37,13 +37,7 @@ export type EnhancedAttributeValue =
   | AffiliationAttribute 
   | StatusEffectAttribute;
 
-export interface EnhancedTypedAttribute {
-  id: string;
-  name: string;
+export interface EnhancedTypedAttribute extends Omit<TypedAttribute, 'type' | 'value'> {
   type: EnhancedAttributeType;
   value: EnhancedAttributeValue;
-  category?: string;
-  unit?: string;
-  createdAt: string;
-  updatedAt: string;
 }

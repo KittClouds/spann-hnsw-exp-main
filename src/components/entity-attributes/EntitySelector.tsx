@@ -16,10 +16,25 @@ export function EntitySelector({ onEntitySelected }: EntitySelectorProps) {
   const [selectedEntity, setSelectedEntity] = useAtom(selectedEntityAtom);
   const graph = useGraph();
 
-  // Get all entities from the graph
+  // Get all entities from the graph by searching for entity nodes
   const getAllEntities = () => {
-    if (!graph || !graph.getAllEntities) return [];
-    return graph.getAllEntities();
+    if (!graph || !graph.getGraph) return [];
+    
+    try {
+      const cy = graph.getGraph();
+      const entityNodes = cy.nodes('[type="entity"]');
+      
+      return entityNodes.map(node => {
+        const data = node.data();
+        return {
+          kind: data.entityKind || 'UNKNOWN',
+          label: data.entityLabel || data.label || 'Unnamed'
+        };
+      }).toArray();
+    } catch (error) {
+      console.error('Error getting entities:', error);
+      return [];
+    }
   };
 
   const entities = getAllEntities();

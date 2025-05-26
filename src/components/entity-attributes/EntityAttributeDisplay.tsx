@@ -12,24 +12,24 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Eye, Grid3X3 } from 'lucide-react';
-import { EnhancedTypedAttribute, ResourceAttribute, StatBlockAttribute } from '@/types/enhancedAttributes';
+import { EnhancedTypedAttribute, EnhancedAttributeType, ResourceAttribute, StatBlockAttribute } from '@/types/enhancedAttributes';
 import { TypedAttribute } from '@/types/attributes';
 
 export function EntityAttributeDisplay() {
   const [selectedEntity] = useAtom(selectedEntityAtom);
   const [displayMode, setDisplayMode] = useAtom(entityDisplayModeAtom);
-  const [attributes, setAttributes] = useState<TypedAttribute[]>([]);
+  const [attributes, setAttributes] = useState<EnhancedTypedAttribute[]>([]);
   const graph = useGraph();
 
   useEffect(() => {
     if (selectedEntity && graph) {
       const entityAttributes = graph.getEntityAttributes(selectedEntity.kind, selectedEntity.label) || {};
       
-      // Convert stored attributes to TypedAttribute format
-      const attributesList: TypedAttribute[] = Object.entries(entityAttributes).map(([name, value]) => ({
+      // Convert stored attributes to EnhancedTypedAttribute format
+      const attributesList: EnhancedTypedAttribute[] = Object.entries(entityAttributes).map(([name, value]) => ({
         id: `${selectedEntity.kind}-${selectedEntity.label}-${name}`,
         name,
-        type: inferAttributeType(value),
+        type: inferAttributeType(value) as EnhancedAttributeType,
         value,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -41,7 +41,7 @@ export function EntityAttributeDisplay() {
     }
   }, [selectedEntity, graph]);
 
-  const inferAttributeType = (value: any): any => {
+  const inferAttributeType = (value: any): EnhancedAttributeType => {
     if (typeof value === 'string') return 'Text';
     if (typeof value === 'number') return 'Number';
     if (typeof value === 'boolean') return 'Boolean';
@@ -53,7 +53,7 @@ export function EntityAttributeDisplay() {
     return 'Text';
   };
 
-  const handleAttributesChange = (newAttributes: TypedAttribute[]) => {
+  const handleAttributesChange = (newAttributes: EnhancedTypedAttribute[]) => {
     setAttributes(newAttributes);
     
     if (selectedEntity && graph) {
@@ -70,12 +70,12 @@ export function EntityAttributeDisplay() {
     const categories = {
       resources: attributes.filter(attr => attr.type === 'Resource'),
       stats: attributes.filter(attr => attr.type === 'StatBlock'),
-      basic: attributes.filter(attr => !['Resource', 'StatBlock'].includes(attr.type as string)),
+      basic: attributes.filter(attr => !['Resource', 'StatBlock'].includes(attr.type)),
     };
     return categories;
   };
 
-  const renderResourceAttributes = (resourceAttrs: TypedAttribute[]) => (
+  const renderResourceAttributes = (resourceAttrs: EnhancedTypedAttribute[]) => (
     <div className="space-y-3">
       {resourceAttrs.map(attr => (
         <ResourceBar
@@ -93,7 +93,7 @@ export function EntityAttributeDisplay() {
     </div>
   );
 
-  const renderStatBlocks = (statAttrs: TypedAttribute[]) => (
+  const renderStatBlocks = (statAttrs: EnhancedTypedAttribute[]) => (
     <div className="space-y-3">
       {statAttrs.map(attr => (
         <StatBlock
@@ -110,6 +110,30 @@ export function EntityAttributeDisplay() {
       ))}
     </div>
   );
+
+  // Convert enhanced attributes to base TypedAttribute for AttributeEditor
+  const convertToBasicAttributes = (attrs: EnhancedTypedAttribute[]): TypedAttribute[] => {
+    return attrs.map(attr => ({
+      id: attr.id,
+      name: attr.name,
+      type: attr.type === 'Resource' || attr.type === 'StatBlock' ? 'Text' : attr.type,
+      value: typeof attr.value === 'object' ? JSON.stringify(attr.value) : attr.value,
+      unit: attr.unit,
+      createdAt: attr.createdAt,
+      updatedAt: attr.updatedAt
+    }));
+  };
+
+  const convertFromBasicAttributes = (basicAttrs: TypedAttribute[], existingAttrs: EnhancedTypedAttribute[]): EnhancedTypedAttribute[] => {
+    return basicAttrs.map(attr => {
+      const existing = existingAttrs.find(e => e.id === attr.id);
+      return {
+        ...attr,
+        type: existing?.type || (attr.type as EnhancedAttributeType),
+        value: existing?.value || attr.value
+      } as EnhancedTypedAttribute;
+    });
+  };
 
   if (!selectedEntity) {
     return (
@@ -182,12 +206,13 @@ export function EntityAttributeDisplay() {
               
               <TabsContent value="basic">
                 <AttributeEditor
-                  attributes={categories.basic}
+                  attributes={convertToBasicAttributes(categories.basic)}
                   onAttributesChange={(newBasicAttrs) => {
+                    const convertedBasic = convertFromBasicAttributes(newBasicAttrs, categories.basic);
                     const updatedAttrs = [
                       ...categories.resources,
                       ...categories.stats,
-                      ...newBasicAttrs
+                      ...convertedBasic
                     ];
                     handleAttributesChange(updatedAttrs);
                   }}
@@ -224,12 +249,13 @@ export function EntityAttributeDisplay() {
                   Attributes
                 </h4>
                 <AttributeEditor
-                  attributes={categories.basic}
+                  attributes={convertToBasicAttributes(categories.basic)}
                   onAttributesChange={(newBasicAttrs) => {
+                    const convertedBasic = convertFromBasicAttributes(newBasicAttrs, categories.basic);
                     const updatedAttrs = [
                       ...categories.resources,
                       ...categories.stats,
-                      ...newBasicAttrs
+                      ...convertedBasic
                     ];
                     handleAttributesChange(updatedAttrs);
                   }}
