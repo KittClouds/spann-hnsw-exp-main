@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Eye, Grid3X3 } from 'lucide-react';
 import { EnhancedTypedAttribute, EnhancedAttributeType, ResourceAttribute, StatBlockAttribute } from '@/types/enhancedAttributes';
-import { TypedAttribute } from '@/types/attributes';
+import { TypedAttribute, AttributeType } from '@/types/attributes';
 
 export function EntityAttributeDisplay() {
   const [selectedEntity] = useAtom(selectedEntityAtom);
@@ -111,12 +111,14 @@ export function EntityAttributeDisplay() {
     </div>
   );
 
-  // Convert enhanced attributes to base TypedAttribute for AttributeEditor
+  // Convert enhanced attributes to base TypedAttribute for AttributeEditor - only basic types
   const convertToBasicAttributes = (attrs: EnhancedTypedAttribute[]): TypedAttribute[] => {
     return attrs.map(attr => ({
       id: attr.id,
       name: attr.name,
-      type: attr.type === 'Resource' || attr.type === 'StatBlock' ? 'Text' : attr.type,
+      type: (['Text', 'Number', 'Boolean', 'Date', 'List', 'EntityLink', 'URL'].includes(attr.type as string) 
+        ? attr.type 
+        : 'Text') as AttributeType,
       value: typeof attr.value === 'object' ? JSON.stringify(attr.value) : attr.value,
       unit: attr.unit,
       createdAt: attr.createdAt,

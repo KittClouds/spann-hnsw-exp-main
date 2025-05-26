@@ -16,21 +16,19 @@ export function EntitySelector({ onEntitySelected }: EntitySelectorProps) {
   const [selectedEntity, setSelectedEntity] = useAtom(selectedEntityAtom);
   const graph = useGraph();
 
-  // Get all entities from the graph by searching for entity nodes
+  // Get all entities using the graph context method
   const getAllEntities = () => {
-    if (!graph || !graph.getGraph) return [];
+    if (!graph || !graph.getAllEntities) {
+      console.warn('getAllEntities method not available in graph context');
+      return [];
+    }
     
     try {
-      const cy = graph.getGraph();
-      const entityNodes = cy.nodes('[type="entity"]');
-      
-      return entityNodes.map(node => {
-        const data = node.data();
-        return {
-          kind: data.entityKind || 'UNKNOWN',
-          label: data.entityLabel || data.label || 'Unnamed'
-        };
-      }).toArray();
+      const entities = graph.getAllEntities();
+      return entities.map(entity => ({
+        kind: entity.kind || 'UNKNOWN',
+        label: entity.label || 'Unnamed'
+      }));
     } catch (error) {
       console.error('Error getting entities:', error);
       return [];
