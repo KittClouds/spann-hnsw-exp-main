@@ -6,6 +6,7 @@ import { rightSidebarContentAtom } from "@/lib/rightSidebarStore";
 import { useRightSidebar } from "@/components/RightSidebarProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { EntityAttributeDisplay } from "./entity-attributes/EntityAttributeDisplay";
 
 export function AppRightSidebar() {
   const [contentType] = useAtom(rightSidebarContentAtom);
@@ -13,6 +14,8 @@ export function AppRightSidebar() {
 
   const renderContent = () => {
     switch (contentType) {
+      case 'attributes':
+        return <EntityAttributeDisplay />;
       case 'empty':
       default:
         return (
@@ -26,6 +29,15 @@ export function AppRightSidebar() {
     }
   };
 
+  const getHeaderTitle = () => {
+    switch (contentType) {
+      case 'attributes':
+        return 'Entity Attributes';
+      default:
+        return 'Right Panel';
+    }
+  };
+
   return (
     <div 
       className={cn(
@@ -36,7 +48,7 @@ export function AppRightSidebar() {
       {/* Header */}
       <div className="border-b border-[#1a1b23] p-4">
         <div className="flex items-center justify-between w-full">
-          <h2 className="text-sm font-semibold text-foreground">Right Panel</h2>
+          <h2 className="text-sm font-semibold text-foreground">{getHeaderTitle()}</h2>
           <Button
             variant="ghost"
             size="icon"
@@ -50,7 +62,7 @@ export function AppRightSidebar() {
       </div>
       
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-hidden">
         {renderContent()}
       </div>
       
@@ -58,7 +70,7 @@ export function AppRightSidebar() {
       <div className="border-t border-[#1a1b23] p-4">
         <div className="w-full">
           <p className="text-xs text-muted-foreground text-center">
-            Galaxy Notes - Right Panel
+            Galaxy Notes - {getHeaderTitle()}
           </p>
         </div>
       </div>
