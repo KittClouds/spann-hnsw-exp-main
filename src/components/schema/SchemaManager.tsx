@@ -42,6 +42,9 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from '@/lib/utils';
+import { BlueprintManager } from './BlueprintManager';
+import { useAtom } from 'jotai';
+import { blueprintsAtom } from '@/lib/store';
 
 // Define zod schemas for validation
 const entityFormSchema = z.object({
@@ -69,6 +72,7 @@ export function SchemaManager() {
   const [activeTab, setActiveTab] = useState("entities");
   const [entityTypes, setEntityTypes] = useState(() => getEntityTypes());
   const [relationshipTypes, setRelationshipTypes] = useState(() => getRelationshipTypes());
+  const [blueprints, setBlueprints] = useAtom(blueprintsAtom);
 
   // Forms
   const entityForm = useForm<EntityFormValues>({
@@ -159,6 +163,24 @@ export function SchemaManager() {
     return shapeMap[shape] || <div className="w-6 h-4" style={{ backgroundColor: color }} />;
   };
 
+  const handleBlueprintCreate = (blueprint: EntityBlueprint) => {
+    setBlueprints([...blueprints, blueprint]);
+    toast.success(`Blueprint "${blueprint.name}" created successfully.`);
+  };
+
+  const handleBlueprintUpdate = (updatedBlueprint: EntityBlueprint) => {
+    setBlueprints(blueprints.map(b => 
+      b.id === updatedBlueprint.id ? updatedBlueprint : b
+    ));
+    toast.success(`Blueprint "${updatedBlueprint.name}" updated successfully.`);
+  };
+
+  const handleBlueprintDelete = (blueprintId: string) => {
+    const blueprint = blueprints.find(b => b.id === blueprintId);
+    setBlueprints(blueprints.filter(b => b.id !== blueprintId));
+    toast.success(`Blueprint "${blueprint?.name}" deleted successfully.`);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -167,7 +189,7 @@ export function SchemaManager() {
           <span>Schema</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="h-4 w-4" />
@@ -184,6 +206,7 @@ export function SchemaManager() {
           <TabsList>
             <TabsTrigger value="entities">Entity Types</TabsTrigger>
             <TabsTrigger value="relationships">Relationship Types</TabsTrigger>
+            <TabsTrigger value="blueprints">Blueprints</TabsTrigger>
             <TabsTrigger value="usage">How to Use</TabsTrigger>
           </TabsList>
           
@@ -469,6 +492,26 @@ export function SchemaManager() {
                   </form>
                 </Form>
               </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="blueprints" className="flex-1 overflow-auto p-2">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Attribute Blueprints</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Create reusable attribute templates for entity types. When you create a new entity, 
+                  you can apply a blueprint to automatically add predefined attributes.
+                </p>
+              </div>
+              
+              <BlueprintManager
+                blueprints={blueprints}
+                entityTypes={entityTypes.map(e => e.kind)}
+                onBlueprintCreate={handleBlueprintCreate}
+                onBlueprintUpdate={handleBlueprintUpdate}
+                onBlueprintDelete={handleBlueprintDelete}
+              />
             </div>
           </TabsContent>
           

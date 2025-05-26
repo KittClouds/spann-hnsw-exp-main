@@ -4,9 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, Edit2, Check, XCircle } from 'lucide-react';
+import { Plus, X, Edit2, Check, XCircle, Zap } from 'lucide-react';
 import { TypedAttribute, AttributeType, AttributeValue } from '@/types/attributes';
+import { EntityBlueprint } from '@/types/blueprints';
 import { TypedAttributeInput } from './TypedAttributeInput';
+import { BlueprintSelector } from './BlueprintSelector';
 import { generateNodeId } from '@/lib/utils/ids';
 
 interface AttributeEditorProps {
@@ -14,22 +16,54 @@ interface AttributeEditorProps {
   onAttributesChange: (attributes: TypedAttribute[]) => void;
   entityKind: string;
   entityLabel: string;
+  availableBlueprints?: EntityBlueprint[];
 }
 
 export function AttributeEditor({ 
   attributes, 
   onAttributesChange, 
   entityKind, 
-  entityLabel 
+  entityLabel,
+  availableBlueprints = []
 }: AttributeEditorProps) {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showBlueprintSelector, setShowBlueprintSelector] = useState(
+    attributes.length === 0 && availableBlueprints.length > 0
+  );
   const [newAttribute, setNewAttribute] = useState({
     name: '',
     type: 'Text' as AttributeType,
     value: '' as AttributeValue,
     unit: ''
   });
+
+  const handleApplyBlueprint = (blueprint: EntityBlueprint) => {
+    const blueprintAttributes: TypedAttribute[] = blueprint.templates.map(template => ({
+      id: generateNodeId(),
+      name: template.name,
+      type: template.type,
+      value: template.defaultValue || getDefaultValueForType(template.type),
+      unit: template.unit,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
+
+    onAttributesChange([...attributes, ...blueprintAttributes]);
+    setShowBlueprintSelector(false);
+  };
+
+  const getDefaultValueForType = (type: AttributeType): AttributeValue => {
+    switch (type) {
+      case 'Text': return '';
+      case 'Number': return 0;
+      case 'Boolean': return false;
+      case 'Date': return new Date().toISOString();
+      case 'List': return [];
+      case 'URL': return '';
+      default: return '';
+    }
+  };
 
   const handleAddAttribute = () => {
     if (!newAttribute.name.trim()) return;
@@ -94,6 +128,29 @@ export function AttributeEditor({
 
   return (
     <div className="space-y-3">
+      {/* Blueprint Selector */}
+      {showBlueprintSelector && (
+        <BlueprintSelector
+          entityKind={entityKind}
+          availableBlueprints={availableBlueprints.filter(b => b.entityKind === entityKind)}
+          onApplyBlueprint={handleApplyBlueprint}
+          onSkip={() => setShowBlueprintSelector(false)}
+        />
+      )}
+
+      {/* Blueprint Trigger */}
+      {!showBlueprintSelector && availableBlueprints.some(b => b.entityKind === entityKind) && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowBlueprintSelector(true)}
+          className="h-7 text-xs border-dashed border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+        >
+          <Zap className="h-3 w-3 mr-1" />
+          Apply Blueprint
+        </Button>
+      )}
+
       {/* Existing Attributes */}
       {attributes.map((attribute) => (
         <Card key={attribute.id} className="bg-[#12141f] border-[#1a1b23]">

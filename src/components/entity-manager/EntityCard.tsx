@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,8 @@ import { Entity } from '@/lib/utils/parsingUtils';
 import { ClusterEntity } from './useActiveClusterEntities';
 import { AttributeEditor } from './AttributeEditor';
 import { TypedAttribute, EnhancedEntityAttributes } from '@/types/attributes';
+import { useAtom } from 'jotai';
+import { blueprintsAtom } from '@/lib/store';
 
 interface EntityCardProps {
   entity: Entity | ClusterEntity;
@@ -19,6 +20,7 @@ interface EntityCardProps {
 export function EntityCard({ entity, viewMode }: EntityCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [attributes, setAttributes] = useState<TypedAttribute[]>([]);
+  const [blueprints] = useAtom(blueprintsAtom);
   const { getEntityAttributes, updateEntityAttributes } = useGraph();
 
   React.useEffect(() => {
@@ -128,6 +130,7 @@ export function EntityCard({ entity, viewMode }: EntityCardProps) {
                     onAttributesChange={handleAttributesChange}
                     entityKind={entity.kind}
                     entityLabel={entity.label}
+                    availableBlueprints={blueprints}
                   />
                 </div>
               </div>

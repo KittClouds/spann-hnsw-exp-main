@@ -6,6 +6,7 @@ import { createParagraphBlock } from './utils/blockUtils';
 import { parseAllNotes, Entity, Triple as ParsedTriple } from './utils/parsingUtils'; 
 import { Thread, ThreadMessage, ChatRole } from '../services/types';
 import { SchemaDefinitions } from './schema';
+import { EntityBlueprint, BlueprintStorage } from '@/types/blueprints';
 
 // Define standard root ID constant to make it explicit throughout the codebase
 export const STANDARD_ROOT_ID = 'standard_root';
@@ -348,6 +349,26 @@ export const schemaAtom = atomWithStorage<SchemaDefinitions>('galaxy-schema-defs
   nodes: [],
   edges: []
 });
+
+// Add blueprint storage atom
+export const blueprintStorageAtom = atomWithStorage<BlueprintStorage>('galaxy-blueprint-storage', {
+  blueprints: [],
+  version: 1,
+  lastUpdated: new Date().toISOString()
+});
+
+// Add derived atom for easy blueprint access
+export const blueprintsAtom = atom(
+  (get) => get(blueprintStorageAtom).blueprints,
+  (get, set, blueprints: EntityBlueprint[]) => {
+    const storage = get(blueprintStorageAtom);
+    set(blueprintStorageAtom, {
+      ...storage,
+      blueprints,
+      lastUpdated: new Date().toISOString()
+    });
+  }
+);
 
 // Helper to get notes by cluster
 export const getNotesByClusterId = (notes: Note[], clusterId: string | null): Note[] => {
