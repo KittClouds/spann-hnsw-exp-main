@@ -6,6 +6,7 @@ import { rightSidebarContentAtom } from "@/lib/rightSidebarStore";
 import { useRightSidebar } from "@/components/RightSidebarProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { EntityAttributePanel } from "@/components/entity-attributes/EntityAttributePanel";
 
 export function AppRightSidebar() {
   const [contentType] = useAtom(rightSidebarContentAtom);
@@ -13,6 +14,8 @@ export function AppRightSidebar() {
 
   const renderContent = () => {
     switch (contentType) {
+      case 'entity-attributes':
+        return <EntityAttributePanel />;
       case 'empty':
       default:
         return (

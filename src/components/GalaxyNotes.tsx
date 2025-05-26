@@ -20,8 +20,9 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useAtom } from 'jotai';
 import { activeNoteAtom } from '@/lib/store';
+import { rightSidebarContentAtom } from '@/lib/rightSidebarStore';
 import { useRightSidebar } from './RightSidebarProvider';
-import { PanelRight } from 'lucide-react';
+import { PanelRight, Users } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 function RightSidebarTrigger() {
@@ -36,6 +37,30 @@ function RightSidebarTrigger() {
     >
       <PanelRight className="h-4 w-4" />
       <span className="sr-only">Toggle right sidebar</span>
+    </Button>
+  );
+}
+
+function EntityAttributesTrigger() {
+  const [, setContentType] = useAtom(rightSidebarContentAtom);
+  const { open, toggleSidebar } = useRightSidebar();
+  
+  const handleClick = () => {
+    setContentType('entity-attributes');
+    if (!open) {
+      toggleSidebar();
+    }
+  };
+  
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleClick}
+      className="h-7 w-7"
+    >
+      <Users className="h-4 w-4" />
+      <span className="sr-only">Entity Attributes</span>
     </Button>
   );
 }
@@ -71,6 +96,7 @@ function GalaxyNotesInner() {
           </div>
           <div className="flex items-center gap-2">
             <EntityManagerDrawer />
+            <EntityAttributesTrigger />
             <RightSidebarTrigger />
             <ThemeToggle />
           </div>
