@@ -30,7 +30,7 @@ export function GalaxyNotes() {
       <RightSidebarProvider>
         <div className="flex h-screen w-full bg-gradient-to-b dark:from-[#0f101a] dark:to-[#171926] light:from-white light:to-[#f8f6ff] text-foreground">
           <AppSidebar />
-          <SidebarInset className="flex-1">
+          <SidebarInset className="flex-1 min-w-0">
             <header className="border-b border-border p-4 flex items-center justify-between bg-opacity-95 backdrop-blur-sm dark:bg-black/30 light:bg-white/70">
               <div className="flex items-center gap-2">
                 <SidebarTrigger className="-ml-1" />
