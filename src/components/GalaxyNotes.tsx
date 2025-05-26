@@ -40,50 +40,56 @@ function RightSidebarTrigger() {
   );
 }
 
-export function GalaxyNotes() {
+function GalaxyNotesInner() {
   const [activeNote] = useAtom(activeNoteAtom);
   const { open: rightSidebarOpen } = useRightSidebar();
 
   return (
+    <div className="flex h-screen w-full bg-gradient-to-b dark:from-[#0f101a] dark:to-[#171926] light:from-white light:to-[#f8f6ff] text-foreground">
+      <AppSidebar />
+      <SidebarInset 
+        className={cn(
+          "flex-1 min-w-0 transition-all duration-300 ease-in-out",
+          rightSidebarOpen ? "mr-64" : "mr-0"
+        )}
+      >
+        <header className="border-b border-border p-4 flex items-center justify-between bg-opacity-95 backdrop-blur-sm dark:bg-black/30 light:bg-white/70">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="h-6 mx-2" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{activeNote?.title || "Select a note"}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+          <div className="flex-1 text-center">
+            <h1 className="text-2xl font-bold text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]">Galaxy Notes</h1>
+            <p className="text-sm text-muted-foreground">Multi-note block editor with automatic saving</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <EntityManagerDrawer />
+            <RightSidebarTrigger />
+            <ThemeToggle />
+          </div>
+        </header>
+        
+        <main className="flex-1 overflow-hidden">
+          <NoteEditor />
+        </main>
+      </SidebarInset>
+      <AppRightSidebar />
+    </div>
+  );
+}
+
+export function GalaxyNotes() {
+  return (
     <SidebarProvider>
       <RightSidebarProvider>
-        <div className="flex h-screen w-full bg-gradient-to-b dark:from-[#0f101a] dark:to-[#171926] light:from-white light:to-[#f8f6ff] text-foreground">
-          <AppSidebar />
-          <SidebarInset 
-            className={cn(
-              "flex-1 min-w-0 transition-all duration-300 ease-in-out",
-              rightSidebarOpen ? "mr-64" : "mr-0"
-            )}
-          >
-            <header className="border-b border-border p-4 flex items-center justify-between bg-opacity-95 backdrop-blur-sm dark:bg-black/30 light:bg-white/70">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger className="-ml-1" />
-                <Separator orientation="vertical" className="h-6 mx-2" />
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>{activeNote?.title || "Select a note"}</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
-              </div>
-              <div className="flex-1 text-center">
-                <h1 className="text-2xl font-bold text-transparent bg-clip-text dark:bg-gradient-to-r dark:from-[#9b87f5] dark:to-[#7c5bf1] light:bg-gradient-to-r light:from-[#614ac2] light:to-[#7460db]">Galaxy Notes</h1>
-                <p className="text-sm text-muted-foreground">Multi-note block editor with automatic saving</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <EntityManagerDrawer />
-                <RightSidebarTrigger />
-                <ThemeToggle />
-              </div>
-            </header>
-            
-            <main className="flex-1 overflow-hidden">
-              <NoteEditor />
-            </main>
-          </SidebarInset>
-          <AppRightSidebar />
-        </div>
+        <GalaxyNotesInner />
       </RightSidebarProvider>
     </SidebarProvider>
   );
