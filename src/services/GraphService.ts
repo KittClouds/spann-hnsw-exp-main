@@ -1066,7 +1066,24 @@ export class GraphService implements IGraphService {
     }
     
     const currentAttributes = entity.data('attributes') || {};
-    entity.data('attributes', { ...currentAttributes, ...attributes });
+    
+    // Handle both old format (simple key-value) and new format (EnhancedEntityAttributes)
+    let newAttributes;
+    if (attributes.attributes && Array.isArray(attributes.attributes)) {
+      // New enhanced format
+      newAttributes = attributes;
+    } else {
+      // Old format or simple attributes - wrap in enhanced format
+      newAttributes = {
+        attributes: attributes,
+        metadata: {
+          version: 1,
+          lastUpdated: new Date().toISOString()
+        }
+      };
+    }
+    
+    entity.data('attributes', { ...currentAttributes, ...newAttributes });
     
     this.queueNotify([entity.json() as ElementDefinition]);
     return true;
