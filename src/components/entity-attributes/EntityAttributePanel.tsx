@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
 import { activeNoteConnectionsAtom, activeNoteAtom } from '@/lib/store';
