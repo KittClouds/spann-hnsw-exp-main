@@ -28,6 +28,17 @@ export function EntityAttributePanel() {
     ? {} // Will implement attribute retrieval in next phase
     : {};
 
+  // Helper function to safely render attribute values
+  const renderAttributeValue = (value: unknown): string => {
+    if (value === null || value === undefined) {
+      return 'N/A';
+    }
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
+
   if (!selectedEntity) {
     return (
       <div className="p-4 space-y-4">
@@ -136,7 +147,7 @@ export function EntityAttributePanel() {
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-medium text-white">{key}</span>
                     <span className="text-xs text-muted-foreground">
-                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                      {renderAttributeValue(value)}
                     </span>
                   </div>
                 </CardContent>
