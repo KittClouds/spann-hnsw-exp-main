@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
 import { activeNoteConnectionsAtom, activeNoteAtom } from '@/lib/store';
@@ -30,12 +31,12 @@ export function EntityAttributePanel() {
   // Helper function to safely render attribute values
   const renderAttributeValue = (value: unknown): React.ReactNode => {
     if (value === null || value === undefined) {
-      return 'N/A';
+      return <span className="text-muted-foreground">N/A</span>;
     }
     if (typeof value === 'object') {
-      return JSON.stringify(value);
+      return <span className="text-xs text-muted-foreground">{JSON.stringify(value)}</span>;
     }
-    return String(value);
+    return <span>{String(value)}</span>;
   };
 
   if (!selectedEntity) {
@@ -145,9 +146,9 @@ export function EntityAttributePanel() {
                 <CardContent className="p-3">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-medium text-white">{key}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {renderAttributeValue(value)}
-                    </span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
