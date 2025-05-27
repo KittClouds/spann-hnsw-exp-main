@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
 import { activeNoteConnectionsAtom, activeNoteAtom } from '@/lib/store';
@@ -93,7 +94,7 @@ export function EntityAttributePanel() {
                     <div className="flex items-center gap-2">
                       {viewMode === 'cluster' && 'referenceCount' in entity && (
                         <span className="text-xs text-muted-foreground">
-                          {entity.referenceCount} refs
+                          {(entity.referenceCount as number)} refs
                         </span>
                       )}
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -164,3 +165,4 @@ export function EntityAttributePanel() {
     </div>
   );
 }
+
