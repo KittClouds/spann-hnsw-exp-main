@@ -29,7 +29,7 @@ export function EntityAttributePanel() {
     : {};
 
   // Helper function to safely render attribute values
-  const renderAttributeValue = (value: unknown): string => {
+  const renderAttributeValue = (value: unknown): React.ReactNode => {
     if (value === null || value === undefined) {
       return 'N/A';
     }
