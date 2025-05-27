@@ -14,44 +14,217 @@ export const createDefaultBlueprints = (): EntityBlueprint[] => {
       templates: [
         {
           id: generateNodeId(),
-          name: 'Age',
-          type: 'Number',
-          defaultValue: 25,
-          unit: 'years',
-          required: false,
-          description: 'Character age in years'
+          name: 'Name',
+          type: 'Text',
+          defaultValue: '',
+          required: true,
+          description: 'Character name'
         },
         {
           id: generateNodeId(),
-          name: 'Species',
+          name: 'Portrait',
+          type: 'URL',
+          defaultValue: '',
+          required: false,
+          description: 'Character portrait URL'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Race',
           type: 'Text',
           defaultValue: 'Human',
-          required: true,
-          description: 'Character species or race'
+          required: false,
+          description: 'Character race or species'
         },
         {
           id: generateNodeId(),
-          name: 'Occupation',
+          name: 'Class',
           type: 'Text',
           defaultValue: '',
           required: false,
-          description: 'Character job or role'
+          description: 'Character class or profession'
         },
         {
           id: generateNodeId(),
-          name: 'Skills',
+          name: 'Level',
+          type: 'Number',
+          defaultValue: 1,
+          required: false,
+          description: 'Character level'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Health',
+          type: 'ProgressBar',
+          defaultValue: { current: 100, maximum: 100 },
+          required: false,
+          description: 'Current and maximum health'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Mana',
+          type: 'ProgressBar',
+          defaultValue: { current: 50, maximum: 50 },
+          required: false,
+          description: 'Current and maximum mana'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Stats',
+          type: 'StatBlock',
+          defaultValue: { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10 },
+          required: false,
+          description: 'Character ability scores'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Alignment',
+          type: 'Text',
+          defaultValue: 'Neutral',
+          required: false,
+          description: 'Character alignment'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Background',
+          type: 'Text',
+          defaultValue: '',
+          required: false,
+          description: 'Character background story'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Relationships',
           type: 'List',
           defaultValue: [],
           required: false,
-          description: 'Character abilities and skills'
+          description: 'Character relationships and connections'
+        }
+      ],
+      isDefault: true,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: generateNodeId(),
+      entityKind: 'FACTION',
+      name: 'Faction Blueprint',
+      description: 'Standard attributes for faction entities',
+      templates: [
+        {
+          id: generateNodeId(),
+          name: 'Name',
+          type: 'Text',
+          defaultValue: '',
+          required: true,
+          description: 'Faction name'
         },
         {
           id: generateNodeId(),
-          name: 'Is Alive',
-          type: 'Boolean',
-          defaultValue: true,
+          name: 'Faction Type',
+          type: 'Text',
+          defaultValue: 'Guild',
           required: false,
-          description: 'Whether the character is currently alive'
+          description: 'Type of faction'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Goal',
+          type: 'Text',
+          defaultValue: '',
+          required: false,
+          description: 'Primary faction goal or purpose'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Size',
+          type: 'Number',
+          defaultValue: 10,
+          required: false,
+          description: 'Number of faction members'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Power Level',
+          type: 'Number',
+          defaultValue: 1,
+          required: false,
+          description: 'Faction influence level (1-10)'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Allies',
+          type: 'List',
+          defaultValue: [],
+          required: false,
+          description: 'Allied factions and entities'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Enemies',
+          type: 'List',
+          defaultValue: [],
+          required: false,
+          description: 'Enemy factions and entities'
+        }
+      ],
+      isDefault: true,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: generateNodeId(),
+      entityKind: 'SCENE',
+      name: 'Scene Blueprint',
+      description: 'Standard attributes for scene entities',
+      templates: [
+        {
+          id: generateNodeId(),
+          name: 'Scene Type',
+          type: 'Text',
+          defaultValue: 'Dialogue',
+          required: false,
+          description: 'Type of scene'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Mood',
+          type: 'Text',
+          defaultValue: 'Neutral',
+          required: false,
+          description: 'Overall mood of the scene'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Time of Day',
+          type: 'Text',
+          defaultValue: 'Day',
+          required: false,
+          description: 'When the scene takes place'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Location',
+          type: 'EntityLink',
+          defaultValue: { entityId: '', kind: 'LOCATION', label: '' },
+          required: false,
+          description: 'Scene location'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Participants',
+          type: 'List',
+          defaultValue: [],
+          required: false,
+          description: 'Characters involved in the scene'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Outcome',
+          type: 'Text',
+          defaultValue: '',
+          required: false,
+          description: 'Summary of scene outcome'
         }
       ],
       isDefault: true,
@@ -66,18 +239,25 @@ export const createDefaultBlueprints = (): EntityBlueprint[] => {
       templates: [
         {
           id: generateNodeId(),
-          name: 'Type',
+          name: 'Name',
+          type: 'Text',
+          defaultValue: '',
+          required: true,
+          description: 'Location name'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Location Type',
           type: 'Text',
           defaultValue: 'City',
           required: false,
-          description: 'Type of location (city, building, etc.)'
+          description: 'Type of location'
         },
         {
           id: generateNodeId(),
           name: 'Population',
           type: 'Number',
-          defaultValue: 0,
-          unit: 'people',
+          defaultValue: 1000,
           required: false,
           description: 'Number of inhabitants'
         },
@@ -87,23 +267,23 @@ export const createDefaultBlueprints = (): EntityBlueprint[] => {
           type: 'Text',
           defaultValue: 'Temperate',
           required: false,
-          description: 'Climate or weather conditions'
+          description: 'Climate conditions'
         },
         {
           id: generateNodeId(),
-          name: 'Notable Features',
-          type: 'List',
-          defaultValue: [],
+          name: 'Controlling Faction',
+          type: 'EntityLink',
+          defaultValue: { entityId: '', kind: 'FACTION', label: '' },
           required: false,
-          description: 'Important landmarks or characteristics'
+          description: 'Faction that controls this location'
         },
         {
           id: generateNodeId(),
-          name: 'Established',
-          type: 'Date',
-          defaultValue: new Date().toISOString(),
+          name: 'Description',
+          type: 'Text',
+          defaultValue: '',
           required: false,
-          description: 'Date when location was established'
+          description: 'Detailed location description'
         }
       ],
       isDefault: true,
@@ -118,45 +298,120 @@ export const createDefaultBlueprints = (): EntityBlueprint[] => {
       templates: [
         {
           id: generateNodeId(),
+          name: 'Name',
+          type: 'Text',
+          defaultValue: '',
+          required: true,
+          description: 'Item name'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Item Type',
+          type: 'Text',
+          defaultValue: 'Misc',
+          required: false,
+          description: 'Category of item'
+        },
+        {
+          id: generateNodeId(),
           name: 'Rarity',
           type: 'Text',
           defaultValue: 'Common',
           required: false,
-          description: 'How rare or valuable the item is'
+          description: 'Item rarity level'
         },
         {
           id: generateNodeId(),
           name: 'Weight',
           type: 'Number',
           defaultValue: 1,
-          unit: 'kg',
+          unit: 'lbs',
           required: false,
-          description: 'Physical weight of the item'
+          description: 'Item weight'
         },
         {
           id: generateNodeId(),
           name: 'Value',
           type: 'Number',
-          defaultValue: 0,
-          unit: 'coins',
+          defaultValue: 10,
+          unit: 'gold',
           required: false,
-          description: 'Monetary value'
+          description: 'Item monetary value'
         },
         {
           id: generateNodeId(),
-          name: 'Is Magical',
-          type: 'Boolean',
-          defaultValue: false,
+          name: 'Owner',
+          type: 'EntityLink',
+          defaultValue: { entityId: '', kind: 'CHARACTER', label: '' },
           required: false,
-          description: 'Whether the item has magical properties'
+          description: 'Current item owner'
         },
         {
           id: generateNodeId(),
           name: 'Effects',
+          type: 'Text',
+          defaultValue: '',
+          required: false,
+          description: 'Item effects and abilities'
+        }
+      ],
+      isDefault: true,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: generateNodeId(),
+      entityKind: 'EVENT',
+      name: 'Event Blueprint',
+      description: 'Standard attributes for event entities',
+      templates: [
+        {
+          id: generateNodeId(),
+          name: 'Name',
+          type: 'Text',
+          defaultValue: '',
+          required: true,
+          description: 'Event name'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Event Type',
+          type: 'Text',
+          defaultValue: 'Social',
+          required: false,
+          description: 'Category of event'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Date',
+          type: 'Date',
+          defaultValue: new Date().toISOString(),
+          required: false,
+          description: 'When the event occurred'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Location',
+          type: 'EntityLink',
+          defaultValue: { entityId: '', kind: 'LOCATION', label: '' },
+          required: false,
+          description: 'Event location'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Participants',
           type: 'List',
           defaultValue: [],
           required: false,
-          description: 'Special effects or abilities'
+          description: 'Entities involved in the event'
+        },
+        {
+          id: generateNodeId(),
+          name: 'Consequence',
+          type: 'Text',
+          defaultValue: '',
+          required: false,
+          description: 'Event consequences and outcomes'
         }
       ],
       isDefault: true,

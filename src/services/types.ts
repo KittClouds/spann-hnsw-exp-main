@@ -1,8 +1,10 @@
+
 import { Core, NodeSingular, EdgeSingular, NodeCollection, EdgeCollection, ElementDefinition as CytoscapeElementDefinition, Position, SingularElementArgument } from 'cytoscape';
 import { Note, Cluster } from '@/lib/store';
 import { Entity } from '@/lib/utils/parsingUtils';
 import { GraphDocument } from '@/lib/langchain-lite';
 import { EntityWithReferences } from "@/components/entity-browser/EntityBrowser";
+import { TypedAttribute } from '@/types/attributes';
 
 export type ElementDefinition = CytoscapeElementDefinition;
 
@@ -135,6 +137,8 @@ export interface IGraphService {
   // Entity operations
   updateEntityAttributes(kind: string, label: string, attributes: Record<string, any>): boolean;
   getEntityAttributes(kind: string, label: string): Record<string, any> | null;
+  saveEntityAttributes(entityId: string, attributes: TypedAttribute[]): Promise<void>;
+  loadEntityAttributes(entityId: string): Promise<TypedAttribute[]>;
   
   // Store operations
   importFromStore(notes: Note[], clusters: Cluster[]): void;
@@ -180,5 +184,7 @@ declare module './GraphService' {
     createEntity(entity: Entity): boolean;
     getEntityReferences(kind: string, label: string): {id: string, title: string}[];
     getEntityRelationships(kind: string, label: string): any[];
+    saveEntityAttributes(entityId: string, attributes: TypedAttribute[]): Promise<void>;
+    loadEntityAttributes(entityId: string): Promise<TypedAttribute[]>;
   }
 }

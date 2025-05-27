@@ -1,6 +1,5 @@
 
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAtom } from 'jotai';
 import { activeNoteConnectionsAtom, activeNoteAtom } from '@/lib/store';
 import { useActiveClusterEntities } from '@/components/entity-manager/useActiveClusterEntities';
@@ -9,35 +8,128 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { User, ChevronRight, FileText, FolderOpen } from 'lucide-react';
+import { useGraph } from '@/contexts/GraphContext';
+import { getBlueprintForEntityKind } from '@/lib/blueprintMatching';
+import { TypedAttribute } from '@/types/attributes';
+import { CharacterSheetLayout } from './layouts/CharacterSheetLayout';
+import { FactionOverviewLayout } from './layouts/FactionOverviewLayout';
+import { SimpleLayout } from './layouts/SimpleLayout';
 
 type ViewMode = 'note' | 'cluster';
 
 export function EntityAttributePanel() {
   const [viewMode, setViewMode] = useState<ViewMode>('note');
   const [selectedEntity, setSelectedEntity] = useState<{kind: string, label: string} | null>(null);
+  const [entityAttributes, setEntityAttributes] = useState<TypedAttribute[]>([]);
   
   // Use the same data sources as Entity Manager
   const [{ entities: noteEntities }] = useAtom(activeNoteConnectionsAtom);
   const [activeNote] = useAtom(activeNoteAtom);
   const clusterEntities = useActiveClusterEntities();
+  const graph = useGraph();
   
   // Choose entities based on view mode
   const entities = viewMode === 'note' ? noteEntities : clusterEntities;
-  
-  // Get attributes for selected entity (placeholder for now)
-  const entityAttributes = selectedEntity 
-    ? {} // Will implement attribute retrieval in next phase
-    : {};
 
-  // Helper function to safely render attribute values
-  const renderAttributeValue = (value: unknown): React.ReactNode => {
-    if (value === null || value === undefined) {
-      return <span className="text-muted-foreground">N/A</span>;
+  // Load entity attributes when an entity is selected
+  useEffect(() => {
+    if (selectedEntity && graph) {
+      const attributes = graph.getEntityAttributes?.(selectedEntity.kind, selectedEntity.label);
+      if (attributes) {
+        // Convert to TypedAttribute format
+        const typedAttributes: TypedAttribute[] = Object.entries(attributes).map(([name, value]) => ({
+          id: `${selectedEntity.kind}-${selectedEntity.label}-${name}`,
+          name,
+          type: inferAttributeType(value),
+          value,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }));
+        setEntityAttributes(typedAttributes);
+      } else {
+        // Create default attributes from blueprint
+        const blueprint = getBlueprintForEntityKind(selectedEntity.kind);
+        if (blueprint) {
+          const defaultAttributes: TypedAttribute[] = blueprint.templates.map(template => ({
+            id: `${selectedEntity.kind}-${selectedEntity.label}-${template.name}`,
+            name: template.name,
+            type: template.type,
+            value: template.defaultValue || getDefaultValueForType(template.type),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }));
+          setEntityAttributes(defaultAttributes);
+        }
+      }
     }
-    if (typeof value === 'object') {
-      return <span className="text-xs text-muted-foreground">{JSON.stringify(value)}</span>;
+  }, [selectedEntity, graph]);
+
+  // Helper function to infer attribute type from value
+  const inferAttributeType = (value: any): any => {
+    if (typeof value === 'string') return 'Text';
+    if (typeof value === 'number') return 'Number';
+    if (typeof value === 'boolean') return 'Boolean';
+    if (Array.isArray(value)) return 'List';
+    if (value && typeof value === 'object') {
+      if ('current' in value && 'maximum' in value) return 'ProgressBar';
+      if ('strength' in value) return 'StatBlock';
+      if ('entityId' in value) return 'Relationship';
     }
-    return <span>{String(value)}</span>;
+    return 'Text';
+  };
+
+  // Helper function to get default value for attribute type
+  const getDefaultValueForType = (type: string): any => {
+    switch (type) {
+      case 'ProgressBar': return { current: 100, maximum: 100 };
+      case 'StatBlock': return { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10 };
+      case 'Relationship': return { entityId: '', entityLabel: '', relationshipType: '' };
+      case 'Number': return 0;
+      case 'Boolean': return false;
+      case 'List': return [];
+      case 'Date': return new Date().toISOString();
+      default: return '';
+    }
+  };
+
+  // Render appropriate layout based on entity kind
+  const renderEntityLayout = () => {
+    if (!selectedEntity || entityAttributes.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          <p className="text-sm">No attributes found for this entity.</p>
+          <p className="text-xs mt-1">Attributes can be added through the Entity Manager.</p>
+        </div>
+      );
+    }
+
+    const handleAttributeClick = (attribute: TypedAttribute) => {
+      console.log('Attribute clicked:', attribute);
+    };
+
+    switch (selectedEntity.kind) {
+      case 'CHARACTER':
+        return (
+          <CharacterSheetLayout 
+            attributes={entityAttributes}
+            onAttributeClick={handleAttributeClick}
+          />
+        );
+      case 'FACTION':
+        return (
+          <FactionOverviewLayout 
+            attributes={entityAttributes}
+            onAttributeClick={handleAttributeClick}
+          />
+        );
+      default:
+        return (
+          <SimpleLayout 
+            attributes={entityAttributes}
+            onAttributeClick={handleAttributeClick}
+          />
+        );
+    }
   };
 
   if (!selectedEntity) {
@@ -140,29 +232,8 @@ export function EntityAttributePanel() {
       </div>
       
       <ScrollArea className="h-[400px]">
-        {Object.keys(entityAttributes).length > 0 ? (
-          <div className="space-y-3">
-            {Object.entries(entityAttributes).map(([key, value]) => (
-              <Card key={key} className="bg-[#12141f] border-[#1a1b23]">
-                <CardContent className="p-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-medium text-white">{key}</span>
-                    <div className="text-xs text-muted-foreground">
-                      {renderAttributeValue(value)}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">No attributes found for this entity.</p>
-            <p className="text-xs mt-1">Attributes can be added through the Entity Manager.</p>
-          </div>
-        )}
+        {renderEntityLayout()}
       </ScrollArea>
     </div>
   );
 }
-
