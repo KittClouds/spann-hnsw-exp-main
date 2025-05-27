@@ -1,22 +1,31 @@
 
 import React, { useState } from 'react';
-import { useGraph } from '@/contexts/GraphContext';
+import { useAtom } from 'jotai';
+import { activeNoteConnectionsAtom, activeNoteAtom } from '@/lib/store';
+import { useActiveClusterEntities } from '@/components/entity-manager/useActiveClusterEntities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { User, ChevronRight } from 'lucide-react';
+import { User, ChevronRight, FileText, FolderOpen } from 'lucide-react';
+
+type ViewMode = 'note' | 'cluster';
 
 export function EntityAttributePanel() {
-  const graph = useGraph();
+  const [viewMode, setViewMode] = useState<ViewMode>('note');
   const [selectedEntity, setSelectedEntity] = useState<{kind: string, label: string} | null>(null);
   
-  // Get all entities from the graph
-  const entities = graph.getAllEntities();
+  // Use the same data sources as Entity Manager
+  const [{ entities: noteEntities }] = useAtom(activeNoteConnectionsAtom);
+  const [activeNote] = useAtom(activeNoteAtom);
+  const clusterEntities = useActiveClusterEntities();
   
-  // Get attributes for selected entity
+  // Choose entities based on view mode
+  const entities = viewMode === 'note' ? noteEntities : clusterEntities;
+  
+  // Get attributes for selected entity (placeholder for now)
   const entityAttributes = selectedEntity 
-    ? graph.getEntityAttributes(selectedEntity.kind, selectedEntity.label) || {}
+    ? {} // Will implement attribute retrieval in next phase
     : {};
 
   if (!selectedEntity) {
@@ -24,7 +33,31 @@ export function EntityAttributePanel() {
       <div className="p-4 space-y-4">
         <div className="text-center text-muted-foreground mb-4">
           <h3 className="text-sm font-medium mb-2">Entity Attributes</h3>
-          <p className="text-xs">Select an entity to view its attributes</p>
+          <p className="text-xs">
+            {activeNote ? `Viewing: ${activeNote.title}` : 'No active note'}
+          </p>
+        </div>
+        
+        {/* View Mode Toggle */}
+        <div className="flex gap-2 mb-4">
+          <Button
+            variant={viewMode === 'note' ? 'default' : 'ghost'}
+            onClick={() => setViewMode('note')}
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-3 w-3" />
+            Note
+          </Button>
+          <Button
+            variant={viewMode === 'cluster' ? 'default' : 'ghost'}
+            onClick={() => setViewMode('cluster')}
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <FolderOpen className="h-3 w-3" />
+            Cluster
+          </Button>
         </div>
         
         <ScrollArea className="h-[400px]">
@@ -47,9 +80,11 @@ export function EntityAttributePanel() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {entity.referenceCount} refs
-                      </span>
+                      {viewMode === 'cluster' && 'referenceCount' in entity && (
+                        <span className="text-xs text-muted-foreground">
+                          {entity.referenceCount} refs
+                        </span>
+                      )}
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </div>
@@ -61,7 +96,9 @@ export function EntityAttributePanel() {
         
         {entities.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">No entities found in your notes.</p>
+            <p className="text-sm">
+              No entities found {viewMode === 'note' ? 'in this note' : 'in this cluster'}.
+            </p>
             <p className="text-xs mt-1">
               Use <code className="bg-muted px-1 rounded">[TYPE|Label]</code> syntax to create entities.
             </p>
