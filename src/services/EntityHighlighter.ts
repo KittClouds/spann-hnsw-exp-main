@@ -1,5 +1,5 @@
 
-import { BlockNoteEditor, Block, PartialInlineContent } from '@blocknote/core';
+import { BlockNoteEditor, Block } from '@blocknote/core';
 import { parseNoteConnections } from '@/lib/utils/parsingUtils';
 
 export class EntityHighlighter {
@@ -31,7 +31,8 @@ export class EntityHighlighter {
       const replacements: Array<{
         from: number;
         to: number;
-        insert: PartialInlineContent;
+        type: string;
+        props: Record<string, any>;
       }> = [];
 
       // Process triples first (they contain entities)
@@ -46,13 +47,13 @@ export class EntityHighlighter {
           replacements.push({
             from: match.index,
             to: match.index + match[0].length,
-            insert: {
-              type: "triple",
-              props: {
-                subject: triple.subject,
-                predicate: triple.predicate,
-                object: triple.object
-              }
+            type: "triple",
+            props: {
+              subjectKind: triple.subject.kind,
+              subjectLabel: triple.subject.label,
+              predicate: triple.predicate,
+              objectKind: triple.object.kind,
+              objectLabel: triple.object.label
             }
           });
         }
@@ -76,13 +77,11 @@ export class EntityHighlighter {
             replacements.push({
               from: match.index,
               to: match.index + match[0].length,
-              insert: {
-                type: "entity",
-                props: {
-                  kind: entity.kind,
-                  label: entity.label,
-                  attributes: entity.attributes || {}
-                }
+              type: "entity",
+              props: {
+                kind: entity.kind,
+                label: entity.label,
+                attributes: entity.attributes ? JSON.stringify(entity.attributes) : ""
               }
             });
           }
@@ -103,11 +102,9 @@ export class EntityHighlighter {
             replacements.push({
               from: match.index,
               to: match.index + match[0].length,
-              insert: {
-                type: "wikilink",
-                props: {
-                  text: link
-                }
+              type: "wikilink",
+              props: {
+                text: link
               }
             });
           }
@@ -128,11 +125,9 @@ export class EntityHighlighter {
             replacements.push({
               from: match.index,
               to: match.index + match[0].length,
-              insert: {
-                type: "tag",
-                props: {
-                  text: tag
-                }
+              type: "tag",
+              props: {
+                text: tag
               }
             });
           }
@@ -153,22 +148,28 @@ export class EntityHighlighter {
             replacements.push({
               from: match.index,
               to: match.index + match[0].length,
-              insert: {
-                type: "mention",
-                props: {
-                  text: mention
-                }
+              type: "mention",
+              props: {
+                text: mention
               }
             });
           }
         }
       });
 
-      // Apply replacements in reverse order to maintain positions
+      // Apply replacements using BlockNote's replaceInlineContent method
+      // Sort in reverse order to maintain positions
       replacements
         .sort((a, b) => b.from - a.from)
         .forEach(replacement => {
-          this.editor.updateInlineContent(block.id, replacement.from, replacement.to, [replacement.insert]);
+          try {
+            this.editor.replaceInlineContent(block.id, replacement.from, replacement.to, [{
+              type: replacement.type,
+              props: replacement.props
+            }]);
+          } catch (error) {
+            console.warn('EntityHighlighter: Error replacing inline content', error);
+          }
         });
 
     } catch (error) {

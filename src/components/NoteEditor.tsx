@@ -1,3 +1,4 @@
+
 import { useActiveNote, useActiveNoteId, useNotes, useNoteActions } from '@/hooks/useLiveStore';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -14,7 +15,7 @@ import { ConnectionsPanel } from './connections/ConnectionsPanel';
 import { EmptyNoteState } from './EmptyNoteState';
 import { NoteSerializer } from '@/services/NoteSerializer';
 import { createEmptyBlock } from '@/lib/utils/blockUtils';
-import { entityEditorSchema } from '@/lib/editor/EntityEditorSchema';
+import { entityEditorSchema, EntityEditorSchema } from '@/lib/editor/EntityEditorSchema';
 import { EntityHighlighter } from '@/services/EntityHighlighter';
 
 export function NoteEditor() {
@@ -63,7 +64,7 @@ export function NoteEditor() {
   // Initialize entity highlighter when editor is ready
   useEffect(() => {
     if (editor) {
-      entityHighlighterRef.current = new EntityHighlighter(editor);
+      entityHighlighterRef.current = new EntityHighlighter(editor as any);
     }
   }, [editor]);
 

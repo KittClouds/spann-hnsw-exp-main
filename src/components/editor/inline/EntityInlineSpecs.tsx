@@ -12,42 +12,42 @@ export const ENTITY_COLORS = {
 };
 
 // Tag inline component
-const TagInline = ({ inline }: { inline: any }) => (
+const TagInline = ({ inlineContent }: { inlineContent: any }) => (
   <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.tag} cursor-pointer hover:opacity-80 transition-opacity`}>
-    #{inline.props.text}
+    #{inlineContent.props.text}
   </span>
 );
 
 // Mention inline component
-const MentionInline = ({ inline }: { inline: any }) => (
+const MentionInline = ({ inlineContent }: { inlineContent: any }) => (
   <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.mention} cursor-pointer hover:opacity-80 transition-opacity`}>
-    @{inline.props.text}
+    @{inlineContent.props.text}
   </span>
 );
 
 // Wiki link inline component
-const WikiLinkInline = ({ inline }: { inline: any }) => (
+const WikiLinkInline = ({ inlineContent }: { inlineContent: any }) => (
   <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.wikilink} cursor-pointer hover:opacity-80 transition-opacity`}>
-    {inline.props.text}
+    {inlineContent.props.text}
   </span>
 );
 
 // Entity inline component
-const EntityInline = ({ inline }: { inline: any }) => (
+const EntityInline = ({ inlineContent }: { inlineContent: any }) => (
   <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.entity} cursor-pointer hover:opacity-80 transition-opacity`}>
-    <span className="text-xs opacity-70">{inline.props.kind}</span>
-    {inline.props.label}
+    <span className="text-xs opacity-70">{inlineContent.props.kind}</span>
+    {inlineContent.props.label}
   </span>
 );
 
 // Triple inline component
-const TripleInline = ({ inline }: { inline: any }) => (
+const TripleInline = ({ inlineContent }: { inlineContent: any }) => (
   <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.triple} cursor-pointer hover:opacity-80 transition-opacity`}>
-    <span className="opacity-70">{inline.props.subject.kind}</span>
-    {inline.props.subject.label}
-    <span className="opacity-60 mx-1">({inline.props.predicate})</span>
-    <span className="opacity-70">{inline.props.object.kind}</span>
-    {inline.props.object.label}
+    <span className="opacity-70">{inlineContent.props.subjectKind}</span>
+    {inlineContent.props.subjectLabel}
+    <span className="opacity-60 mx-1">({inlineContent.props.predicate})</span>
+    <span className="opacity-70">{inlineContent.props.objectKind}</span>
+    {inlineContent.props.objectLabel}
   </span>
 );
 
@@ -62,7 +62,7 @@ export const TagInlineSpec = createReactInlineContentSpec(
   },
   {
     render: TagInline,
-    serialize: (inline) => `#${inline.props.text}`
+    serialize: (inlineContent) => `#${inlineContent.props.text}`
   }
 );
 
@@ -76,7 +76,7 @@ export const MentionInlineSpec = createReactInlineContentSpec(
   },
   {
     render: MentionInline,
-    serialize: (inline) => `@${inline.props.text}`
+    serialize: (inlineContent) => `@${inlineContent.props.text}`
   }
 );
 
@@ -90,7 +90,7 @@ export const WikiLinkInlineSpec = createReactInlineContentSpec(
   },
   {
     render: WikiLinkInline,
-    serialize: (inline) => `[[${inline.props.text}]]`
+    serialize: (inlineContent) => `[[${inlineContent.props.text}]]`
   }
 );
 
@@ -100,17 +100,17 @@ export const EntityInlineSpec = createReactInlineContentSpec(
     propSchema: {
       kind: { default: "" },
       label: { default: "" },
-      attributes: { default: {} }
+      attributes: { default: "" } // Store as JSON string instead of object
     },
     content: "none"
   },
   {
     render: EntityInline,
-    serialize: (inline) => {
-      const attrs = inline.props.attributes && Object.keys(inline.props.attributes).length > 0
-        ? `|${JSON.stringify(inline.props.attributes)}`
+    serialize: (inlineContent) => {
+      const attrs = inlineContent.props.attributes && inlineContent.props.attributes !== ""
+        ? `|${inlineContent.props.attributes}`
         : '';
-      return `[${inline.props.kind}|${inline.props.label}${attrs}]`;
+      return `[${inlineContent.props.kind}|${inlineContent.props.label}${attrs}]`;
     }
   }
 );
@@ -119,17 +119,19 @@ export const TripleInlineSpec = createReactInlineContentSpec(
   {
     type: "triple",
     propSchema: {
-      subject: { default: { kind: "", label: "" } },
+      subjectKind: { default: "" },
+      subjectLabel: { default: "" },
       predicate: { default: "" },
-      object: { default: { kind: "", label: "" } }
+      objectKind: { default: "" },
+      objectLabel: { default: "" }
     },
     content: "none"
   },
   {
     render: TripleInline,
-    serialize: (inline) => {
-      const { subject, predicate, object } = inline.props;
-      return `[${subject.kind}|${subject.label}] (${predicate}) [${object.kind}|${object.label}]`;
+    serialize: (inlineContent) => {
+      const { subjectKind, subjectLabel, predicate, objectKind, objectLabel } = inlineContent.props;
+      return `[${subjectKind}|${subjectLabel}] (${predicate}) [${objectKind}|${objectLabel}]`;
     }
   }
 );
