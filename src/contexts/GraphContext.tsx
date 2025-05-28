@@ -80,7 +80,9 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   // Load schema from storage on mount
   useEffect(() => {
     const validSchemaDefs = schemaDefs as SchemaDefinitions;
-    if (validSchemaDefs && validSchemaDefs.nodes && validSchemaDefs.edges && 
+    if (validSchemaDefs && typeof validSchemaDefs === 'object' && 
+        'nodes' in validSchemaDefs && 'edges' in validSchemaDefs && 
+        Array.isArray(validSchemaDefs.nodes) && Array.isArray(validSchemaDefs.edges) &&
         (validSchemaDefs.nodes.length > 0 || validSchemaDefs.edges.length > 0)) {
       console.log("GraphProvider: Loading schema from storage", validSchemaDefs);
       schema.loadDefinitions(validSchemaDefs);
@@ -112,74 +114,74 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
 
     const changedNoteIds = new Set<string>();
 
-    // Compare Tags
-    if (tagsMap instanceof Map) {
-      tagsMap.forEach((currentTags, noteId) => {
-        if (previousTagsMap.current.get(noteId) !== currentTags) {
+    // Compare Tags with proper type assertions
+    if (tagsMap instanceof Map && previousTagsMap.current instanceof Map) {
+      (tagsMap as Map<string, string[]>).forEach((currentTags, noteId) => {
+        if ((previousTagsMap.current as Map<string, string[]>).get(noteId) !== currentTags) {
           changedNoteIds.add(noteId);
         }
       });
-      previousTagsMap.current.forEach((_, noteId) => {
-        if (!tagsMap.has(noteId)) changedNoteIds.add(noteId);
+      (previousTagsMap.current as Map<string, string[]>).forEach((_, noteId) => {
+        if (!(tagsMap as Map<string, string[]>).has(noteId)) changedNoteIds.add(noteId);
       });
     }
 
-    // Compare Mentions
-    if (mentionsMap instanceof Map) {
-      mentionsMap.forEach((currentMentions, noteId) => {
-        if (previousMentionsMap.current.get(noteId) !== currentMentions) {
+    // Compare Mentions with proper type assertions
+    if (mentionsMap instanceof Map && previousMentionsMap.current instanceof Map) {
+      (mentionsMap as Map<string, string[]>).forEach((currentMentions, noteId) => {
+        if ((previousMentionsMap.current as Map<string, string[]>).get(noteId) !== currentMentions) {
           changedNoteIds.add(noteId);
         }
       });
-      previousMentionsMap.current.forEach((_, noteId) => {
-        if (!mentionsMap.has(noteId)) changedNoteIds.add(noteId);
+      (previousMentionsMap.current as Map<string, string[]>).forEach((_, noteId) => {
+        if (!(mentionsMap as Map<string, string[]>).has(noteId)) changedNoteIds.add(noteId);
       });
     }
 
-    // Compare Links
-    if (linksMap instanceof Map) {
-      linksMap.forEach((currentLinks, noteId) => {
-        if (previousLinksMap.current.get(noteId) !== currentLinks) {
+    // Compare Links with proper type assertions
+    if (linksMap instanceof Map && previousLinksMap.current instanceof Map) {
+      (linksMap as Map<string, string[]>).forEach((currentLinks, noteId) => {
+        if ((previousLinksMap.current as Map<string, string[]>).get(noteId) !== currentLinks) {
           changedNoteIds.add(noteId);
         }
       });
-      previousLinksMap.current.forEach((_, noteId) => {
-        if (!linksMap.has(noteId)) changedNoteIds.add(noteId);
+      (previousLinksMap.current as Map<string, string[]>).forEach((_, noteId) => {
+        if (!(linksMap as Map<string, string[]>).has(noteId)) changedNoteIds.add(noteId);
       });
     }
     
-    // Compare Entities
-    if (entitiesMap instanceof Map) {
-      entitiesMap.forEach((currentEntities, noteId) => {
-        if (previousEntitiesMap.current.get(noteId) !== currentEntities) {
+    // Compare Entities with proper type assertions
+    if (entitiesMap instanceof Map && previousEntitiesMap.current instanceof Map) {
+      (entitiesMap as Map<string, Entity[]>).forEach((currentEntities, noteId) => {
+        if ((previousEntitiesMap.current as Map<string, Entity[]>).get(noteId) !== currentEntities) {
           changedNoteIds.add(noteId);
         }
       });
-      previousEntitiesMap.current.forEach((_, noteId) => {
-        if (!entitiesMap.has(noteId)) changedNoteIds.add(noteId);
+      (previousEntitiesMap.current as Map<string, Entity[]>).forEach((_, noteId) => {
+        if (!(entitiesMap as Map<string, Entity[]>).has(noteId)) changedNoteIds.add(noteId);
       });
     }
     
-    // Compare Triples
-    if (triplesMap instanceof Map) {
-      triplesMap.forEach((currentTriples, noteId) => {
-        if (previousTriplesMap.current.get(noteId) !== currentTriples) {
+    // Compare Triples with proper type assertions
+    if (triplesMap instanceof Map && previousTriplesMap.current instanceof Map) {
+      (triplesMap as Map<string, any[]>).forEach((currentTriples, noteId) => {
+        if ((previousTriplesMap.current as Map<string, any[]>).get(noteId) !== currentTriples) {
           changedNoteIds.add(noteId);
         }
       });
-      previousTriplesMap.current.forEach((_, noteId) => {
-        if (!triplesMap.has(noteId)) changedNoteIds.add(noteId);
+      (previousTriplesMap.current as Map<string, any[]>).forEach((_, noteId) => {
+        if (!(triplesMap as Map<string, any[]>).has(noteId)) changedNoteIds.add(noteId);
       });
     }
 
     if (changedNoteIds.size > 0) {
       console.log(`GraphProvider: Detected connection changes in ${changedNoteIds.size} notes. Updating graph...`, Array.from(changedNoteIds));
       changedNoteIds.forEach(noteId => {
-        const tags = tagsMap instanceof Map ? (tagsMap.get(noteId) ?? []) : [];
-        const mentions = mentionsMap instanceof Map ? (mentionsMap.get(noteId) ?? []) : [];
-        const links = linksMap instanceof Map ? (linksMap.get(noteId) ?? []) : [];
-        const entities = entitiesMap instanceof Map ? (entitiesMap.get(noteId) ?? []) : [];
-        const triples = triplesMap instanceof Map ? (triplesMap.get(noteId) ?? []) : [];
+        const tags = tagsMap instanceof Map ? ((tagsMap as Map<string, string[]>).get(noteId) ?? []) : [];
+        const mentions = mentionsMap instanceof Map ? ((mentionsMap as Map<string, string[]>).get(noteId) ?? []) : [];
+        const links = linksMap instanceof Map ? ((linksMap as Map<string, string[]>).get(noteId) ?? []) : [];
+        const entities = entitiesMap instanceof Map ? ((entitiesMap as Map<string, Entity[]>).get(noteId) ?? []) : [];
+        const triples = triplesMap instanceof Map ? ((triplesMap as Map<string, any[]>).get(noteId) ?? []) : [];
         
         graphService.updateNoteConnections(noteId, tags, mentions, links, entities, triples);
       });
@@ -274,11 +276,11 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
 
     getConnections: (noteId) => {
       return {
-        tag: tagsMap instanceof Map ? (tagsMap.get(noteId)?.map(t => ({ id: t, title: t })) ?? []) : [],
-        mention: mentionsMap instanceof Map ? (mentionsMap.get(noteId)?.map(m => ({ id: m, title: m })) ?? []) : [],
-        concept: linksMap instanceof Map ? (linksMap.get(noteId)?.map(l => ({ id: l, title: l })) ?? []) : [],
-        entity: entitiesMap instanceof Map ? (entitiesMap.get(noteId) ?? []) : [],
-        triple: triplesMap instanceof Map ? (triplesMap.get(noteId) ?? []) : []
+        tag: tagsMap instanceof Map ? ((tagsMap as Map<string, string[]>).get(noteId)?.map(t => ({ id: t, title: t })) ?? []) : [],
+        mention: mentionsMap instanceof Map ? ((mentionsMap as Map<string, string[]>).get(noteId)?.map(m => ({ id: m, title: m })) ?? []) : [],
+        concept: linksMap instanceof Map ? ((linksMap as Map<string, string[]>).get(noteId)?.map(l => ({ id: l, title: l })) ?? []) : [],
+        entity: entitiesMap instanceof Map ? ((entitiesMap as Map<string, Entity[]>).get(noteId) ?? []) : [],
+        triple: triplesMap instanceof Map ? ((triplesMap as Map<string, any[]>).get(noteId) ?? []) : []
       };
     },
     
