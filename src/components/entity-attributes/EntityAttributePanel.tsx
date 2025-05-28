@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { User, ChevronRight, FileText, FolderOpen } from 'lucide-react';
+import { User, ChevronRight, FileText, FolderOpen, RefreshCw } from 'lucide-react';
 import { useGraph } from '@/contexts/GraphContext';
 import { getBlueprintForEntityKind } from '@/lib/blueprintMatching';
 import { TypedAttribute } from '@/types/attributes';
@@ -21,6 +21,7 @@ export function EntityAttributePanel() {
   const [viewMode, setViewMode] = useState<ViewMode>('note');
   const [selectedEntity, setSelectedEntity] = useState<{kind: string, label: string} | null>(null);
   const [entityAttributes, setEntityAttributes] = useState<TypedAttribute[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Use the same data sources as Entity Manager
   const [{ entities: noteEntities }] = useAtom(activeNoteConnectionsAtom);
@@ -31,21 +32,37 @@ export function EntityAttributePanel() {
   // Choose entities based on view mode
   const entities = viewMode === 'note' ? noteEntities : clusterEntities;
 
-  // Load entity attributes when an entity is selected
+  // Auto-refresh attributes every 500ms when an entity is selected
+  useEffect(() => {
+    if (!selectedEntity) return;
+    
+    const interval = setInterval(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, 500);
+    
+    return () => clearInterval(interval);
+  }, [selectedEntity]);
+
+  // Load entity attributes when an entity is selected or refresh is triggered
   useEffect(() => {
     if (selectedEntity && graph) {
       const attributes = graph.getEntityAttributes?.(selectedEntity.kind, selectedEntity.label);
       if (attributes) {
-        // Convert to TypedAttribute format
-        const typedAttributes: TypedAttribute[] = Object.entries(attributes).map(([name, value]) => ({
-          id: `${selectedEntity.kind}-${selectedEntity.label}-${name}`,
-          name,
-          type: inferAttributeType(value),
-          value,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }));
-        setEntityAttributes(typedAttributes);
+        // Handle enhanced format vs legacy format
+        if (attributes.attributes && Array.isArray(attributes.attributes)) {
+          setEntityAttributes(attributes.attributes);
+        } else {
+          // Convert legacy format to TypedAttribute format
+          const typedAttributes: TypedAttribute[] = Object.entries(attributes).map(([name, value]) => ({
+            id: `${selectedEntity.kind}-${selectedEntity.label}-${name}`,
+            name,
+            type: inferAttributeType(value),
+            value,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }));
+          setEntityAttributes(typedAttributes);
+        }
       } else {
         // Create default attributes from blueprint
         const blueprint = getBlueprintForEntityKind(selectedEntity.kind);
@@ -59,10 +76,12 @@ export function EntityAttributePanel() {
             updatedAt: new Date().toISOString()
           }));
           setEntityAttributes(defaultAttributes);
+        } else {
+          setEntityAttributes([]);
         }
       }
     }
-  }, [selectedEntity, graph]);
+  }, [selectedEntity, graph, refreshTrigger]);
 
   // Helper function to infer attribute type from value
   const inferAttributeType = (value: any): any => {
@@ -73,7 +92,7 @@ export function EntityAttributePanel() {
     if (value && typeof value === 'object') {
       if ('current' in value && 'maximum' in value) return 'ProgressBar';
       if ('strength' in value) return 'StatBlock';
-      if ('entityId' in value) return 'Relationship';
+      if ('entityId' in value && 'relationshipType' in value) return 'Relationship';
     }
     return 'Text';
   };
@@ -221,14 +240,24 @@ export function EntityAttributePanel() {
             {selectedEntity.kind.toLowerCase()}
           </Badge>
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={() => setSelectedEntity(null)}
-          className="text-xs"
-        >
-          ← Back
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setRefreshTrigger(prev => prev + 1)}
+            className="h-6 w-6 p-0"
+          >
+            <RefreshCw className="h-3 w-3" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setSelectedEntity(null)}
+            className="text-xs"
+          >
+            ← Back
+          </Button>
+        </div>
       </div>
       
       <ScrollArea className="h-[400px]">

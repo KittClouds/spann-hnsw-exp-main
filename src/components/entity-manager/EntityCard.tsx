@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { AttributeEditor } from './AttributeEditor';
 import { TypedAttribute, EnhancedEntityAttributes } from '@/types/attributes';
 import { useAtom } from 'jotai';
 import { blueprintsAtom } from '@/lib/store';
+import { getBlueprintForEntityKind } from '@/lib/blueprintMatching';
 
 interface EntityCardProps {
   entity: Entity | ClusterEntity;
@@ -24,27 +26,83 @@ export function EntityCard({ entity, viewMode }: EntityCardProps) {
   const { getEntityAttributes, updateEntityAttributes } = useGraph();
 
   React.useEffect(() => {
-    const existingAttrs = getEntityAttributes(entity.kind, entity.label);
-    if (existingAttrs) {
-      // Check if we have the new enhanced format
-      if (existingAttrs.attributes && Array.isArray(existingAttrs.attributes)) {
-        setAttributes(existingAttrs.attributes);
+    if (isExpanded) {
+      // Load existing attributes
+      const existingAttrs = getEntityAttributes(entity.kind, entity.label);
+      let currentAttributes: TypedAttribute[] = [];
+      
+      if (existingAttrs) {
+        if (existingAttrs.attributes && Array.isArray(existingAttrs.attributes)) {
+          currentAttributes = existingAttrs.attributes;
+        } else {
+          // Migrate old format to new format
+          currentAttributes = Object.entries(existingAttrs).map(([key, value]) => ({
+            id: `migrated-${key}-${Date.now()}`,
+            name: key,
+            type: 'Text' as const,
+            value: String(value),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }));
+        }
+      }
+
+      // Get blueprint for this entity kind and merge with existing attributes
+      const blueprint = getBlueprintForEntityKind(entity.kind);
+      if (blueprint) {
+        const blueprintAttributeNames = new Set(blueprint.templates.map(t => t.name));
+        const existingAttributeNames = new Set(currentAttributes.map(a => a.name));
+        
+        // Add missing blueprint attributes
+        const missingBlueprintAttrs = blueprint.templates
+          .filter(template => !existingAttributeNames.has(template.name))
+          .map(template => ({
+            id: `blueprint-${entity.kind}-${entity.label}-${template.name}-${Date.now()}`,
+            name: template.name,
+            type: template.type,
+            value: template.defaultValue || getDefaultValueForType(template.type),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }));
+
+        // Sort attributes: blueprint first (in blueprint order), then custom
+        const blueprintAttrs = blueprint.templates.map(template => 
+          currentAttributes.find(attr => attr.name === template.name) ||
+          missingBlueprintAttrs.find(attr => attr.name === template.name)
+        ).filter(Boolean) as TypedAttribute[];
+        
+        const customAttrs = currentAttributes.filter(attr => 
+          !blueprintAttributeNames.has(attr.name)
+        );
+
+        const finalAttributes = [...blueprintAttrs, ...customAttrs];
+        setAttributes(finalAttributes);
+        
+        // If we added missing blueprint attributes, save them
+        if (missingBlueprintAttrs.length > 0) {
+          handleAttributesChange(finalAttributes);
+        }
       } else {
-        // Migrate old format to new format
-        const migratedAttrs: TypedAttribute[] = Object.entries(existingAttrs).map(([key, value]) => ({
-          id: `migrated-${key}-${Date.now()}`,
-          name: key,
-          type: 'Text' as const,
-          value: String(value),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }));
-        setAttributes(migratedAttrs);
-        // Save the migrated format
-        handleAttributesChange(migratedAttrs);
+        setAttributes(currentAttributes);
       }
     }
-  }, [entity.kind, entity.label, getEntityAttributes]);
+  }, [entity.kind, entity.label, getEntityAttributes, isExpanded]);
+
+  const getDefaultValueForType = (type: any): any => {
+    switch (type) {
+      case 'ProgressBar': return { current: 100, maximum: 100 };
+      case 'StatBlock': return { 
+        strength: 10, dexterity: 10, constitution: 10, 
+        intelligence: 10, wisdom: 10, charisma: 10 
+      };
+      case 'Relationship': return { entityId: '', entityLabel: '', relationshipType: '' };
+      case 'Number': return 0;
+      case 'Boolean': return false;
+      case 'List': return [];
+      case 'Date': return new Date().toISOString();
+      default: return '';
+    }
+  };
 
   const handleAttributesChange = (newAttributes: TypedAttribute[]) => {
     setAttributes(newAttributes);
@@ -131,6 +189,7 @@ export function EntityCard({ entity, viewMode }: EntityCardProps) {
                     entityKind={entity.kind}
                     entityLabel={entity.label}
                     availableBlueprints={blueprints}
+                    showBlueprintSelector={false}
                   />
                 </div>
               </div>
