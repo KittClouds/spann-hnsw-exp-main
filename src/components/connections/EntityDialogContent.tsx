@@ -19,7 +19,7 @@ export function EntityDialogContent({ entity }: EntityDialogContentProps) {
           View Details
         </Button>
       </DialogTrigger>
-      <EntityInspector entity={entity} closeDialog={() => setOpen(false)} />
+      <EntityInspector entity={entity} />
     </Dialog>
   );
 }
