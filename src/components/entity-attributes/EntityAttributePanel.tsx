@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useActiveNoteConnections, useActiveNote, useEntityAttributes, useBlueprintsArray } from '@/hooks/useLiveStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,21 +28,6 @@ export function EntityAttributePanel() {
   const blueprints = useBlueprintsArray();
   const [selectedEntity, setSelectedEntity] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('simple');
-
-  // Auto-select first entity when entities change or load
-  useEffect(() => {
-    const entitiesArray = Array.isArray(entities) ? entities : [];
-    
-    if (entitiesArray.length > 0) {
-      // If no entity is selected, or if the selected entity is no longer in the list
-      if (!selectedEntity || !entitiesArray.find(e => e.label === selectedEntity.label && e.kind === selectedEntity.kind)) {
-        setSelectedEntity(entitiesArray[0]);
-      }
-    } else {
-      // Clear selection if no entities exist
-      setSelectedEntity(null);
-    }
-  }, [entities, selectedEntity]);
 
   // Group entities by kind
   const entityGroups = useMemo(() => {
