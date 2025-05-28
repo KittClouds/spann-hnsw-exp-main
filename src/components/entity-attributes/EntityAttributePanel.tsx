@@ -49,20 +49,75 @@ export function EntityAttributePanel() {
     );
   }, [selectedEntity, entityAttributes]);
 
-  // Convert attributes object to typed attributes array for SimpleLayout
+  // Enhanced type detection function
+  const detectAttributeType = (value: any): AttributeType => {
+    if (value === null || value === undefined) return 'Text';
+    
+    // Check for complex object types first
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      // Progress Bar detection
+      if ('current' in value && 'maximum' in value && typeof value.current === 'number' && typeof value.maximum === 'number') {
+        return 'ProgressBar';
+      }
+      
+      // Stat Block detection
+      if ('strength' in value && 'dexterity' in value && 'constitution' in value && 
+          'intelligence' in value && 'wisdom' in value && 'charisma' in value) {
+        return 'StatBlock';
+      }
+      
+      // Relationship detection
+      if ('entityId' in value && 'relationshipType' in value) {
+        return 'Relationship';
+      }
+      
+      // Entity Link detection
+      if ('entityId' in value && 'kind' in value && 'label' in value) {
+        return 'EntityLink';
+      }
+    }
+    
+    // Array detection
+    if (Array.isArray(value)) {
+      return 'List';
+    }
+    
+    // Date detection (ISO string format)
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+      return 'Date';
+    }
+    
+    // URL detection
+    if (typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'))) {
+      return 'URL';
+    }
+    
+    // Basic type detection
+    if (typeof value === 'number') return 'Number';
+    if (typeof value === 'boolean') return 'Boolean';
+    
+    return 'Text';
+  };
+
+  // Convert attributes object to typed attributes array with proper type detection
   const typedAttributes = useMemo(() => {
     if (!selectedEntityAttributes?.attributes) return [];
     
+    // Handle both new format (array) and old format (object)
+    if (Array.isArray(selectedEntityAttributes.attributes)) {
+      return selectedEntityAttributes.attributes;
+    }
+    
+    // Convert old format to new format with enhanced type detection
     return Object.entries(selectedEntityAttributes.attributes).map(([key, value]) => ({
-      id: key,
+      id: `${selectedEntity.kind}-${selectedEntity.label}-${key}`,
       name: key,
-      type: (typeof value === 'number' ? 'Number' : 
-            typeof value === 'boolean' ? 'Boolean' : 'Text') as AttributeType,
+      type: detectAttributeType(value),
       value: value as AttributeValue,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }));
-  }, [selectedEntityAttributes]);
+  }, [selectedEntityAttributes, selectedEntity]);
 
   const renderEntityContent = () => {
     if (!selectedEntity) {
@@ -88,7 +143,7 @@ export function EntityAttributePanel() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="simple">Simple</TabsTrigger>
+            <TabsTrigger value="simple">Overview</TabsTrigger>
             <TabsTrigger value="character">Character</TabsTrigger>
             <TabsTrigger value="faction">Faction</TabsTrigger>
           </TabsList>
@@ -101,14 +156,14 @@ export function EntityAttributePanel() {
           </TabsContent>
 
           <TabsContent value="character" className="space-y-4">
-            <SimpleLayout
+            <CharacterSheetLayout
               attributes={typedAttributes}
               onAttributeClick={() => {}}
             />
           </TabsContent>
 
           <TabsContent value="faction" className="space-y-4">
-            <SimpleLayout
+            <FactionOverviewLayout
               attributes={typedAttributes}
               onAttributeClick={() => {}}
             />

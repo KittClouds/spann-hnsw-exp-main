@@ -1,8 +1,9 @@
+
 import React from 'react';
-import { TypedAttribute } from '@/types/attributes';
+import { TypedAttribute, ProgressBarValue, StatBlockValue } from '@/types/attributes';
 import { ProgressBarRenderer } from '../renderers/ProgressBarRenderer';
 import { StatBlockRenderer } from '../renderers/StatBlockRenderer';
-import { RelationshipRenderer } from '../renderers/RelationshipRenderer';
+import { Badge } from '@/components/ui/badge';
 
 interface CharacterSheetLayoutProps {
   attributes: TypedAttribute[];
@@ -10,85 +11,87 @@ interface CharacterSheetLayoutProps {
 }
 
 export function CharacterSheetLayout({ attributes, onAttributeClick }: CharacterSheetLayoutProps) {
-  const getAttributeByName = (name: string) => 
-    attributes.find(attr => attr.name.toLowerCase() === name.toLowerCase());
+  // Group attributes by type for character sheet layout
+  const statBlocks = attributes.filter(attr => attr.type === 'StatBlock');
+  const progressBars = attributes.filter(attr => attr.type === 'ProgressBar');
+  const basicInfo = attributes.filter(attr => !['StatBlock', 'ProgressBar'].includes(attr.type));
 
-  const portrait = getAttributeByName('portrait');
-  const stats = getAttributeByName('stats');
-  const health = getAttributeByName('health');
-  const mana = getAttributeByName('mana');
-  const relationships = getAttributeByName('relationships');
+  const renderBasicAttribute = (attr: TypedAttribute) => {
+    const formatValue = () => {
+      switch (attr.type) {
+        case 'Boolean':
+          return attr.value ? 'Yes' : 'No';
+        case 'Date':
+          return new Date(attr.value as string).toLocaleDateString();
+        case 'List':
+          return Array.isArray(attr.value) ? attr.value.join(', ') : 'Invalid list';
+        default:
+          return String(attr.value);
+      }
+    };
+
+    return (
+      <div key={attr.id} className="flex justify-between items-center py-2 border-b border-[#1a1b23] last:border-b-0">
+        <span className="text-sm text-muted-foreground">{attr.name}</span>
+        <span className="text-sm font-medium text-white">{formatValue()}</span>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
-      {/* Header with portrait and basic info */}
-      <div className="flex gap-4">
-        {portrait && (
-          <div className="w-20 h-20 bg-[#1a1b23] rounded-lg flex items-center justify-center">
-            {typeof portrait.value === 'string' && portrait.value ? (
-              <img 
-                src={portrait.value} 
-                alt="Portrait" 
-                className="w-full h-full object-cover rounded-lg"
-              />
-            ) : (
-              <span className="text-xs text-muted-foreground">No Image</span>
-            )}
+      {/* Stat Blocks Section */}
+      {statBlocks.length > 0 && (
+        <div className="bg-[#12141f] border border-[#1a1b23] rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <Badge className="bg-indigo-500/20 text-indigo-400 text-xs">Stats</Badge>
+          </h3>
+          <div className="space-y-4">
+            {statBlocks.map(attr => (
+              <div key={attr.id}>
+                <div className="text-xs text-muted-foreground mb-2">{attr.name}</div>
+                <StatBlockRenderer value={attr.value as StatBlockValue} />
+              </div>
+            ))}
           </div>
-        )}
-        
-        <div className="flex-1 space-y-2">
-          {/* Progress bars */}
-          {health && health.type === 'ProgressBar' && (
-            <ProgressBarRenderer 
-              value={health.value as any} 
-              label="Health" 
-            />
-          )}
-          {mana && mana.type === 'ProgressBar' && (
-            <ProgressBarRenderer 
-              value={mana.value as any} 
-              label="Mana" 
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Stats block */}
-      {stats && stats.type === 'StatBlock' && (
-        <div className="bg-[#12141f] border border-[#1a1b23] rounded-lg p-3">
-          <h4 className="text-sm font-medium text-white mb-3">Ability Scores</h4>
-          <StatBlockRenderer value={stats.value as any} />
         </div>
       )}
 
-      {/* Other attributes */}
-      <div className="space-y-2">
-        {attributes
-          .filter(attr => !['portrait', 'stats', 'health', 'mana', 'relationships'].includes(attr.name.toLowerCase()))
-          .map(attr => (
-            <div key={attr.id} className="flex justify-between items-center py-1">
-              <span className="text-sm text-muted-foreground capitalize">{attr.name}</span>
-              <span className="text-sm text-white">
-                {typeof attr.value === 'object' ? JSON.stringify(attr.value) : String(attr.value)}
-              </span>
-            </div>
-          ))}
-      </div>
-
-      {/* Relationships */}
-      {relationships && Array.isArray(relationships.value) && relationships.value.length > 0 && (
-        <div className="bg-[#12141f] border border-[#1a1b23] rounded-lg p-3">
-          <h4 className="text-sm font-medium text-white mb-3">Relationships</h4>
-          <div className="space-y-1">
-            {relationships.value.map((rel: any, index: number) => (
-              <RelationshipRenderer 
-                key={index} 
-                value={rel} 
-                onClick={() => onAttributeClick?.(relationships)}
+      {/* Progress Bars Section */}
+      {progressBars.length > 0 && (
+        <div className="bg-[#12141f] border border-[#1a1b23] rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <Badge className="bg-emerald-500/20 text-emerald-400 text-xs">Resources</Badge>
+          </h3>
+          <div className="space-y-4">
+            {progressBars.map(attr => (
+              <ProgressBarRenderer 
+                key={attr.id}
+                value={attr.value as ProgressBarValue} 
+                label={attr.name}
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Basic Info Section */}
+      {basicInfo.length > 0 && (
+        <div className="bg-[#12141f] border border-[#1a1b23] rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <Badge className="bg-blue-500/20 text-blue-400 text-xs">Details</Badge>
+          </h3>
+          <div className="space-y-1">
+            {basicInfo.map(renderBasicAttribute)}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {attributes.length === 0 && (
+        <div className="text-center text-muted-foreground py-8">
+          <p>No character attributes found.</p>
+          <p className="text-sm mt-1">Add stat blocks and progress bars in the Entity Manager.</p>
         </div>
       )}
     </div>
