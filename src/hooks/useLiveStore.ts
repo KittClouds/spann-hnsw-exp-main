@@ -10,7 +10,8 @@ import {
   activeClusterNotes$,
   standardNotes$,
   activeNoteConnections$,
-  entityAttributes$
+  entityAttributes$,
+  blueprints$
 } from '../livestore/queries';
 import { events } from '../livestore/schema';
 
@@ -89,6 +90,12 @@ export function useEntityAttributes() {
   return Array.isArray(attrs) ? attrs : [];
 }
 
+export function useBlueprintsArray() {
+  const { store } = useStore();
+  const blueprints = store.useQuery(blueprints$);
+  return Array.isArray(blueprints) ? blueprints : [];
+}
+
 // Helper to commit note updates
 export function useNoteActions() {
   const { store } = useStore();
@@ -133,10 +140,4 @@ export function useNoteActions() {
     updateCluster,
     deleteCluster
   };
-}
-
-export function useBlueprintsArray() {
-  const { store } = useStore();
-  const blueprints = store.useQuery(blueprints$);
-  return Array.isArray(blueprints) ? blueprints : [];
 }

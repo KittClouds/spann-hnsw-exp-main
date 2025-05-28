@@ -34,11 +34,18 @@ export const entityAttributes$ = queryDb(
   { label: 'entityAttributes$' }
 );
 
-// UI state queries
-export const uiState$ = queryDb(
-  tables.uiState.document$,
-  { label: 'uiState$' }
-);
+// UI state queries - use the client document pattern correctly
+export const uiState$ = computed((get) => {
+  // For client documents, we need to query the table and get the first result
+  const results = get(queryDb(tables.uiState, { label: 'uiStateRaw$' }));
+  return Array.isArray(results) && results.length > 0 ? results[0].value : {
+    activeNoteId: null,
+    activeClusterId: 'cluster-default',
+    activeThreadId: null,
+    graphInitialized: false,
+    graphLayout: 'dagre'
+  };
+}, { label: 'uiState$' });
 
 export const activeNoteId$ = computed((get) => {
   const ui = get(uiState$);
@@ -75,7 +82,7 @@ export const activeNote$ = computed((get) => {
 
 export const activeThreadMessages$ = queryDb((get) => {
   const activeThreadId = get(activeThreadId$);
-  if (!activeThreadId) return [];
+  if (!activeThreadId) return tables.threadMessages.where({ threadId: '__nonexistent__' });
   return tables.threadMessages.where({ threadId: activeThreadId }).orderBy('createdAt', 'asc');
 }, { label: 'activeThreadMessages$' });
 

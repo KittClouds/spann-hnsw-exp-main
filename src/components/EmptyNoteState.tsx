@@ -1,20 +1,33 @@
 
 import { File } from "lucide-react";
 import { Button } from "./ui/button";
-import { useAtom } from "jotai";
-import { activeClusterIdAtom, createNote, notesAtom } from "@/lib/store";
+import { useNotes, useActiveClusterId, useNoteActions, useActiveNoteId } from "@/hooks/useLiveStore";
 import { toast } from "sonner";
-import { ClusterId } from "@/lib/utils/ids";
+import { generateNoteId } from "@/lib/utils/ids";
 
 export function EmptyNoteState() {
-  const [notes, setNotes] = useAtom(notesAtom);
-  const [activeClusterId] = useAtom(activeClusterIdAtom);
+  const notes = useNotes();
+  const [activeClusterId] = useActiveClusterId();
+  const [, setActiveNoteId] = useActiveNoteId();
+  const { createNote } = useNoteActions();
 
   const handleCreateNote = () => {
-    // Make sure activeClusterId is properly cast to ClusterId type if not null
-    const clusterId = activeClusterId ? activeClusterId as ClusterId : null;
-    const { id, note } = createNote(null, clusterId);
-    setNotes([...notes, note]);
+    const newNote = {
+      id: generateNoteId(),
+      parentId: null,
+      clusterId: activeClusterId === 'cluster-default' ? null : activeClusterId,
+      title: 'Untitled Note',
+      content: [],
+      type: 'note',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      path: null,
+      tags: null,
+      mentions: null
+    };
+    
+    createNote(newNote);
+    setActiveNoteId(newNote.id);
     toast("New note created", {
       description: "Start typing to edit your note"
     });

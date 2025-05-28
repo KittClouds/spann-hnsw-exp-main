@@ -1,4 +1,3 @@
-
 import { Button } from './ui/button';
 import { Database, ChevronRight, MoreVertical, Plus, PenLine, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -33,7 +32,7 @@ export function ClusterView() {
   useEffect(() => {
     if (!clusters.some(c => c.id === DEFAULT_CLUSTER_ID)) {
       const defaultCluster = {
-        id: DEFAULT_CLUSTER_ID,
+        id: DEFAULT_CLUSTER_ID as `cluster-${string}`,
         title: 'Main Cluster',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()

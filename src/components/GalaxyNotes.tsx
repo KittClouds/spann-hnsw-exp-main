@@ -19,7 +19,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useAtom } from 'jotai';
-import { activeNoteAtom } from '@/lib/store';
+import { useActiveNote } from '@/hooks/useLiveStore';
 import { rightSidebarContentAtom } from '@/lib/rightSidebarStore';
 import { useRightSidebar } from './RightSidebarProvider';
 import { PanelRight, Users } from 'lucide-react';
@@ -66,7 +66,7 @@ function EntityAttributesTrigger() {
 }
 
 function GalaxyNotesInner() {
-  const [activeNote] = useAtom(activeNoteAtom);
+  const activeNote = useActiveNote();
   const { open: rightSidebarOpen } = useRightSidebar();
 
   return (

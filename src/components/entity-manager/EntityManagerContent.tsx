@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
-import { useAtom } from 'jotai';
-import { activeNoteConnectionsAtom, activeClusterIdAtom } from '@/lib/store';
+import { useActiveClusterId, useActiveNoteConnections } from '@/hooks/useLiveStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, FileText, FolderOpen } from 'lucide-react';
@@ -13,11 +12,11 @@ type ViewMode = 'note' | 'cluster';
 export function EntityManagerContent() {
   const [viewMode, setViewMode] = useState<ViewMode>('note');
   const [searchQuery, setSearchQuery] = useState('');
-  const [{ entities: noteEntities }] = useAtom(activeNoteConnectionsAtom);
-  const [activeClusterId] = useAtom(activeClusterIdAtom);
+  const { entities: noteEntities } = useActiveNoteConnections();
+  const [activeClusterId] = useActiveClusterId();
   const clusterEntities = useActiveClusterEntities();
 
-  const entities = viewMode === 'note' ? noteEntities : clusterEntities;
+  const entities = viewMode === 'note' ? (Array.isArray(noteEntities) ? noteEntities : []) : clusterEntities;
 
   // Group entities by kind
   const entityGroups = React.useMemo(() => {
