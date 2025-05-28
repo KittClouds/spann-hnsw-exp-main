@@ -34,11 +34,6 @@ const AppWithLiveStore = () => (
         </div>
       </div>
     )}
-    onStoreReady={(store) => {
-      // Run migration when store is ready
-      console.log('LiveStore ready, running migration...');
-      migrateLegacyData(store);
-    }}
   >
     <App />
   </LiveStoreProvider>

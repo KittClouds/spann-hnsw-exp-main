@@ -48,6 +48,19 @@ export function EntityAttributePanel() {
     );
   }, [selectedEntity, entityAttributes]);
 
+  // Convert attributes object to typed attributes array for SimpleLayout
+  const typedAttributes = useMemo(() => {
+    if (!selectedEntityAttributes?.attributes) return [];
+    
+    return Object.entries(selectedEntityAttributes.attributes).map(([key, value]) => ({
+      id: key,
+      name: key,
+      type: typeof value === 'number' ? 'number' : 
+            typeof value === 'boolean' ? 'boolean' : 'string',
+      value: value
+    }));
+  }, [selectedEntityAttributes]);
+
   const renderEntityContent = () => {
     if (!selectedEntity) {
       return (
@@ -60,14 +73,6 @@ export function EntityAttributePanel() {
         </div>
       );
     }
-
-    const layouts = {
-      simple: SimpleLayout,
-      character: CharacterSheetLayout,
-      faction: FactionOverviewLayout,
-    };
-
-    const LayoutComponent = layouts[activeTab as keyof typeof layouts] || SimpleLayout;
 
     return (
       <div className="space-y-4">
@@ -86,29 +91,23 @@ export function EntityAttributePanel() {
           </TabsList>
 
           <TabsContent value="simple" className="space-y-4">
-            <LayoutComponent
-              entity={selectedEntity}
-              attributes={selectedEntityAttributes?.attributes || {}}
-              onAttributeChange={() => {}}
-              onSave={() => {}}
+            <SimpleLayout
+              attributes={typedAttributes}
+              onAttributeClick={() => {}}
             />
           </TabsContent>
 
           <TabsContent value="character" className="space-y-4">
-            <LayoutComponent
-              entity={selectedEntity}
-              attributes={selectedEntityAttributes?.attributes || {}}
-              onAttributeChange={() => {}}
-              onSave={() => {}}
+            <SimpleLayout
+              attributes={typedAttributes}
+              onAttributeClick={() => {}}
             />
           </TabsContent>
 
           <TabsContent value="faction" className="space-y-4">
-            <LayoutComponent
-              entity={selectedEntity}
-              attributes={selectedEntityAttributes?.attributes || {}}
-              onAttributeChange={() => {}}
-              onSave={() => {}}
+            <SimpleLayout
+              attributes={typedAttributes}
+              onAttributeClick={() => {}}
             />
           </TabsContent>
         </Tabs>

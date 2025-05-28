@@ -1,4 +1,3 @@
-
 import {
   Events,
   makeSchema,
@@ -279,10 +278,10 @@ const materializers = State.SQLite.materializers(events, {
   'v1.ThreadMessageDeleted': ({ id }) =>
     tables.threadMessages.delete().where({ id }),
 
-  'v1.EntityAttributesUpdated': ({ id, entityKind, entityLabel, attributes, metadata }) =>
-    tables.entityAttributes.insert({ id, entityKind, entityLabel, attributes, metadata })
-      .onConflict('id')
-      .doUpdate({ attributes, metadata }),
+  'v1.EntityAttributesUpdated': ({ id, entityKind, entityLabel, attributes, metadata }) => [
+    tables.entityAttributes.insert({ id, entityKind, entityLabel, attributes, metadata }),
+    tables.entityAttributes.update({ attributes, metadata }).where({ id })
+  ],
 
   'v1.BlueprintCreated': ({ id, entityKind, name, description, templates, isDefault, createdAt, updatedAt }) =>
     tables.blueprints.insert({ id, entityKind, name, description, templates, isDefault, createdAt, updatedAt }),
