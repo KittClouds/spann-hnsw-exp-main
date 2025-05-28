@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { EntityAttributesForm } from './EntityAttributesForm';
-import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useGraph } from '@/contexts/GraphContext';
 import { graphContextExtensionMethods } from '@/contexts/GraphContextExtension';
 
@@ -27,6 +27,9 @@ export function EntityInspector({ entity, closeDialog }: EntityInspectorProps) {
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>No Entity Selected</DialogTitle>
+          <DialogDescription>
+            Please select an entity to view its details.
+          </DialogDescription>
         </DialogHeader>
         <div className="p-4 text-center text-muted-foreground">
           Please select an entity to view its details.
@@ -69,6 +72,9 @@ export function EntityInspector({ entity, closeDialog }: EntityInspectorProps) {
           <span className="truncate">{label}</span>
           {renderStyledBadge()}
         </DialogTitle>
+        <DialogDescription>
+          View and edit details for this {kind} entity.
+        </DialogDescription>
       </DialogHeader>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
