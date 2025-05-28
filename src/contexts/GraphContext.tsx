@@ -1,22 +1,25 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { graphService } from '../services/GraphService';
 import { syncManager } from '../services/SyncManager';
 import { NodeType, EdgeType, ElementDefinition, GraphJSON, Thread, ThreadMessage } from '../services/types';
-import { useAtom } from 'jotai';
+import { useStore } from '@livestore/react';
 import {
-  notesAtom,
-  clustersAtom,
   Note,
   Cluster,
-  graphInitializedAtom,
-  STANDARD_ROOT_ID,
-  noteTagsMapAtom,
-  noteMentionsMapAtom,
-  noteLinksMapAtom,
-  noteEntitiesMapAtom,
-  noteTriplesMapAtom,
-  schemaAtom
+  STANDARD_ROOT_ID
 } from '@/lib/store';
+import { 
+  notes$,
+  clusters$,
+  noteTagsMap$,
+  noteMentionsMap$,
+  noteLinksMap$,
+  noteEntitiesMap$,
+  noteTriplesMap$,
+  uiState$
+} from '@/livestore/queries';
+import { events } from '@/livestore/schema';
 import { ClusterId } from '@/lib/utils/ids';
 import { schema } from '@/lib/schema';
 import { Entity } from '@/lib/utils/parsingUtils';
@@ -61,15 +64,17 @@ interface GraphContextType {
 const GraphContext = createContext<GraphContextType | undefined>(undefined);
 
 export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const [notes] = useAtom(notesAtom);
-  const [clusters] = useAtom(clustersAtom);
-  const [initialized, setInitialized] = useAtom(graphInitializedAtom);
-  const [tagsMap] = useAtom(noteTagsMapAtom);
-  const [mentionsMap] = useAtom(noteMentionsMapAtom);
-  const [linksMap] = useAtom(noteLinksMapAtom);
-  const [entitiesMap] = useAtom(noteEntitiesMapAtom);
-  const [triplesMap] = useAtom(noteTriplesMapAtom);
-  const [schemaDefs, setSchemaDefs] = useAtom(schemaAtom);
+  const { store } = useStore();
+  const notes = store.useQuery(notes$);
+  const clusters = store.useQuery(clusters$);
+  const uiState = store.useQuery(uiState$);
+  const tagsMap = store.useQuery(noteTagsMap$);
+  const mentionsMap = store.useQuery(noteMentionsMap$);
+  const linksMap = store.useQuery(noteLinksMap$);
+  const entitiesMap = store.useQuery(noteEntitiesMap$);
+  const triplesMap = store.useQuery(noteTriplesMap$);
+
+  const [initialized, setInitialized] = useState(false);
 
   const previousTagsMap = useRef(tagsMap);
   const previousMentionsMap = useRef(mentionsMap);
@@ -79,15 +84,8 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
 
   // Load schema from storage on mount
   useEffect(() => {
-    const validSchemaDefs = schemaDefs as SchemaDefinitions;
-    if (validSchemaDefs && typeof validSchemaDefs === 'object' && 
-        'nodes' in validSchemaDefs && 'edges' in validSchemaDefs && 
-        Array.isArray(validSchemaDefs.nodes) && Array.isArray(validSchemaDefs.edges) &&
-        (validSchemaDefs.nodes.length > 0 || validSchemaDefs.edges.length > 0)) {
-      console.log("GraphProvider: Loading schema from storage", validSchemaDefs);
-      schema.loadDefinitions(validSchemaDefs);
-    }
-  }, [schemaDefs]);
+    // Schema loading logic would go here if needed
+  }, []);
 
   // Effect for initial graph load from store
   useEffect(() => {
@@ -104,7 +102,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
       previousTriplesMap.current = triplesMap;
       setInitialized(true);
     }
-  }, [notes, clusters, initialized, setInitialized, tagsMap, mentionsMap, linksMap, entitiesMap, triplesMap]);
+  }, [notes, clusters, initialized, tagsMap, mentionsMap, linksMap, entitiesMap, triplesMap]);
 
   // Effect to synchronize derived connections TO the graph
   useEffect(() => {
@@ -291,12 +289,24 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     
     registerEntityType: (kind: string, labelProp: string, style) => {
       schema.registerNode(kind, { kind, labelProp, defaultStyle: style });
-      setSchemaDefs(schema.list());
+      store.commit(events.uiStateSet({ 
+        activeNoteId: uiState.activeNoteId,
+        activeClusterId: uiState.activeClusterId,
+        activeThreadId: uiState.activeThreadId,
+        graphInitialized: uiState.graphInitialized,
+        graphLayout: uiState.graphLayout
+      }));
     },
     
     registerRelationshipType: (label, from, to, directed = true, style) => {
       schema.registerEdge(label, { from, to, directed, defaultStyle: style });
-      setSchemaDefs(schema.list());
+      store.commit(events.uiStateSet({ 
+        activeNoteId: uiState.activeNoteId,
+        activeClusterId: uiState.activeClusterId,
+        activeThreadId: uiState.activeThreadId,
+        graphInitialized: uiState.graphInitialized,
+        graphLayout: uiState.graphLayout
+      }));
     },
     
     getEntityTypes: () => {
