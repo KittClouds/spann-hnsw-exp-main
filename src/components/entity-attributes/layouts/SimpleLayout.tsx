@@ -89,7 +89,7 @@ export function SimpleLayout({ attributes, onAttributeClick }: SimpleLayoutProps
       case 'Number':
         return (
           <div className="text-sm font-medium text-white">
-            {attribute.value}
+            {String(attribute.value)}
             {attribute.unit && <span className="text-muted-foreground ml-1">{attribute.unit}</span>}
           </div>
         );
