@@ -1,6 +1,7 @@
 
 import { useEffect, useCallback } from 'react';
-import { useGraph } from '@/contexts/GraphContext';
+import { useStore } from '@livestore/react';
+import { events } from '../livestore/schema';
 import { TypedAttribute, EnhancedEntityAttributes } from '@/types/attributes';
 
 interface UseAttributeSyncProps {
@@ -16,7 +17,7 @@ export function useAttributeSync({
   attributes,
   onAttributesChange
 }: UseAttributeSyncProps) {
-  const { getEntityAttributes, updateEntityAttributes } = useGraph();
+  const { store } = useStore();
 
   // Debounced save function
   const debouncedSave = useCallback(
@@ -32,11 +33,19 @@ export function useAttributeSync({
               lastUpdated: new Date().toISOString()
             }
           };
-          updateEntityAttributes(entityKind, entityLabel, enhancedAttrs);
+          
+          const id = `${entityKind}:${entityLabel}`;
+          store.commit(events.entityAttributesUpdated({
+            id,
+            entityKind,
+            entityLabel,
+            attributes: enhancedAttrs.attributes,
+            metadata: enhancedAttrs.metadata
+          }));
         }, 300);
       };
     })(),
-    [entityKind, entityLabel, updateEntityAttributes]
+    [entityKind, entityLabel, store]
   );
 
   // Save attributes when they change
@@ -46,26 +55,13 @@ export function useAttributeSync({
     }
   }, [attributes, debouncedSave]);
 
-  // Load attributes from graph when entity changes
+  // Load attributes function - this would need to be connected to a query
   const loadAttributes = useCallback(() => {
-    const existingAttrs = getEntityAttributes(entityKind, entityLabel);
-    if (existingAttrs) {
-      if (existingAttrs.attributes && Array.isArray(existingAttrs.attributes)) {
-        return existingAttrs.attributes;
-      } else {
-        // Migrate old format
-        return Object.entries(existingAttrs).map(([key, value]) => ({
-          id: `migrated-${key}-${Date.now()}`,
-          name: key,
-          type: 'Text' as const,
-          value: String(value),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }));
-      }
-    }
+    // For now, return empty array - this would be replaced with a proper query
+    // The component should use useQuery to get entity attributes directly
+    console.warn('loadAttributes called - this should be replaced with direct useQuery usage');
     return [];
-  }, [entityKind, entityLabel, getEntityAttributes]);
+  }, []);
 
   return {
     loadAttributes,

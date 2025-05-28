@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGraph } from '@/contexts/GraphContext';
+import { useStore, useQuery } from '@livestore/react';
+import { events, tables } from '@/livestore/schema';
 import { Entity } from '@/lib/utils/parsingUtils';
 import { ClusterEntity } from './useActiveClusterEntities';
 import { AttributeEditor } from './AttributeEditor';
 import { TypedAttribute, EnhancedEntityAttributes } from '@/types/attributes';
-import { useAtom } from 'jotai';
-import { blueprintsAtom } from '@/lib/store';
+import { blueprints$ } from '@/livestore/queries';
 import { getBlueprintForEntityKind } from '@/lib/blueprintMatching';
 
 interface EntityCardProps {
@@ -22,21 +22,32 @@ interface EntityCardProps {
 export function EntityCard({ entity, viewMode }: EntityCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [attributes, setAttributes] = useState<TypedAttribute[]>([]);
-  const [blueprints] = useAtom(blueprintsAtom);
-  const { getEntityAttributes, updateEntityAttributes } = useGraph();
+  const blueprints = useQuery(blueprints$);
+  const { store } = useStore();
+
+  // Query entity attributes from LiveStore
+  const entityAttributesQuery = useQuery(
+    tables.entityAttributes.where({ 
+      entityKind: entity.kind, 
+      entityLabel: entity.label 
+    }).limit(1)
+  );
 
   React.useEffect(() => {
     if (isExpanded) {
-      // Load existing attributes
-      const existingAttrs = getEntityAttributes(entity.kind, entity.label);
+      // Load existing attributes from LiveStore
+      const existingAttrs = Array.isArray(entityAttributesQuery) && entityAttributesQuery.length > 0 
+        ? entityAttributesQuery[0] 
+        : null;
+      
       let currentAttributes: TypedAttribute[] = [];
       
-      if (existingAttrs) {
-        if (existingAttrs.attributes && Array.isArray(existingAttrs.attributes)) {
+      if (existingAttrs && existingAttrs.attributes) {
+        if (Array.isArray(existingAttrs.attributes)) {
           currentAttributes = existingAttrs.attributes;
         } else {
           // Migrate old format to new format
-          currentAttributes = Object.entries(existingAttrs).map(([key, value]) => ({
+          currentAttributes = Object.entries(existingAttrs.attributes).map(([key, value]) => ({
             id: `migrated-${key}-${Date.now()}`,
             name: key,
             type: 'Text' as const,
@@ -86,7 +97,7 @@ export function EntityCard({ entity, viewMode }: EntityCardProps) {
         setAttributes(currentAttributes);
       }
     }
-  }, [entity.kind, entity.label, getEntityAttributes, isExpanded]);
+  }, [entity.kind, entity.label, entityAttributesQuery, isExpanded]);
 
   const getDefaultValueForType = (type: any): any => {
     switch (type) {
@@ -107,15 +118,17 @@ export function EntityCard({ entity, viewMode }: EntityCardProps) {
   const handleAttributesChange = (newAttributes: TypedAttribute[]) => {
     setAttributes(newAttributes);
     
-    const enhancedAttrs: EnhancedEntityAttributes = {
+    const id = `${entity.kind}:${entity.label}`;
+    store.commit(events.entityAttributesUpdated({
+      id,
+      entityKind: entity.kind,
+      entityLabel: entity.label,
       attributes: newAttributes,
       metadata: {
         version: 2,
         lastUpdated: new Date().toISOString()
       }
-    };
-    
-    updateEntityAttributes(entity.kind, entity.label, enhancedAttrs);
+    }));
   };
 
   const isClusterEntity = 'sourceNoteIds' in entity;
@@ -188,7 +201,7 @@ export function EntityCard({ entity, viewMode }: EntityCardProps) {
                     onAttributesChange={handleAttributesChange}
                     entityKind={entity.kind}
                     entityLabel={entity.label}
-                    availableBlueprints={blueprints}
+                    availableBlueprints={Array.isArray(blueprints) ? blueprints : []}
                     showBlueprintSelector={false}
                   />
                 </div>

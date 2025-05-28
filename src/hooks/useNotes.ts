@@ -1,15 +1,11 @@
 
-import { useAtom } from 'jotai';
-import { activeNoteIdAtom, STANDARD_ROOT_ID } from '@/lib/store';
+import { useActiveNoteId as useLiveStoreActiveNoteId } from './useLiveStore';
 import { syncManager } from '../services/SyncManager';
 import { NodeType } from '../services/types';
 
-// Provide a hook that wraps the atom usage
+// Provide a hook that wraps the LiveStore usage
 export function useActiveNoteId() {
-  const [noteId, setNoteId] = useAtom(activeNoteIdAtom);
-  // Make sure types are compatible with how it's used in components
-  const setActiveId = (id: string) => setNoteId(id);
-  return [noteId, setActiveId] as const;
+  return useLiveStoreActiveNoteId();
 }
 
 // Helper hook to check if a note belongs to the standard root
