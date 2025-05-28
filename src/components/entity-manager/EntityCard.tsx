@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useStore, useQuery } from '@livestore/react';
-import { events, tables } from '@/livestore/schema';
+import { useStore } from '@livestore/react';
+import { useEntityAttributes, useBlueprintsArray } from '@/hooks/useLiveStore';
+import { events } from '@/livestore/schema';
 import { Entity } from '@/lib/utils/parsingUtils';
 import { ClusterEntity } from './useActiveClusterEntities';
 import { AttributeEditor } from './AttributeEditor';
 import { TypedAttribute, EnhancedEntityAttributes } from '@/types/attributes';
-import { blueprints$ } from '@/livestore/queries';
 import { getBlueprintForEntityKind } from '@/lib/blueprintMatching';
 
 interface EntityCardProps {
@@ -22,23 +22,16 @@ interface EntityCardProps {
 export function EntityCard({ entity, viewMode }: EntityCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [attributes, setAttributes] = useState<TypedAttribute[]>([]);
-  const blueprints = useQuery(blueprints$);
+  const blueprints = useBlueprintsArray();
+  const entityAttributes = useEntityAttributes();
   const { store } = useStore();
-
-  // Query entity attributes from LiveStore
-  const entityAttributesQuery = useQuery(
-    tables.entityAttributes.where({ 
-      entityKind: entity.kind, 
-      entityLabel: entity.label 
-    }).limit(1)
-  );
 
   React.useEffect(() => {
     if (isExpanded) {
       // Load existing attributes from LiveStore
-      const existingAttrs = Array.isArray(entityAttributesQuery) && entityAttributesQuery.length > 0 
-        ? entityAttributesQuery[0] 
-        : null;
+      const existingAttrs = entityAttributes.find(attr => 
+        attr.entityKind === entity.kind && attr.entityLabel === entity.label
+      );
       
       let currentAttributes: TypedAttribute[] = [];
       
@@ -97,7 +90,7 @@ export function EntityCard({ entity, viewMode }: EntityCardProps) {
         setAttributes(currentAttributes);
       }
     }
-  }, [entity.kind, entity.label, entityAttributesQuery, isExpanded]);
+  }, [entity.kind, entity.label, entityAttributes, isExpanded]);
 
   const getDefaultValueForType = (type: any): any => {
     switch (type) {
@@ -201,7 +194,7 @@ export function EntityCard({ entity, viewMode }: EntityCardProps) {
                     onAttributesChange={handleAttributesChange}
                     entityKind={entity.kind}
                     entityLabel={entity.label}
-                    availableBlueprints={Array.isArray(blueprints) ? blueprints : []}
+                    availableBlueprints={blueprints}
                     showBlueprintSelector={false}
                   />
                 </div>

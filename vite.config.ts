@@ -10,7 +10,7 @@ export default defineConfig({
     livestoreDevtoolsPlugin({ schemaPath: './src/livestore/schema.ts' })
   ],
   server: {
-    port: process.env.PORT ? Number(process.env.PORT) : 60_001,
+    port: 8080,
   },
   worker: { format: 'es' },
   resolve: {

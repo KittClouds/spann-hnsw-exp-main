@@ -1,15 +1,15 @@
-import { useAtom } from 'jotai';
+
 import { Button } from './ui/button';
-import { Database, File, Folder, ChevronRight, MoreVertical, Plus, PenLine, Trash2 } from 'lucide-react';
+import { Database, ChevronRight, MoreVertical, Plus, PenLine, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
 import { useState, useEffect } from 'react';
-import { clustersAtom, createCluster, activeClusterIdAtom, notesAtom } from '@/lib/store';
+import { useClusters, useActiveClusterId, useNoteActions } from '@/hooks/useLiveStore';
 import { toast } from 'sonner';
 import { useGraph } from '@/contexts/GraphContext';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { ClusterNoteTree } from './ClusterNoteTree';
-import { ClusterId } from '@/lib/utils/ids';
+import { generateClusterId } from '@/lib/utils/ids';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,15 +19,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function ClusterView() {
-  const [clusters, setClusters] = useAtom(clustersAtom);
-  const [activeClusterId, setActiveClusterId] = useAtom(activeClusterIdAtom);
+  const clusters = useClusters();
+  const [activeClusterId, setActiveClusterId] = useActiveClusterId();
   const [isOpen, setIsOpen] = useState(false);
   const [newClusterTitle, setNewClusterTitle] = useState('');
   const [editingClusterId, setEditingClusterId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
-  const { addCluster, deleteCluster, updateCluster } = useGraph();
+  const { createCluster, updateCluster, deleteCluster } = useNoteActions();
+  const { addCluster, deleteCluster: deleteGraphCluster, updateCluster: updateGraphCluster } = useGraph();
   
-  const DEFAULT_CLUSTER_ID = 'cluster-default' as ClusterId;
+  const DEFAULT_CLUSTER_ID = 'cluster-default';
   
   useEffect(() => {
     if (!clusters.some(c => c.id === DEFAULT_CLUSTER_ID)) {
@@ -37,13 +38,13 @@ export function ClusterView() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      setClusters(prev => [...prev, defaultCluster]);
+      createCluster(defaultCluster);
       
       setTimeout(() => {
         addCluster(defaultCluster);
       }, 0);
     }
-  }, [clusters, setClusters, addCluster]);
+  }, [clusters, createCluster, addCluster]);
 
   const handleCreateCluster = () => {
     if (!newClusterTitle.trim()) {
@@ -51,8 +52,14 @@ export function ClusterView() {
       return;
     }
 
-    const { cluster } = createCluster(newClusterTitle);
-    setClusters(prev => [...prev, cluster]);
+    const cluster = {
+      id: generateClusterId(),
+      title: newClusterTitle,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    createCluster(cluster);
     addCluster(cluster);
     setNewClusterTitle('');
     setIsOpen(false);
@@ -70,15 +77,8 @@ export function ClusterView() {
       return;
     }
     
-    setClusters(prevClusters => 
-      prevClusters.map(c => 
-        c.id === clusterId 
-          ? { ...c, title: editTitle, updatedAt: new Date().toISOString() }
-          : c
-      )
-    );
-    
     updateCluster(clusterId, { title: editTitle });
+    updateGraphCluster(clusterId, { title: editTitle });
     setEditingClusterId(null);
     toast.success("Cluster renamed successfully");
   };
@@ -93,8 +93,8 @@ export function ClusterView() {
       setActiveClusterId(DEFAULT_CLUSTER_ID);
     }
     
-    setClusters(prevClusters => prevClusters.filter(c => c.id !== clusterId));
     deleteCluster(clusterId);
+    deleteGraphCluster(clusterId);
     toast.success("Cluster deleted successfully");
   };
 

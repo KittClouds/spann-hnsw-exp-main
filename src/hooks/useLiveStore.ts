@@ -109,5 +109,34 @@ export function useNoteActions() {
     store.commit(events.noteDeleted({ id }));
   };
 
-  return { updateNote, createNote, deleteNote };
+  const createCluster = (cluster: any) => {
+    store.commit(events.clusterCreated(cluster));
+  };
+
+  const updateCluster = (id: string, updates: any) => {
+    store.commit(events.clusterUpdated({
+      id,
+      updates,
+      updatedAt: new Date().toISOString()
+    }));
+  };
+
+  const deleteCluster = (id: string) => {
+    store.commit(events.clusterDeleted({ id }));
+  };
+
+  return { 
+    updateNote, 
+    createNote, 
+    deleteNote,
+    createCluster,
+    updateCluster,
+    deleteCluster
+  };
+}
+
+export function useBlueprintsArray() {
+  const { store } = useStore();
+  const blueprints = store.useQuery(blueprints$);
+  return Array.isArray(blueprints) ? blueprints : [];
 }

@@ -1,7 +1,7 @@
+
 import React, { useState, useCallback } from "react";
 import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
-import { useAtom } from "jotai";
-import { notesAtom, activeNoteIdAtom, createNote, createFolder, deleteNote } from "@/lib/store";
+import { useNotes, useActiveNoteId, useNoteActions } from "@/hooks/useLiveStore";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -22,30 +22,43 @@ import {
   SidebarMenuSub,
 } from "@/components/ui/sidebar";
 import { Button } from "./ui/button";
-import { NoteId, ClusterId } from "@/lib/utils/ids";
+import { generateNoteId } from "@/lib/utils/ids";
 
 interface ClusterNoteTreeProps {
   clusterId: string;
 }
 
 export function ClusterNoteTree({ clusterId }: ClusterNoteTreeProps) {
-  const [notes, setNotes] = useAtom(notesAtom);
-  const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
+  const notes = useNotes();
+  const [activeNoteId, setActiveNoteId] = useActiveNoteId();
+  const { createNote } = useNoteActions();
   
   const rootNotes = notes.filter(note => note.parentId === null && note.clusterId === clusterId);
 
-  const handleNewItem = useCallback((type: 'note' | 'folder', parentId: NoteId | null = null) => {
-    const creator = type === 'note' ? createNote : createFolder;
-    const { id, note } = creator(parentId, clusterId as ClusterId);
-    setNotes([...notes, note]);
+  const handleNewItem = useCallback((type: 'note' | 'folder', parentId: string | null = null) => {
+    const newNote = {
+      id: generateNoteId(),
+      parentId,
+      clusterId,
+      title: type === 'note' ? 'Untitled Note' : 'New Folder',
+      content: [],
+      type,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      path: null,
+      tags: null,
+      mentions: null
+    };
+    
+    createNote(newNote);
     if (type === 'note') {
-      setActiveNoteId(id);
+      setActiveNoteId(newNote.id);
     }
     
     toast(`New ${type} created`, {
       description: type === 'note' ? "Start typing to edit your note" : "You can add notes inside this folder",
     });
-  }, [setNotes, setActiveNoteId, clusterId, notes]);
+  }, [setActiveNoteId, clusterId, createNote]);
 
   if (rootNotes.length === 0) {
     return (
@@ -121,12 +134,12 @@ interface ClusterNoteTreeItemProps {
   notes: any[];
   activeNoteId: string | null;
   onSelect: (id: string) => void;
-  onNewItem: (type: 'note' | 'folder', parentId: NoteId | null) => void;
+  onNewItem: (type: 'note' | 'folder', parentId: string | null) => void;
   clusterId: string;
 }
 
 function ClusterNoteTreeItem({ note, notes, activeNoteId, onSelect, onNewItem, clusterId }: ClusterNoteTreeItemProps) {
-  const [notes_, setNotes] = useAtom(notesAtom);
+  const { updateNote, deleteNote } = useNoteActions();
   const isFolder = note.type === 'folder';
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(note.title);
@@ -140,11 +153,7 @@ function ClusterNoteTreeItem({ note, notes, activeNoteId, onSelect, onNewItem, c
       return;
     }
     
-    setNotes(notes_.map(n => 
-      n.id === note.id 
-        ? { ...n, title: editTitle, updatedAt: new Date().toISOString() }
-        : n
-    ));
+    updateNote(note.id, { title: editTitle });
     setIsEditing(false);
     toast.success("Renamed successfully");
   };
@@ -155,7 +164,7 @@ function ClusterNoteTreeItem({ note, notes, activeNoteId, onSelect, onNewItem, c
       return;
     }
     
-    setNotes(deleteNote(notes_, note.id));
+    deleteNote(note.id);
     toast.success("Deleted successfully");
   };
 

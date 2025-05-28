@@ -1,6 +1,5 @@
 
-import { useAtom } from 'jotai';
-import { activeNoteIdAtom, activeNoteConnectionsAtom } from '@/lib/store';
+import { useActiveNote, useActiveNoteConnections } from '@/hooks/useLiveStore';
 import { useGraph } from '@/contexts/GraphContext'; // Keep for backlinks
 import { Badge } from '@/components/ui/badge';
 import { Link, ChevronDown, ChevronUp, Hash, AtSign, Database } from 'lucide-react';
@@ -12,13 +11,14 @@ import { SchemaManager } from "../schema/SchemaManager";
 import { EntityPanel } from "./EntityPanel";
 
 export function ConnectionsPanel() {
-  const [activeNoteId] = useAtom(activeNoteIdAtom);
-  const [{ tags, mentions, links }] = useAtom(activeNoteConnectionsAtom);
+  const activeNote = useActiveNote();
+  const connections = useActiveNoteConnections();
   const { getBacklinks } = useGraph(); // Only need backlinks from graph context now
   const [isOpen, setIsOpen] = useState(false);
   const [activeView, setActiveView] = useState<'links' | 'backlinks' | 'entities'>('links');
   
-  const backlinks = activeNoteId ? getBacklinks(activeNoteId) : [];
+  const backlinks = activeNote?.id ? getBacklinks(activeNote.id) : [];
+  const { tags = [], mentions = [], links = [] } = connections;
 
   return (
     <div className="relative bg-[#0a0a0d] border-t border-[#1a1b23]">

@@ -1,17 +1,12 @@
+
 import React, { useState } from "react";
 import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
-import { useAtom } from "jotai";
 import { 
-  notesAtom, 
-  activeNoteIdAtom, 
-  createNote, 
-  createFolder, 
-  Note, 
-  clustersAtom, 
-  activeClusterIdAtom, 
-  deleteNote,
-  STANDARD_ROOT_ID 
-} from "@/lib/store";
+  useNotes, 
+  useActiveNoteId, 
+  useActiveClusterId, 
+  useNoteActions 
+} from "@/hooks/useLiveStore";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -19,41 +14,47 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarGroupAction, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarFooter, SidebarRail } from "@/components/ui/sidebar";
 import { Button } from "./ui/button";
 import { ClusterView } from "./ClusterView";
-import { NoteId, ClusterId } from "@/lib/utils/ids";
+import { generateNoteId } from "@/lib/utils/ids";
 
 export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
-  const [notes, setNotes] = useAtom(notesAtom);
-  const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
-  const [activeClusterId] = useAtom(activeClusterIdAtom);
+  const notes = useNotes();
+  const [activeNoteId, setActiveNoteId] = useActiveNoteId();
+  const [activeClusterId] = useActiveClusterId();
   const [activeTab, setActiveTab] = useState<string>("folders");
+  const { createNote } = useNoteActions();
   
   // For the Folders tab, only show notes that belong to standard_root (clusterId === null)
   // This ensures complete separation between standard notes and cluster notes
   const rootStandardNotes = notes.filter(note => note.parentId === null && note.clusterId === null);
 
-  const handleNewItem = React.useCallback((type: 'note' | 'folder', parentId: NoteId | null = null) => {
-    const creator = type === 'note' ? createNote : createFolder;
+  const handleNewItem = React.useCallback((type: 'note' | 'folder', parentId: string | null = null) => {
+    const clusterId = activeTab === "folders" ? null : activeClusterId;
     
-    // When creating notes/folders in Folders tab, explicitly use null clusterId
-    // When creating notes/folders in Clusters tab, use activeClusterId
-    const clusterId = activeTab === "folders" ? null : activeClusterId as ClusterId;
+    const newNote = {
+      id: generateNoteId(),
+      parentId,
+      clusterId,
+      title: type === 'note' ? 'Untitled Note' : 'New Folder',
+      content: [],
+      type,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      path: null,
+      tags: null,
+      mentions: null
+    };
     
-    const {
-      id,
-      note
-    } = creator(parentId, clusterId);
-    
-    setNotes([...notes, note]);
+    createNote(newNote);
     if (type === 'note') {
-      setActiveNoteId(id);
+      setActiveNoteId(newNote.id);
     }
     
     toast(`New ${type} created`, {
       description: type === 'note' ? "Start typing to edit your note" : "You can add notes inside this folder"
     });
-  }, [setNotes, setActiveNoteId, activeClusterId, notes, activeTab]);
+  }, [activeClusterId, activeTab, createNote, setActiveNoteId]);
 
   return <Sidebar className="bg-black border-r border-[#1a1b23]" {...props}>
       <SidebarContent>
@@ -69,7 +70,7 @@ export function AppSidebar({
           <TabsContent value="folders" className="mt-0">
             <SidebarGroup>
               <SidebarGroupLabel className="text-xs text-muted-foreground uppercase tracking-wider">
-                Notes ({STANDARD_ROOT_ID})
+                Notes (standard_root)
               </SidebarGroupLabel>
               <SidebarGroupAction>
                 <DropdownMenu>
@@ -141,11 +142,11 @@ export function AppSidebar({
 }
 
 interface NoteTreeProps {
-  note: Note;
-  notes: Note[];
+  note: any;
+  notes: any[];
   activeNoteId: string | null;
   onSelect: (id: string) => void;
-  onNewItem: (type: 'note' | 'folder', parentId: NoteId | null) => void;
+  onNewItem: (type: 'note' | 'folder', parentId: string | null) => void;
 }
 
 function NoteTree({
@@ -155,7 +156,7 @@ function NoteTree({
   onSelect,
   onNewItem
 }: NoteTreeProps) {
-  const [notes_, setNotes] = useAtom(notesAtom);
+  const { updateNote, deleteNote } = useNoteActions();
   const isFolder = note.type === 'folder';
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(note.title);
@@ -167,11 +168,7 @@ function NoteTree({
       setEditTitle(note.title);
       return;
     }
-    setNotes(notes_.map(n => n.id === note.id ? {
-      ...n,
-      title: editTitle,
-      updatedAt: new Date().toISOString()
-    } : n));
+    updateNote(note.id, { title: editTitle });
     setIsEditing(false);
     toast.success("Renamed successfully");
   };
@@ -181,7 +178,7 @@ function NoteTree({
       toast.error("Cannot delete the last folder");
       return;
     }
-    setNotes(deleteNote(notes_, note.id));
+    deleteNote(note.id);
     toast.success("Deleted successfully");
   };
 
