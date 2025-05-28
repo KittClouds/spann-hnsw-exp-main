@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Entity } from '@/lib/utils/parsingUtils';
 import { EntityInspector } from './EntityInspector';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface EntityDialogContentProps {
   entity: Entity;
@@ -19,7 +19,21 @@ export function EntityDialogContent({ entity }: EntityDialogContentProps) {
           View Details
         </Button>
       </DialogTrigger>
-      <EntityInspector entity={entity} />
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {entity ? entity.label : "No Entity Selected"}
+          </DialogTitle>
+          <DialogDescription>
+            {entity 
+              ? `View and edit details for this ${entity.kind} entity.`
+              : "Please select an entity to view its details."
+            }
+          </DialogDescription>
+        </DialogHeader>
+        
+        <EntityInspector entity={entity} />
+      </DialogContent>
     </Dialog>
   );
 }
