@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useActiveNoteConnections, useActiveNote, useEntityAttributes, useBlueprintsArray } from '@/hooks/useLiveStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +39,32 @@ export function EntityAttributePanel() {
     });
     return groups;
   }, [entities]);
+
+  // Auto-select the first entity when entities are available
+  useEffect(() => {
+    const entitiesArray = Array.isArray(entities) ? entities : [];
+    
+    // If no entities available, clear selection
+    if (entitiesArray.length === 0) {
+      setSelectedEntity(null);
+      return;
+    }
+
+    // If no entity is currently selected, auto-select the first one
+    if (!selectedEntity) {
+      setSelectedEntity(entitiesArray[0]);
+      return;
+    }
+
+    // If the currently selected entity is no longer in the list, select the first available one
+    const isCurrentEntityStillValid = entitiesArray.some(
+      entity => entity.kind === selectedEntity.kind && entity.label === selectedEntity.label
+    );
+    
+    if (!isCurrentEntityStillValid) {
+      setSelectedEntity(entitiesArray[0]);
+    }
+  }, [entities, selectedEntity]);
 
   // Get attributes for selected entity
   const selectedEntityAttributes = useMemo(() => {
