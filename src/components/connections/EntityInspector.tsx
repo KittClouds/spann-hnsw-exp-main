@@ -11,16 +11,31 @@ import { useGraph } from '@/contexts/GraphContext';
 import { graphContextExtensionMethods } from '@/contexts/GraphContextExtension';
 
 interface EntityInspectorProps {
-  entity: Entity;
+  entity: Entity | null;
   closeDialog?: () => void;
 }
 
 export function EntityInspector({ entity, closeDialog }: EntityInspectorProps) {
-  const { kind, label } = entity;
   const [activeTab, setActiveTab] = useState("info");
   const [attributes, setAttributes] = useState<Record<string, any>>({});
   const graph = useGraph();
   const { updateEntityAttributes } = graphContextExtensionMethods;
+  
+  // Early return if entity is null
+  if (!entity) {
+    return (
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>No Entity Selected</DialogTitle>
+        </DialogHeader>
+        <div className="p-4 text-center text-muted-foreground">
+          Please select an entity to view its details.
+        </div>
+      </DialogContent>
+    );
+  }
+  
+  const { kind, label } = entity;
   
   useEffect(() => {
     // Load attributes when component mounts
