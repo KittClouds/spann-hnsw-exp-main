@@ -1,4 +1,3 @@
-
 import { useActiveNote, useActiveNoteId, useNotes, useNoteActions } from '@/hooks/useLiveStore';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -15,6 +14,8 @@ import { ConnectionsPanel } from './connections/ConnectionsPanel';
 import { EmptyNoteState } from './EmptyNoteState';
 import { NoteSerializer } from '@/services/NoteSerializer';
 import { createEmptyBlock } from '@/lib/utils/blockUtils';
+import { entityEditorSchema } from '@/lib/editor/EntityEditorSchema';
+import { EntityHighlighter } from '@/services/EntityHighlighter';
 
 export function NoteEditor() {
   const activeNote = useActiveNote();
@@ -31,6 +32,7 @@ export function NoteEditor() {
   // Track the current note being edited to prevent cross-contamination
   const currentNoteRef = useRef<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const entityHighlighterRef = useRef<EntityHighlighter | null>(null);
   
   // Ensure we always have valid initial content
   const getInitialContent = useCallback((): Block[] => {
@@ -54,8 +56,16 @@ export function NoteEditor() {
   }, [activeNote]);
   
   const editor = useBlockNote({
+    schema: entityEditorSchema,
     initialContent: getInitialContent(),
   });
+
+  // Initialize entity highlighter when editor is ready
+  useEffect(() => {
+    if (editor) {
+      entityHighlighterRef.current = new EntityHighlighter(editor);
+    }
+  }, [editor]);
 
   useEffect(() => {
     const handleThemeChange = () => {
@@ -117,11 +127,21 @@ export function NoteEditor() {
     }, 500);
   }, [editor, activeNote, updateNote]);
 
-  // Set up content change listener
+  // Set up content change listener with entity highlighting
   useEffect(() => {
     if (!editor) return;
     
     const handleContentChange = () => {
+      // Process entity highlighting for changed blocks
+      if (entityHighlighterRef.current) {
+        const changedBlocks = editor.document as Block[];
+        changedBlocks.forEach(block => {
+          if (block.type === 'paragraph') {
+            entityHighlighterRef.current?.processBlockDebounced(block, 150);
+          }
+        });
+      }
+      
       saveChanges();
     };
     
@@ -156,6 +176,17 @@ export function NoteEditor() {
         
         // Replace blocks with new content
         editor.replaceBlocks(editor.document, newContent);
+        
+        // Process entity highlighting for initial content
+        if (entityHighlighterRef.current) {
+          setTimeout(() => {
+            newContent.forEach(block => {
+              if (block.type === 'paragraph') {
+                entityHighlighterRef.current?.processBlock(block);
+              }
+            });
+          }, 100);
+        }
       } catch (error) {
         console.error("Error replacing blocks:", error);
       }
