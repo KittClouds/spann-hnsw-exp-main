@@ -61,8 +61,7 @@ export const TagInlineSpec = createReactInlineContentSpec(
     content: "none"
   },
   {
-    render: TagInline,
-    serialize: (inlineContent) => `#${inlineContent.props.text}`
+    render: TagInline
   }
 );
 
@@ -75,8 +74,7 @@ export const MentionInlineSpec = createReactInlineContentSpec(
     content: "none"
   },
   {
-    render: MentionInline,
-    serialize: (inlineContent) => `@${inlineContent.props.text}`
+    render: MentionInline
   }
 );
 
@@ -89,8 +87,7 @@ export const WikiLinkInlineSpec = createReactInlineContentSpec(
     content: "none"
   },
   {
-    render: WikiLinkInline,
-    serialize: (inlineContent) => `[[${inlineContent.props.text}]]`
+    render: WikiLinkInline
   }
 );
 
@@ -100,18 +97,12 @@ export const EntityInlineSpec = createReactInlineContentSpec(
     propSchema: {
       kind: { default: "" },
       label: { default: "" },
-      attributes: { default: "" } // Store as JSON string instead of object
+      attributes: { default: "" }
     },
     content: "none"
   },
   {
-    render: EntityInline,
-    serialize: (inlineContent) => {
-      const attrs = inlineContent.props.attributes && inlineContent.props.attributes !== ""
-        ? `|${inlineContent.props.attributes}`
-        : '';
-      return `[${inlineContent.props.kind}|${inlineContent.props.label}${attrs}]`;
-    }
+    render: EntityInline
   }
 );
 
@@ -128,10 +119,6 @@ export const TripleInlineSpec = createReactInlineContentSpec(
     content: "none"
   },
   {
-    render: TripleInline,
-    serialize: (inlineContent) => {
-      const { subjectKind, subjectLabel, predicate, objectKind, objectLabel } = inlineContent.props;
-      return `[${subjectKind}|${subjectLabel}] (${predicate}) [${objectKind}|${objectLabel}]`;
-    }
+    render: TripleInline
   }
 );

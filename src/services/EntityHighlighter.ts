@@ -157,16 +157,29 @@ export class EntityHighlighter {
         }
       });
 
-      // Apply replacements using BlockNote's replaceInlineContent method
+      // Apply replacements using BlockNote's insertInlineContent method
       // Sort in reverse order to maintain positions
       replacements
         .sort((a, b) => b.from - a.from)
         .forEach(replacement => {
           try {
-            this.editor.replaceInlineContent(block.id, replacement.from, replacement.to, [{
+            // Use the correct BlockNote API to replace content
+            this.editor.focus();
+            
+            // Set text cursor position
+            this.editor.setTextCursorPosition(block.id, replacement.from);
+            
+            // Delete the original text
+            for (let i = 0; i < (replacement.to - replacement.from); i++) {
+              this.editor.forwardDeleteCharacter();
+            }
+            
+            // Insert the custom inline content
+            this.editor.insertInlineContent([{
               type: replacement.type,
               props: replacement.props
             }]);
+            
           } catch (error) {
             console.warn('EntityHighlighter: Error replacing inline content', error);
           }
