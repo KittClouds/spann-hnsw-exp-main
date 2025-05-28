@@ -157,38 +157,70 @@ export class EntityHighlighter {
         }
       });
 
-      // Apply replacements using BlockNote's insertInlineContent method
-      // Sort in reverse order to maintain positions
-      replacements
-        .sort((a, b) => b.from - a.from)
-        .forEach(replacement => {
-          try {
-            // Use the correct BlockNote API to replace content
-            this.editor.focus();
-            
-            // Set text cursor position
-            this.editor.setTextCursorPosition(block.id, replacement.from);
-            
-            // Delete the original text
-            for (let i = 0; i < (replacement.to - replacement.from); i++) {
-              this.editor.forwardDeleteCharacter();
-            }
-            
-            // Insert the custom inline content
-            this.editor.insertInlineContent([{
-              type: replacement.type,
-              props: replacement.props
-            }]);
-            
-          } catch (error) {
-            console.warn('EntityHighlighter: Error replacing inline content', error);
-          }
-        });
+      // Apply replacements using BlockNote's text replacement capabilities
+      if (replacements.length > 0) {
+        this.applyReplacements(block, replacements);
+      }
 
     } catch (error) {
       console.warn('EntityHighlighter: Error processing block', error);
     } finally {
       this.isProcessing = false;
+    }
+  }
+
+  private applyReplacements(block: Block, replacements: Array<{from: number; to: number; type: string; props: Record<string, any>}>) {
+    try {
+      // Build new content array by replacing text segments with inline content
+      const textContent = this.extractTextFromBlock(block);
+      const newContent: any[] = [];
+      
+      // Sort replacements by position
+      const sortedReplacements = replacements.sort((a, b) => a.from - b.from);
+      
+      let currentPos = 0;
+      
+      sortedReplacements.forEach(replacement => {
+        // Add text before the replacement
+        if (replacement.from > currentPos) {
+          const beforeText = textContent.slice(currentPos, replacement.from);
+          if (beforeText) {
+            newContent.push({
+              type: "text",
+              text: beforeText,
+              styles: {}
+            });
+          }
+        }
+        
+        // Add the replacement inline content
+        newContent.push({
+          type: replacement.type,
+          props: replacement.props
+        });
+        
+        currentPos = replacement.to;
+      });
+      
+      // Add remaining text after last replacement
+      if (currentPos < textContent.length) {
+        const afterText = textContent.slice(currentPos);
+        if (afterText) {
+          newContent.push({
+            type: "text",
+            text: afterText,
+            styles: {}
+          });
+        }
+      }
+      
+      // Update the block with new content
+      this.editor.updateBlock(block.id, {
+        content: newContent
+      });
+      
+    } catch (error) {
+      console.warn('EntityHighlighter: Error applying replacements', error);
     }
   }
 
