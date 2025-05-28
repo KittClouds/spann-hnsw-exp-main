@@ -1,7 +1,7 @@
 
 import { useActiveNote, useActiveNoteId, useNotes, useNoteActions } from '@/hooks/useLiveStore';
 import { Input } from "@/components/ui/input";
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
@@ -28,8 +28,12 @@ export function NoteEditor() {
     return 'dark';
   });
   
+  // Track the current note being edited to prevent cross-contamination
+  const currentNoteRef = useRef<string | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   // Ensure we always have valid initial content
-  const getInitialContent = (): Block[] => {
+  const getInitialContent = useCallback((): Block[] => {
     console.log("NoteEditor: getInitialContent called", { activeNote, content: activeNote?.content });
     
     // If no active note, return default content
@@ -47,7 +51,7 @@ export function NoteEditor() {
     // Return a default empty paragraph block if no content
     console.log("NoteEditor: No valid content found, creating default block");
     return [createEmptyBlock()];
-  };
+  }, [activeNote]);
   
   const editor = useBlockNote({
     initialContent: getInitialContent(),
@@ -75,52 +79,88 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Debounced save function with serialization
-  const saveChanges = debounce(() => {
-    if (editor && activeNote) {
-       const currentBlocks = editor.document as Block[];
-       console.log("NoteEditor: Saving changes for", activeNote.id);
+  // Improved save function that captures the current note at call time
+  const saveChanges = useCallback(() => {
+    if (!editor || !activeNote) return;
+    
+    // Capture the current note at the time this function is called
+    const noteToSave = activeNote;
+    const noteIdToSave = noteToSave.id;
+    
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      // Double-check we're still on the same note
+      if (currentNoteRef.current !== noteIdToSave) {
+        console.log("NoteEditor: Skipping save - note changed during debounce");
+        return;
+      }
+      
+      const currentBlocks = editor.document as Block[];
+      console.log("NoteEditor: Saving changes for", noteIdToSave);
       
       // Update the note content
-      updateNote(activeNote.id, { content: currentBlocks });
+      updateNote(noteIdToSave, { content: currentBlocks });
       
       // Serialize the note for potential external usage
       try {
-        const updatedNote = { ...activeNote, content: currentBlocks };
+        const updatedNote = { ...noteToSave, content: currentBlocks };
         const doc = NoteSerializer.toDocument(updatedNote);
         const json = doc.toJSON();
         console.log("NoteEditor: Serialized note:", json);
-        // The serialized JSON can now be sent to external systems
-        // For example: localStorage.setItem(`note-${activeNote.id}`, JSON.stringify(json));
       } catch (err) {
         console.error("Error serializing note:", err);
       }
-     }
-  }, 500);
+    }, 500);
+  }, [editor, activeNote, updateNote]);
 
+  // Set up content change listener
   useEffect(() => {
     if (!editor) return;
     
-    editor.onEditorContentChange(() => {
+    const handleContentChange = () => {
       saveChanges();
-    });
+    };
+    
+    editor.onEditorContentChange(handleContentChange);
     
     return () => {
-      saveChanges.cancel();
+      // Cancel any pending saves when component unmounts or editor changes
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
     };
-  }, [editor, saveChanges, activeNote]);
+  }, [editor, saveChanges]);
 
+  // Handle note switching - this is the critical fix
   useEffect(() => {
-    if (editor && activeNote) {
+    if (!editor) return;
+    
+    // Cancel any pending saves from the previous note
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    
+    // Update the current note reference
+    currentNoteRef.current = activeNoteId;
+    
+    if (activeNote) {
       try {
         const newContent = getInitialContent();
-        console.log("NoteEditor: Replacing blocks with", newContent);
+        console.log("NoteEditor: Switching to note", activeNoteId, "with content", newContent);
+        
+        // Replace blocks with new content
         editor.replaceBlocks(editor.document, newContent);
       } catch (error) {
         console.error("Error replacing blocks:", error);
       }
     }
-  }, [activeNoteId, editor]);
+  }, [activeNoteId, activeNote, editor, getInitialContent]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
