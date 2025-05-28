@@ -1,133 +1,95 @@
 
-import React from 'react';
-import { useAtom } from 'jotai';
-import { activeNoteConnectionsAtom } from '@/lib/store';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { useActiveNoteConnections } from '@/hooks/useLiveStore';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Link, FileSymlink, CircleDashed } from 'lucide-react';
-import { useGraph } from '@/contexts/GraphContext';
-import { graphService } from '@/services/GraphService';
+import { ChevronDown, ChevronRight, Database, Link as LinkIcon } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { EntityDialogContent } from './EntityDialogContent';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 export function EntityPanel() {
-  const [{ entities, triples }] = useAtom(activeNoteConnectionsAtom);
-  const graph = useGraph();
+  const { entities, triples } = useActiveNoteConnections();
+  const [isEntitiesOpen, setIsEntitiesOpen] = useState(true);
+  const [isTriplesOpen, setIsTriplesOpen] = useState(true);
+  const [selectedEntity, setSelectedEntity] = useState<any>(null);
 
-  // Group entities by their kind/type
   const entityGroups = React.useMemo(() => {
-    const groups: Record<string, typeof entities> = {};
-    
-    entities.forEach(entity => {
+    const groups: Record<string, any[]> = {};
+    (Array.isArray(entities) ? entities : []).forEach(entity => {
       if (!groups[entity.kind]) {
         groups[entity.kind] = [];
       }
       groups[entity.kind].push(entity);
     });
-    
     return groups;
   }, [entities]);
 
-  const handleTripleClick = (triple: any) => {
-    if (triple.id) {
-      // If supported by app navigation, focus on this triple in the graph
-      const graphInstance = graph.exportGraphJSON().meta ? graphService.getGraph?.() : null;
-      if (graphInstance) {
-        try {
-          graphInstance.getElementById(triple.id).select();
-          graphInstance.center(triple.id);
-        } catch (e) {
-          console.error("Could not focus triple in graph", e);
-        }
-      }
-    }
-  };
-
-  if (entities.length === 0 && triples.length === 0) {
-    return (
-      <div className="text-center py-4 text-muted-foreground text-sm">
-        <p>No entities or relationships found in this note.</p>
-        <p className="mt-2">
-          Use <code className="bg-muted px-1 rounded">[TYPE|Label]</code> syntax to create entities.
-        </p>
-        <p className="mt-1">
-          Define relationships with <code className="bg-muted px-1 rounded">[TYPE|Entity1] (RELATIONSHIP) [TYPE|Entity2]</code> syntax.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
-      {/* Entities section */}
-      {Object.entries(entityGroups).length > 0 && (
-        <div>
-          <h3 className="text-sm font-medium mb-2">Entities</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            {Object.entries(entityGroups).map(([kind, entityList]) => (
-              <Card key={kind} className="bg-[#12141f] border-[#1a1b23]">
-                <CardContent className="p-3">
-                  <h4 className="flex items-center text-xs font-medium mb-2 text-primary">
-                    <Link className="h-3 w-3 mr-1" /> 
-                    {kind}
-                  </h4>
-                  <div className="space-y-1">
-                    {entityList.map((entity) => (
-                      <Badge
-                        key={`${entity.kind}-${entity.label}`}
-                        variant="secondary"
-                        className="bg-[#1a1b23] hover:bg-[#22242f] text-primary border-none mr-1 mb-1 text-xs"
+      <Collapsible open={isEntitiesOpen} onOpenChange={setIsEntitiesOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="w-full justify-between">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              <span>Entities ({Array.isArray(entities) ? entities.length : 0})</span>
+            </div>
+            {isEntitiesOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-2">
+          {Object.keys(entityGroups).length === 0 ? (
+            <p className="text-sm text-muted-foreground p-2">No entities found in this note.</p>
+          ) : (
+            Object.entries(entityGroups).map(([kind, entityList]) => (
+              <div key={kind} className="space-y-1">
+                <h4 className="text-sm font-medium text-muted-foreground">{kind}</h4>
+                {entityList.map((entity, index) => (
+                  <Dialog key={index} onOpenChange={(open) => !open && setSelectedEntity(null)}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start text-left"
+                        onClick={() => setSelectedEntity(entity)}
                       >
-                        {entity.label}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Relationships section */}
-      {triples.length > 0 && (
-        <div>
-          <h3 className="text-sm font-medium mb-2">Relationships</h3>
-          <div className="space-y-2">
-            {triples.map((triple, index) => (
-              <div 
-                key={index}
-                className="bg-[#12141f] border border-[#1a1b23] p-3 rounded-md hover:bg-[#191b28] cursor-pointer transition-colors"
-                onClick={() => handleTripleClick(triple)}
-              >
-                <div className="flex items-center justify-between text-xs flex-wrap">
-                  <div className="flex items-center mb-1 md:mb-0">
-                    <Badge variant="outline" className="border-[#7E69AB]/30 mr-1">
-                      {triple.subject.kind}
-                    </Badge>
-                    <span className="font-medium text-white">
-                      {triple.subject.label}
-                    </span>
-                  </div>
-                  
-                  <Badge className="mx-2 bg-[#7C5BF1] text-white border-none flex items-center">
-                    <CircleDashed className="h-3 w-3 mr-1" />
-                    {triple.predicate}
-                  </Badge>
-                  
-                  <div className="flex items-center">
-                    <Badge variant="outline" className="border-[#7E69AB]/30 mr-1">
-                      {triple.object.kind}
-                    </Badge>
-                    <span className="font-medium text-white">
-                      {triple.object.label}
-                    </span>
-                  </div>
-                </div>
+                        <span className="truncate">{entity.label}</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <EntityDialogContent entity={selectedEntity} />
+                    </DialogContent>
+                  </Dialog>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            ))
+          )}
+        </CollapsibleContent>
+      </Collapsible>
+
+      <Collapsible open={isTriplesOpen} onOpenChange={setIsTriplesOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="w-full justify-between">
+            <div className="flex items-center gap-2">
+              <LinkIcon className="h-4 w-4" />
+              <span>Relationships ({Array.isArray(triples) ? triples.length : 0})</span>
+            </div>
+            {isTriplesOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-1">
+          {!Array.isArray(triples) || triples.length === 0 ? (
+            <p className="text-sm text-muted-foreground p-2">No relationships found in this note.</p>
+          ) : (
+            triples.map((triple, index) => (
+              <div key={index} className="p-2 text-sm bg-muted rounded">
+                <span className="font-medium">{triple.subject.label}</span>
+                <span className="text-muted-foreground mx-2">{triple.predicate}</span>
+                <span className="font-medium">{triple.object.label}</span>
+              </div>
+            ))
+          )}
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

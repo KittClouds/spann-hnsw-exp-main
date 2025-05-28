@@ -43,8 +43,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from '@/lib/utils';
 import { BlueprintManager } from './BlueprintManager';
-import { useAtom } from 'jotai';
-import { blueprintsAtom } from '@/lib/store';
+import { useBlueprintsArray } from '@/hooks/useLiveStore';
 import { EntityBlueprint } from '@/types/blueprints';
 
 // Define zod schemas for validation
@@ -73,7 +72,7 @@ export function SchemaManager() {
   const [activeTab, setActiveTab] = useState("entities");
   const [entityTypes, setEntityTypes] = useState(() => getEntityTypes());
   const [relationshipTypes, setRelationshipTypes] = useState(() => getRelationshipTypes());
-  const [blueprints, setBlueprints] = useAtom(blueprintsAtom);
+  const blueprints = useBlueprintsArray();
 
   // Forms
   const entityForm = useForm<EntityFormValues>({
@@ -164,24 +163,6 @@ export function SchemaManager() {
     return shapeMap[shape] || <div className="w-6 h-4" style={{ backgroundColor: color }} />;
   };
 
-  const handleBlueprintCreate = (blueprint: EntityBlueprint) => {
-    setBlueprints([...blueprints, blueprint]);
-    toast.success(`Blueprint "${blueprint.name}" created successfully.`);
-  };
-
-  const handleBlueprintUpdate = (updatedBlueprint: EntityBlueprint) => {
-    setBlueprints(blueprints.map(b => 
-      b.id === updatedBlueprint.id ? updatedBlueprint : b
-    ));
-    toast.success(`Blueprint "${updatedBlueprint.name}" updated successfully.`);
-  };
-
-  const handleBlueprintDelete = (blueprintId: string) => {
-    const blueprint = blueprints.find(b => b.id === blueprintId);
-    setBlueprints(blueprints.filter(b => b.id !== blueprintId));
-    toast.success(`Blueprint "${blueprint?.name}" deleted successfully.`);
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -229,7 +210,7 @@ export function SchemaManager() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {entityTypes.map((entity) => (
+                      {Array.isArray(entityTypes) && entityTypes.map((entity) => (
                         <TableRow key={entity.kind}>
                           <TableCell>{entity.kind}</TableCell>
                           <TableCell>{shapePreview(entity.defaultStyle?.shape || "rectangle", entity.defaultStyle?.['background-color'] || "#7C5BF1")}</TableCell>
@@ -355,7 +336,7 @@ export function SchemaManager() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {relationshipTypes.map((relationship) => (
+                      {Array.isArray(relationshipTypes) && relationshipTypes.map((relationship) => (
                         <TableRow key={relationship.label}>
                           <TableCell>{relationship.label}</TableCell>
                           <TableCell>{Array.isArray(relationship.from) ? relationship.from.join(', ') : relationship.from}</TableCell>
@@ -507,11 +488,11 @@ export function SchemaManager() {
               </div>
               
               <BlueprintManager
-                blueprints={blueprints}
-                entityTypes={entityTypes.map(e => e.kind)}
-                onBlueprintCreate={handleBlueprintCreate}
-                onBlueprintUpdate={handleBlueprintUpdate}
-                onBlueprintDelete={handleBlueprintDelete}
+                blueprints={Array.isArray(blueprints) ? blueprints : []}
+                entityTypes={Array.isArray(entityTypes) ? entityTypes.map(e => e.kind) : []}
+                onBlueprintCreate={() => {}}
+                onBlueprintUpdate={() => {}}
+                onBlueprintDelete={() => {}}
               />
             </div>
           </TabsContent>

@@ -87,9 +87,9 @@ export const tables = {
   uiState: State.SQLite.clientDocument({
     name: 'uiState',
     schema: Schema.Struct({
-      activeNoteId: Schema.String.pipe(Schema.nullable()),
+      activeNoteId: Schema.NullOr(Schema.String),
       activeClusterId: Schema.String,
-      activeThreadId: Schema.String.pipe(Schema.nullable()),
+      activeThreadId: Schema.NullOr(Schema.String),
       graphInitialized: Schema.Boolean,
       graphLayout: Schema.String
     }),
@@ -140,16 +140,16 @@ export const events = {
     name: 'v1.NoteCreated',
     schema: Schema.Struct({
       id: Schema.String,
-      parentId: Schema.String.pipe(Schema.nullable()),
-      clusterId: Schema.String.pipe(Schema.nullable()),
+      parentId: Schema.NullOr(Schema.String),
+      clusterId: Schema.NullOr(Schema.String),
       title: Schema.String,
       content: Schema.Array(Schema.Any),
       type: Schema.String,
       createdAt: Schema.String,
       updatedAt: Schema.String,
-      path: Schema.String.pipe(Schema.nullable()),
-      tags: Schema.Array(Schema.String).pipe(Schema.nullable()),
-      mentions: Schema.Array(Schema.String).pipe(Schema.nullable())
+      path: Schema.NullOr(Schema.String),
+      tags: Schema.NullOr(Schema.Array(Schema.String)),
+      mentions: Schema.NullOr(Schema.Array(Schema.String))
     })
   }),
 
@@ -188,7 +188,7 @@ export const events = {
       role: Schema.String,
       content: Schema.String,
       createdAt: Schema.String,
-      parentId: Schema.String.pipe(Schema.nullable())
+      parentId: Schema.NullOr(Schema.String)
     })
   }),
 
@@ -226,7 +226,7 @@ export const events = {
       id: Schema.String,
       entityKind: Schema.String,
       name: Schema.String,
-      description: Schema.String.pipe(Schema.nullable()),
+      description: Schema.NullOr(Schema.String),
       templates: Schema.Array(Schema.Any),
       isDefault: Schema.Boolean,
       createdAt: Schema.String,

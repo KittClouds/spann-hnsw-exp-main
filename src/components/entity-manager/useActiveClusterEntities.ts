@@ -15,7 +15,7 @@ export function useActiveClusterEntities(): ClusterEntity[] {
 
   return useMemo(() => {
     // Get all notes in the current cluster
-    const clusterNotes = notes.filter(note => note.clusterId === activeClusterId);
+    const clusterNotes = Array.isArray(notes) ? notes.filter(note => note.clusterId === activeClusterId) : [];
     
     const entityMap = new Map<string, ClusterEntity>();
     
