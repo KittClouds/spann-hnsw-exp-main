@@ -1,22 +1,21 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+import { livestoreDevtoolsPlugin } from '@livestore/devtools-vite'
+
+export default defineConfig({
   plugins: [
     react(),
-    mode === 'development' &&
-    componentTagger(),
-  ].filter(Boolean),
+    livestoreDevtoolsPlugin({ schemaPath: './src/livestore/schema.ts' })
+  ],
+  server: {
+    port: process.env.PORT ? Number(process.env.PORT) : 60_001,
+  },
+  worker: { format: 'es' },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+})

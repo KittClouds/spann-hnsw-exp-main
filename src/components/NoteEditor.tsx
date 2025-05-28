@@ -1,6 +1,5 @@
 
-import { useAtom } from 'jotai';
-import { activeNoteAtom, activeNoteIdAtom, notesAtom, deleteNote } from '@/lib/store';
+import { useActiveNote, useActiveNoteId, useNotes, useNoteActions } from '@/hooks/useLiveStore';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback } from 'react';
 import { useBlockNote } from "@blocknote/react";
@@ -17,9 +16,10 @@ import { EmptyNoteState } from './EmptyNoteState';
 import { NoteSerializer } from '@/services/NoteSerializer';
 
 export function NoteEditor() {
-  const [activeNote, setActiveNote] = useAtom(activeNoteAtom);
-  const [activeNoteId, setActiveNoteId] = useAtom(activeNoteIdAtom);
-  const [notes, setNotes] = useAtom(notesAtom);
+  const activeNote = useActiveNote();
+  const [activeNoteId, setActiveNoteId] = useActiveNoteId();
+  const notes = useNotes();
+  const { updateNote, deleteNote } = useNoteActions();
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -59,18 +59,12 @@ export function NoteEditor() {
        const currentBlocks = editor.document as Block[];
        console.log("NoteEditor: Saving changes for", activeNote.id);
       
-      // Update the content in the activeNoteAtom
-      const updatedNote = {
-        ...activeNote,
-        content: currentBlocks
-      };
-      
-      setActiveNote({
-        content: currentBlocks,
-      });
+      // Update the note content
+      updateNote(activeNote.id, { content: currentBlocks });
       
       // Serialize the note for potential external usage
       try {
+        const updatedNote = { ...activeNote, content: currentBlocks };
         const doc = NoteSerializer.toDocument(updatedNote);
         const json = doc.toJSON();
         console.log("NoteEditor: Serialized note:", json);
@@ -106,17 +100,11 @@ export function NoteEditor() {
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
-      const updatedNote = {
-        ...activeNote,
-        title: e.target.value
-      };
-      
-      setActiveNote({
-        title: e.target.value
-      });
+      updateNote(activeNote.id, { title: e.target.value });
       
       // Serialize the updated note
       try {
+        const updatedNote = { ...activeNote, title: e.target.value };
         const doc = NoteSerializer.toDocument(updatedNote);
         const json = doc.toJSON();
         console.log("NoteEditor: Serialized note with updated title:", json);
@@ -127,7 +115,7 @@ export function NoteEditor() {
   };
 
   const handleDeleteNote = useCallback(() => {
-    if (notes.length <= 1) {
+    if (!activeNote || notes.length <= 1) {
       toast("Cannot delete", {
         description: "You must keep at least one note",
       });
@@ -136,7 +124,7 @@ export function NoteEditor() {
     
     const noteIndex = notes.findIndex(note => note.id === activeNoteId);
     
-    setNotes(deleteNote(notes, activeNoteId || ''));
+    deleteNote(activeNote.id);
     
     const nextNoteIndex = noteIndex < notes.length - 1 ? noteIndex : noteIndex - 1;
     const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
@@ -148,7 +136,7 @@ export function NoteEditor() {
     toast("Note deleted", {
       description: "Your note has been removed",
     });
-  }, [notes, activeNoteId, setNotes, setActiveNoteId]);
+  }, [notes, activeNoteId, activeNote, deleteNote, setActiveNoteId]);
 
   if (!activeNote) {
     return <EmptyNoteState />;
@@ -160,7 +148,7 @@ export function NoteEditor() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex-1">
             <Input
-              value={activeNote.title}
+              value={activeNote.title || ''}
               onChange={handleTitleChange}
               className="text-xl font-semibold bg-transparent border-none focus-visible:ring-0 px-0 text-primary"
               placeholder="Note Title"

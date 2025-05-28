@@ -3,7 +3,7 @@ import { queryDb, computed } from '@livestore/livestore';
 import { tables } from './schema';
 import { parseAllNotes } from '@/lib/utils/parsingUtils';
 
-// Basic entity queries
+// Basic entity queries with proper typing
 export const clusters$ = queryDb(
   tables.clusters.orderBy('createdAt', 'desc'),
   { label: 'clusters$' }
@@ -27,6 +27,11 @@ export const threadMessages$ = queryDb(
 export const blueprints$ = queryDb(
   tables.blueprints.orderBy('createdAt', 'desc'),
   { label: 'blueprints$' }
+);
+
+export const entityAttributes$ = queryDb(
+  tables.entityAttributes.orderBy('entityKind', 'asc'),
+  { label: 'entityAttributes$' }
 );
 
 // UI state queries
@@ -61,10 +66,11 @@ export const standardNotes$ = queryDb(
   { label: 'standardNotes$' }
 );
 
-export const activeNote$ = queryDb((get) => {
+export const activeNote$ = computed((get) => {
   const activeId = get(activeNoteId$);
-  if (!activeId) return null;
-  return tables.notes.where({ id: activeId }).limit(1);
+  const allNotes = get(notes$);
+  if (!activeId || !Array.isArray(allNotes)) return null;
+  return allNotes.find((note: any) => note.id === activeId) || null;
 }, { label: 'activeNote$' });
 
 export const activeThreadMessages$ = queryDb((get) => {
@@ -76,6 +82,15 @@ export const activeThreadMessages$ = queryDb((get) => {
 // Derived connection queries (replaces parsing atoms)
 export const noteConnections$ = computed((get) => {
   const notes = get(notes$);
+  if (!Array.isArray(notes)) {
+    return {
+      tagsMap: new Map(),
+      mentionsMap: new Map(),
+      linksMap: new Map(),
+      entitiesMap: new Map(),
+      triplesMap: new Map()
+    };
+  }
   console.log("LiveStore: Recalculating all parsed connections");
   return parseAllNotes(notes);
 }, { label: 'noteConnections$' });
