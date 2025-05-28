@@ -1,10 +1,10 @@
-
 import React from 'react';
-import { TypedAttribute, ProgressBarValue, StatBlockValue, RelationshipValue } from '@/types/attributes';
+import { TypedAttribute, ProgressBarValue, StatBlockValue, RelationshipValue, EntityReference } from '@/types/attributes';
 import { Badge } from '@/components/ui/badge';
 import { ProgressBarRenderer } from '../renderers/ProgressBarRenderer';
 import { StatBlockRenderer } from '../renderers/StatBlockRenderer';
 import { RelationshipRenderer } from '../renderers/RelationshipRenderer';
+import { EntityLinkRenderer } from '../renderers/EntityLinkRenderer';
 
 interface SimpleLayoutProps {
   attributes: TypedAttribute[];
@@ -54,6 +54,14 @@ export function SimpleLayout({ attributes, onAttributeClick }: SimpleLayoutProps
         return (
           <RelationshipRenderer 
             value={attribute.value as RelationshipValue}
+            onClick={() => onAttributeClick?.(attribute)}
+          />
+        );
+      
+      case 'EntityLink':
+        return (
+          <EntityLinkRenderer 
+            value={attribute.value as EntityReference}
             onClick={() => onAttributeClick?.(attribute)}
           />
         );
