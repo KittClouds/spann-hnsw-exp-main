@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import { SimpleLayout } from './layouts/SimpleLayout';
 import { CharacterSheetLayout } from './layouts/CharacterSheetLayout';
 import { FactionOverviewLayout } from './layouts/FactionOverviewLayout';
-import { TypedAttribute, AttributeType } from '@/types/attributes';
+import { TypedAttribute, AttributeType, AttributeValue } from '@/types/attributes';
 
 export function EntityAttributePanel() {
   const { entities } = useActiveNoteConnections();
@@ -58,7 +58,7 @@ export function EntityAttributePanel() {
       name: key,
       type: (typeof value === 'number' ? 'Number' : 
             typeof value === 'boolean' ? 'Boolean' : 'Text') as AttributeType,
-      value: value,
+      value: value as AttributeValue,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }));
