@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { ConnectionsPanel } from './connections/ConnectionsPanel';
 import { EmptyNoteState } from './EmptyNoteState';
 import { NoteSerializer } from '@/services/NoteSerializer';
+import { createEmptyBlock } from '@/lib/utils/blockUtils';
 
 export function NoteEditor() {
   const activeNote = useActiveNote();
@@ -27,8 +28,17 @@ export function NoteEditor() {
     return 'dark';
   });
   
+  // Ensure we always have valid initial content
+  const getInitialContent = (): Block[] => {
+    if (activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
+      return activeNote.content as Block[];
+    }
+    // Return a default empty paragraph block if no content
+    return [createEmptyBlock()];
+  };
+  
   const editor = useBlockNote({
-    initialContent: (activeNote?.content ?? []) as Block[],
+    initialContent: getInitialContent(),
   });
 
   useEffect(() => {
@@ -89,9 +99,10 @@ export function NoteEditor() {
   }, [editor, saveChanges, activeNote]);
 
   useEffect(() => {
-    if (editor && activeNote?.content) {
+    if (editor && activeNote) {
       try {
-        editor.replaceBlocks(editor.document, activeNote.content);
+        const newContent = getInitialContent();
+        editor.replaceBlocks(editor.document, newContent);
       } catch (error) {
         console.error("Error replacing blocks:", error);
       }
