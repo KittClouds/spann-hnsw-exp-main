@@ -30,10 +30,22 @@ export function NoteEditor() {
   
   // Ensure we always have valid initial content
   const getInitialContent = (): Block[] => {
-    if (activeNote?.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
+    console.log("NoteEditor: getInitialContent called", { activeNote, content: activeNote?.content });
+    
+    // If no active note, return default content
+    if (!activeNote) {
+      console.log("NoteEditor: No active note, returning default content");
+      return [createEmptyBlock()];
+    }
+    
+    // Check if content exists and is a valid array
+    if (activeNote.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
+      console.log("NoteEditor: Using existing content", activeNote.content);
       return activeNote.content as Block[];
     }
+    
     // Return a default empty paragraph block if no content
+    console.log("NoteEditor: No valid content found, creating default block");
     return [createEmptyBlock()];
   };
   
@@ -102,6 +114,7 @@ export function NoteEditor() {
     if (editor && activeNote) {
       try {
         const newContent = getInitialContent();
+        console.log("NoteEditor: Replacing blocks with", newContent);
         editor.replaceBlocks(editor.document, newContent);
       } catch (error) {
         console.error("Error replacing blocks:", error);
