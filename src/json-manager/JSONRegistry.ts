@@ -6,6 +6,7 @@ import {
   entityAdapter, 
   noteAdapter 
 } from './adapters';
+import { initializeSchemas } from './schemas';
 
 /**
  * JSON Registry - Central registration point for all adapters
@@ -25,6 +26,9 @@ export class JSONRegistry {
     
     console.log('JSONRegistry: Initializing Fort Knox JSON Management System');
     
+    // Initialize schemas first
+    initializeSchemas();
+    
     // Register all adapters
     jsonManager.registerAdapter('blocknote', blockNoteAdapter);
     jsonManager.registerAdapter('cytoscape', cytoscapeAdapter);
@@ -38,6 +42,10 @@ export class JSONRegistry {
     
     this.initialized = true;
     console.log('JSONRegistry: Fort Knox JSON Management System ready');
+    
+    // Log schema report
+    const report = jsonManager.getSchemaReport();
+    console.log('JSONRegistry: Schema validation ready for types:', report.registeredTypes);
   }
   
   /**
@@ -61,3 +69,4 @@ JSONRegistry.initialize();
 
 export { jsonManager } from './JSONManager';
 export * from './adapters';
+export * from './schemas';

@@ -1,6 +1,6 @@
-
 import { stateValidator } from '@/cursor-stability/StateValidator';
 import { stateMonitor } from '@/cursor-stability/StateMonitor';
+import { jsonSchemaRegistry } from './schemas';
 
 export interface JSONOperation {
   id: string;
@@ -10,6 +10,8 @@ export interface JSONOperation {
   success?: boolean;
   error?: string;
   size?: number;
+  validationErrors?: string[];
+  migrated?: boolean;
 }
 
 export interface SerializationAdapter<T = any> {
@@ -25,6 +27,8 @@ export interface JSONManagerOptions {
   enableMonitoring?: boolean;
   enableValidation?: boolean;
   enableBackup?: boolean;
+  enableSchemaValidation?: boolean;
+  enableAutoMigration?: boolean;
   compressionThreshold?: number;
 }
 
@@ -44,6 +48,8 @@ export class JSONManager {
       enableMonitoring: true,
       enableValidation: true,
       enableBackup: true,
+      enableSchemaValidation: true,
+      enableAutoMigration: true,
       compressionThreshold: 10000,
       ...options
     };
@@ -72,12 +78,27 @@ export class JSONManager {
   serialize<T>(dataType: string, data: T): string {
     const operationId = this.generateOperationId();
     const startTime = Date.now();
+    const operation: JSONOperation = {
+      id: operationId,
+      type: 'serialize',
+      dataType,
+      timestamp: startTime
+    };
     
     try {
       // Get adapter for this data type
       const adapter = this.adapters.get(dataType);
       if (!adapter) {
         throw new Error(`No adapter registered for data type: ${dataType}`);
+      }
+      
+      // Schema validation before serialization
+      if (this.options.enableSchemaValidation) {
+        const schemaValidation = jsonSchemaRegistry.validateData(dataType, data);
+        if (!schemaValidation.isValid) {
+          operation.validationErrors = schemaValidation.errors;
+          console.warn(`JSONManager: Schema validation warnings for ${dataType}:`, schemaValidation.errors);
+        }
       }
       
       // Use adapter to convert to JSON object
@@ -94,11 +115,19 @@ export class JSONManager {
         }
       };
       
-      // Validate if enabled
+      // Final schema validation
+      if (this.options.enableSchemaValidation) {
+        const finalValidation = jsonSchemaRegistry.validateData(dataType, enrichedObject);
+        if (!finalValidation.isValid) {
+          throw new Error(`Final validation failed for ${dataType}: ${finalValidation.errors.join(', ')}`);
+        }
+      }
+      
+      // Validate with adapter if available
       if (this.options.enableValidation && adapter.validate) {
         const isValid = adapter.validate(enrichedObject);
         if (!isValid) {
-          throw new Error(`Validation failed for ${dataType}`);
+          throw new Error(`Adapter validation failed for ${dataType}`);
         }
       }
       
@@ -110,28 +139,18 @@ export class JSONManager {
         this.backups.set(`${dataType}-${operationId}`, { ...enrichedObject });
       }
       
-      // Record operation
-      this.recordOperation({
-        id: operationId,
-        type: 'serialize',
-        dataType,
-        timestamp: startTime,
-        success: true,
-        size: jsonString.length
-      });
+      // Record successful operation
+      operation.success = true;
+      operation.size = jsonString.length;
+      this.recordOperation(operation);
       
       console.log(`JSONManager: Successfully serialized ${dataType} (${jsonString.length} bytes)`);
       return jsonString;
       
     } catch (error) {
-      this.recordOperation({
-        id: operationId,
-        type: 'serialize',
-        dataType,
-        timestamp: startTime,
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      operation.success = false;
+      operation.error = error instanceof Error ? error.message : 'Unknown error';
+      this.recordOperation(operation);
       
       console.error(`JSONManager: Serialization failed for ${dataType}:`, error);
       throw error;
@@ -144,6 +163,13 @@ export class JSONManager {
   deserialize<T>(dataType: string, jsonString: string): T {
     const operationId = this.generateOperationId();
     const startTime = Date.now();
+    const operation: JSONOperation = {
+      id: operationId,
+      type: 'deserialize',
+      dataType,
+      timestamp: startTime,
+      size: jsonString.length
+    };
     
     try {
       // Parse JSON string
@@ -153,6 +179,27 @@ export class JSONManager {
       const adapter = this.adapters.get(dataType);
       if (!adapter) {
         throw new Error(`No adapter registered for data type: ${dataType}`);
+      }
+      
+      // Schema validation with auto-migration
+      if (this.options.enableSchemaValidation) {
+        const schemaValidation = jsonSchemaRegistry.validateData(dataType, jsonObject);
+        
+        if (!schemaValidation.isValid && !schemaValidation.migratedData) {
+          operation.validationErrors = schemaValidation.errors;
+          throw new Error(`Schema validation failed for ${dataType}: ${schemaValidation.errors.join(', ')}`);
+        }
+        
+        if (schemaValidation.migratedData && this.options.enableAutoMigration) {
+          console.log(`JSONManager: Auto-migrated ${dataType} data`);
+          operation.migrated = true;
+          // Use migrated data for deserialization
+          Object.assign(jsonObject, schemaValidation.migratedData);
+        }
+        
+        if (schemaValidation.warnings.length > 0) {
+          console.warn(`JSONManager: Schema warnings for ${dataType}:`, schemaValidation.warnings);
+        }
       }
       
       // Validate metadata if present
@@ -166,39 +213,28 @@ export class JSONManager {
         }
       }
       
-      // Validate if enabled
+      // Validate with adapter if available
       if (this.options.enableValidation && adapter.validate) {
         const isValid = adapter.validate(jsonObject);
         if (!isValid) {
-          throw new Error(`Validation failed for ${dataType}`);
+          throw new Error(`Adapter validation failed for ${dataType}`);
         }
       }
       
       // Use adapter to convert from JSON object
       const data = adapter.deserialize(jsonObject);
       
-      // Record operation
-      this.recordOperation({
-        id: operationId,
-        type: 'deserialize',
-        dataType,
-        timestamp: startTime,
-        success: true,
-        size: jsonString.length
-      });
+      // Record successful operation
+      operation.success = true;
+      this.recordOperation(operation);
       
       console.log(`JSONManager: Successfully deserialized ${dataType}`);
       return data;
       
     } catch (error) {
-      this.recordOperation({
-        id: operationId,
-        type: 'deserialize',
-        dataType,
-        timestamp: startTime,
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      operation.success = false;
+      operation.error = error instanceof Error ? error.message : 'Unknown error';
+      this.recordOperation(operation);
       
       console.error(`JSONManager: Deserialization failed for ${dataType}:`, error);
       throw error;
@@ -211,38 +247,44 @@ export class JSONManager {
   validateJSON(dataType: string, jsonString: string): boolean {
     const operationId = this.generateOperationId();
     const startTime = Date.now();
+    const operation: JSONOperation = {
+      id: operationId,
+      type: 'validate',
+      dataType,
+      timestamp: startTime
+    };
     
     try {
       const jsonObject = JSON.parse(jsonString);
-      const adapter = this.adapters.get(dataType);
       
-      if (!adapter || !adapter.validate) {
-        console.warn(`JSONManager: No validation available for ${dataType}`);
-        return true;
+      // Schema validation
+      if (this.options.enableSchemaValidation) {
+        const schemaValidation = jsonSchemaRegistry.validateData(dataType, jsonObject);
+        if (!schemaValidation.isValid) {
+          operation.validationErrors = schemaValidation.errors;
+          operation.success = false;
+          this.recordOperation(operation);
+          return false;
+        }
       }
       
-      const isValid = adapter.validate(jsonObject);
+      // Adapter validation
+      const adapter = this.adapters.get(dataType);
+      if (adapter && adapter.validate) {
+        const isValid = adapter.validate(jsonObject);
+        operation.success = isValid;
+        this.recordOperation(operation);
+        return isValid;
+      }
       
-      this.recordOperation({
-        id: operationId,
-        type: 'validate',
-        dataType,
-        timestamp: startTime,
-        success: isValid
-      });
-      
-      return isValid;
+      operation.success = true;
+      this.recordOperation(operation);
+      return true;
       
     } catch (error) {
-      this.recordOperation({
-        id: operationId,
-        type: 'validate',
-        dataType,
-        timestamp: startTime,
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-      
+      operation.success = false;
+      operation.error = error instanceof Error ? error.message : 'Unknown error';
+      this.recordOperation(operation);
       return false;
     }
   }
@@ -331,6 +373,36 @@ export class JSONManager {
     oldBackups.forEach(key => this.backups.delete(key));
     
     console.log(`JSONManager: Cleaned ${originalCount - this.operations.length} operations and ${oldBackups.length} backups`);
+  }
+  
+  /**
+   * Get schema validation report for all registered types
+   */
+  getSchemaReport(): {
+    registeredTypes: string[];
+    schemaVersions: Record<string, string[]>;
+    validationStats: Record<string, { total: number; passed: number; failed: number }>;
+  } {
+    const registeredTypes = jsonSchemaRegistry.getRegisteredTypes();
+    const schemaVersions: Record<string, string[]> = {};
+    const validationStats: Record<string, { total: number; passed: number; failed: number }> = {};
+    
+    for (const type of registeredTypes) {
+      schemaVersions[type] = jsonSchemaRegistry.getVersions(type);
+      
+      const typeOperations = this.operations.filter(op => op.dataType === type && op.type === 'validate');
+      validationStats[type] = {
+        total: typeOperations.length,
+        passed: typeOperations.filter(op => op.success).length,
+        failed: typeOperations.filter(op => !op.success).length
+      };
+    }
+    
+    return {
+      registeredTypes,
+      schemaVersions,
+      validationStats
+    };
   }
   
   private generateOperationId(): string {
