@@ -1,3 +1,4 @@
+
 import { atomWithStorage } from 'jotai/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { slug } from './utils';
@@ -46,31 +47,16 @@ class SchemaRegistry {
       labelProp: 'title', 
       defaultStyle: { 'shape': 'roundrectangle' } 
     });
-    
-    // Updated TAG registration for canonical ID system
     this.registerNode('TAG', { 
       kind: 'TAG', 
-      labelProp: 'label',  // Changed from 'title' to 'label' for consistency
-      defaultStyle: { 
-        'shape': 'round-rectangle', 
-        'background-color': '#4ade80',  // Updated color for better visibility
-        'color': '#ffffff',
-        'font-size': '12px'
-      } 
+      labelProp: 'title', 
+      defaultStyle: { 'shape': 'round-rectangle', 'background-color': '#7C5BF1' } 
     });
-    
-    // Updated MENTION registration
     this.registerNode('MENTION', { 
       kind: 'MENTION', 
-      labelProp: 'label',  // Changed from 'title' to 'label' for consistency
-      defaultStyle: { 
-        'shape': 'ellipse', 
-        'background-color': '#60a5fa',  // Updated color scheme
-        'color': '#ffffff',
-        'font-size': '12px'
-      } 
+      labelProp: 'title', 
+      defaultStyle: { 'shape': 'ellipse', 'background-color': '#F3BA2F' } 
     });
-    
     this.registerNode('CHARACTER', { 
       kind: 'CHARACTER', 
       labelProp: 'title', 
@@ -307,7 +293,7 @@ export const schemaAtom = atomWithStorage<SchemaDefinitions>('galaxy-schema-defs
 // Function to generate unique IDs for entities
 export const generateEntityId = (kind: string, label: string): string => {
   const slugLabel = slug(label);
-  return `${kind.toLowerCase()}|${slugLabel}`;
+  return `${kind.toLowerCase()}-${slugLabel}-${uuidv4().substring(0, 8)}`;
 };
 
 // Helper to check if two entity types are compatible for an edge

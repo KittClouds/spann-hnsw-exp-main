@@ -13,7 +13,6 @@ import { GraphSerializer } from './GraphSerializer';
 import { GraphDocument } from '@/lib/langchain-lite';
 import { graphSerializationMethods } from './graphSerializationMethods';
 import { extendGraphService } from './GraphServiceExtension';
-import { initializeMigrationSystem, migrateEntityIds, validateGraphState } from '@/lib/migration';
 
 cytoscape.use(automove);
 cytoscape.use(undoRedo);
@@ -47,38 +46,10 @@ export class GraphService implements IGraphService {
       dragWith: 'node[type = "folder"]'
     });
 
-    // Initialize migration system and run migration if needed
-    this.initializeWithMigration();
+    this.initializeGraph();
     
     // Initialize extensions for entity browser
     extendGraphService(this);
-  }
-
-  private async initializeWithMigration() {
-    try {
-      // Initialize migration system
-      await initializeMigrationSystem();
-      
-      // Initialize graph
-      this.initializeGraph();
-      
-      // Validate current state
-      const validation = validateGraphState(this.cy);
-      if (!validation.isValid) {
-        console.warn('GraphService: Graph validation issues detected:', validation.errors);
-      }
-      
-      // Run migration if needed
-      const migrationResult = await migrateEntityIds(this.cy);
-      if (migrationResult.migratedCount > 0) {
-        console.log(`GraphService: Migrated ${migrationResult.migratedCount} entity IDs to canonical format`);
-      }
-      
-    } catch (error) {
-      console.error('GraphService: Migration initialization failed:', error);
-      // Continue with regular initialization
-      this.initializeGraph();
-    }
   }
 
   private initializeGraph() {
