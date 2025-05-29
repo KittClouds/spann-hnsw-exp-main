@@ -23,3 +23,7 @@ export type {
   MonitorMetrics, 
   AlertThresholds
 } from './StateMonitor';
+
+// Fort Knox JSON Management System exports
+export { jsonManager, JSONRegistry } from '@/json-manager';
+export type { JSONOperation, SerializationAdapter, JSONManagerOptions } from '@/json-manager';
