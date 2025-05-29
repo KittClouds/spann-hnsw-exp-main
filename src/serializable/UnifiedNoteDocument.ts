@@ -31,18 +31,25 @@ export class UnifiedNoteDocument extends UnifiedSerializableBase {
   
   /**
    * Enhanced fromJSON that handles both new and legacy formats
+   * Fixed to return specific type instead of generic T
    */
   static fromUnifiedJSON(json: Record<string, any>): UnifiedNoteDocument {
     try {
-      // Try unified deserialization first
-      const instance = super.fromUnifiedJSON(json) as UnifiedNoteDocument;
-      
-      // Verify namespace matches
+      // Check for unified metadata
       const namespace = json.gn_namespace || [];
       if (Array.isArray(namespace) && 
           namespace[0] === 'app' && 
           namespace[1] === 'note') {
-        return instance;
+        
+        // Create instance with unified data
+        return new UnifiedNoteDocument(
+          json.id || 'unknown',
+          json.title || 'Untitled',
+          json.blocks || json.content || [],
+          json.createdAt || new Date().toISOString(),
+          json.updatedAt || new Date().toISOString(),
+          json.gn_id
+        );
       }
       
       // Handle legacy format
