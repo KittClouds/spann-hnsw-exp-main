@@ -7,7 +7,6 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { Block } from '@blocknote/core';
-import { debounce } from 'lodash';
 import { Button } from './ui/button';
 import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,6 +16,7 @@ import { NoteSerializer } from '@/services/NoteSerializer';
 import { createEmptyBlock } from '@/lib/utils/blockUtils';
 import { entityEditorSchema, EntityEditorSchema } from '@/lib/editor/EntityEditorSchema';
 import { EntityHighlighter } from '@/services/EntityHighlighter';
+import { idleQueue } from '@/lib/utils/idleQueue';
 
 export function NoteEditor() {
   const activeNote = useActiveNote();
@@ -89,13 +89,13 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Debounced save function
-  const debouncedSave = useCallback(
-    debounce(() => {
+  // Create idle queues for autosave and entity processing
+  const autosaveQueue = useRef(
+    idleQueue(() => {
       if (!editor || !activeNote) return;
       
       const currentBlocks = editor.document as Block[];
-      console.log("NoteEditor: Saving changes for", activeNote.id);
+      console.log("NoteEditor: Auto-saving changes for", activeNote.id);
       
       // Update the note content
       updateNote(activeNote.id, { content: currentBlocks });
@@ -109,48 +109,52 @@ export function NoteEditor() {
       } catch (err) {
         console.error("Error serializing note:", err);
       }
-    }, 500),
-    [editor, activeNote, updateNote]
+    }, 2000)
   );
 
-  // Debounced entity processing
-  const debouncedEntityProcessing = useCallback(
-    debounce(() => {
+  const entityProcessingQueue = useRef(
+    idleQueue(() => {
       if (entityHighlighterRef.current) {
         entityHighlighterRef.current.processAllInactiveBlocks();
       }
-    }, 1000), // Longer delay to ensure user has stopped typing
-    []
+    }, 2500)
   );
 
-  // Set up content change listener with simplified debouncing
+  // Set up content change listener with idle-commit pattern
   useEffect(() => {
     if (!editor) return;
     
     const handleContentChange = () => {
-      // Save changes with debouncing
-      debouncedSave();
-      
-      // Process entity highlighting with longer debouncing
-      debouncedEntityProcessing();
+      // Mark content as dirty but don't commit until idle
+      autosaveQueue.current.touch();
+      entityProcessingQueue.current.touch();
+    };
+
+    const handleBlur = () => {
+      // Flush immediately when user leaves the editor
+      autosaveQueue.current.flush();
+      entityProcessingQueue.current.flush();
     };
     
     editor.onEditorContentChange(handleContentChange);
+    // Note: onBlur might not be available in current BlockNote version
+    // If it exists, it would be used like this:
+    // editor.onBlur && editor.onBlur(handleBlur);
     
     return () => {
-      // Cancel any pending operations when component unmounts or editor changes
-      debouncedSave.cancel();
-      debouncedEntityProcessing.cancel();
+      // Flush any pending operations when component unmounts or editor changes
+      autosaveQueue.current.flush();
+      entityProcessingQueue.current.flush();
     };
-  }, [editor, debouncedSave, debouncedEntityProcessing]);
+  }, [editor, activeNote]);
 
   // Handle note switching
   useEffect(() => {
     if (!editor) return;
     
-    // Cancel any pending operations from the previous note
-    debouncedSave.cancel();
-    debouncedEntityProcessing.cancel();
+    // Flush any pending operations from the previous note
+    autosaveQueue.current.flush();
+    entityProcessingQueue.current.flush();
     
     // Update the current note reference
     currentNoteRef.current = activeNoteId;
@@ -173,7 +177,7 @@ export function NoteEditor() {
         console.error("Error replacing blocks:", error);
       }
     }
-  }, [activeNoteId, activeNote, editor, getInitialContent, debouncedSave, debouncedEntityProcessing]);
+  }, [activeNoteId, activeNote, editor, getInitialContent]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
