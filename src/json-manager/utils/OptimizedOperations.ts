@@ -1,4 +1,3 @@
-
 import { enhancedJSONManager } from '../EnhancedJSONManager';
 import { jsonPerformanceManager } from '../PerformanceManager';
 
@@ -129,6 +128,16 @@ export class OptimizedJSONOperations {
   static async memoryAwareProcess<T>(
     dataType: string,
     data: T,
+    operation: 'serialize'
+  ): Promise<any>;
+  static async memoryAwareProcess(
+    dataType: string,
+    data: string | ArrayBuffer,
+    operation: 'deserialize'
+  ): Promise<any>;
+  static async memoryAwareProcess<T>(
+    dataType: string,
+    data: T | string | ArrayBuffer,
     operation: 'serialize' | 'deserialize'
   ): Promise<any> {
     
@@ -144,13 +153,13 @@ export class OptimizedJSONOperations {
       
       // Use compression and streaming for new operations
       if (operation === 'serialize') {
-        return enhancedJSONManager.enhancedSerialize(dataType, data, {
+        return enhancedJSONManager.enhancedSerialize(dataType, data as T, {
           compress: true,
           stream: JSON.stringify(data).length > 50000,
           useCache: false
         });
       } else {
-        return enhancedJSONManager.enhancedDeserialize(dataType, data, {
+        return enhancedJSONManager.enhancedDeserialize(dataType, data as string | ArrayBuffer, {
           compressed: true,
           lazyLoad: true,
           useCache: false
@@ -159,11 +168,11 @@ export class OptimizedJSONOperations {
     } else {
       // Normal operation with caching
       if (operation === 'serialize') {
-        return enhancedJSONManager.enhancedSerialize(dataType, data, {
+        return enhancedJSONManager.enhancedSerialize(dataType, data as T, {
           useCache: true
         });
       } else {
-        return enhancedJSONManager.enhancedDeserialize(dataType, data, {
+        return enhancedJSONManager.enhancedDeserialize(dataType, data as string | ArrayBuffer, {
           useCache: true
         });
       }

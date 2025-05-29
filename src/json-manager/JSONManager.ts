@@ -1,3 +1,4 @@
+
 import { stateValidator } from '@/cursor-stability/StateValidator';
 import { stateMonitor } from '@/cursor-stability/StateMonitor';
 import { jsonSchemaRegistry } from './schemas';
@@ -45,7 +46,7 @@ export class JSONManager {
   private options: Required<JSONManagerOptions>;
   private healthCheckInterval: NodeJS.Timeout | null = null;
   
-  private constructor(options: JSONManagerOptions = {}) {
+  protected constructor(options: JSONManagerOptions = {}) {
     this.options = {
       enableMonitoring: true,
       enableValidation: true,

@@ -1,4 +1,3 @@
-
 import { LRUCache } from 'lru-cache';
 import { stateMonitor } from '@/cursor-stability/StateMonitor';
 
@@ -11,7 +10,7 @@ export interface CacheEntry {
 }
 
 export interface CompressionOptions {
-  algorithm: 'gzip' | 'deflate' | 'brotli';
+  algorithm: 'gzip' | 'deflate';
   threshold: number;
   level: number;
 }
@@ -225,7 +224,7 @@ export class JSONPerformanceManager {
    */
   async decompressJSON(
     compressed: ArrayBuffer,
-    algorithm: 'gzip' | 'deflate' | 'brotli' = 'gzip'
+    algorithm: 'gzip' | 'deflate' = 'gzip'
   ): Promise<string> {
     try {
       if ('DecompressionStream' in window) {
