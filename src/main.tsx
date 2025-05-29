@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
-import App from './App'
+import { Root } from './Root'
 import Index from './pages/Index'
 import EntityBrowserPage from './pages/EntityBrowser'
 import { Migration } from './pages/Migration'
@@ -17,7 +17,7 @@ const queryClient = new QueryClient()
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <App />,
+    element: <Root />,
     children: [
       {
         index: true,

@@ -1,8 +1,6 @@
 
 import { GalaxyNotes } from "@/components/GalaxyNotes";
 
-const Index = () => {
+export default function Index() {
   return <GalaxyNotes />;
-};
-
-export default Index;
+}
