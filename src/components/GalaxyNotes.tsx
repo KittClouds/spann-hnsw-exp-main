@@ -1,10 +1,10 @@
-
 import { ThemeToggle } from "./ThemeToggle";
 import { NoteEditor } from "./NoteEditor";
 import { AppSidebar } from "./AppSidebar";
 import { AppRightSidebar } from "./AppRightSidebar";
 import { RightSidebarProvider } from "./RightSidebarProvider";
 import { EntityManagerDrawer } from "./entity-manager/EntityManagerDrawer";
+import { EntityColorSettings } from "./EntityColorSettings";
 import {
   SidebarInset,
   SidebarProvider,
@@ -18,11 +18,12 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAtom } from 'jotai';
 import { useActiveNote } from '@/hooks/useLiveStore';
 import { rightSidebarContentAtom } from '@/lib/rightSidebarStore';
 import { useRightSidebar } from './RightSidebarProvider';
-import { PanelRight, Users } from 'lucide-react';
+import { PanelRight, Users, Palette } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 function RightSidebarTrigger() {
@@ -65,6 +66,26 @@ function EntityAttributesTrigger() {
   );
 }
 
+function EntityColorTrigger() {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+        >
+          <Palette className="h-4 w-4" />
+          <span className="sr-only">Entity Colors</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-96" align="end">
+        <EntityColorSettings />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function GalaxyNotesInner() {
   const activeNote = useActiveNote();
   const { open: rightSidebarOpen } = useRightSidebar();
@@ -97,6 +118,7 @@ function GalaxyNotesInner() {
           <div className="flex items-center gap-2">
             <EntityManagerDrawer />
             <EntityAttributesTrigger />
+            <EntityColorTrigger />
             <RightSidebarTrigger />
             <ThemeToggle />
           </div>
