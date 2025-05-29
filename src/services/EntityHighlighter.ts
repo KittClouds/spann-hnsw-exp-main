@@ -218,60 +218,57 @@ export class EntityHighlighter {
   }
 
   /**
-   * Apply all replacements atomically in a single editor transaction
+   * Apply all replacements atomically using BlockNote's updateBlock method
    * This prevents race conditions by ensuring sidebar reads happen after migration
    */
   private applyReplacementsAtomically(block: Block, replacements: Array<{from: number; to: number; type: string; props: Record<string, any>}>) {
     try {
-      // Use editor transaction to make atomic changes
-      this.editor.transact(() => {
-        // Build new content array by replacing text segments with inline content
-        const textContent = this.extractTextFromBlock(block);
-        const newContent: any[] = [];
-        
-        // Sort replacements by position
-        const sortedReplacements = replacements.sort((a, b) => a.from - b.from);
-        
-        let currentPos = 0;
-        
-        sortedReplacements.forEach(replacement => {
-          // Add text before the replacement
-          if (replacement.from > currentPos) {
-            const beforeText = textContent.slice(currentPos, replacement.from);
-            if (beforeText) {
-              newContent.push({
-                type: "text",
-                text: beforeText,
-                styles: {}
-              });
-            }
-          }
-          
-          // Add the replacement inline content
-          newContent.push({
-            type: replacement.type,
-            props: replacement.props
-          });
-          
-          currentPos = replacement.to;
-        });
-        
-        // Add remaining text after last replacement
-        if (currentPos < textContent.length) {
-          const afterText = textContent.slice(currentPos);
-          if (afterText) {
+      // Build new content array by replacing text segments with inline content
+      const textContent = this.extractTextFromBlock(block);
+      const newContent: any[] = [];
+      
+      // Sort replacements by position
+      const sortedReplacements = replacements.sort((a, b) => a.from - b.from);
+      
+      let currentPos = 0;
+      
+      sortedReplacements.forEach(replacement => {
+        // Add text before the replacement
+        if (replacement.from > currentPos) {
+          const beforeText = textContent.slice(currentPos, replacement.from);
+          if (beforeText) {
             newContent.push({
               type: "text",
-              text: afterText,
+              text: beforeText,
               styles: {}
             });
           }
         }
         
-        // Update the block with new content atomically
-        this.editor.updateBlock(block.id, {
-          content: newContent
+        // Add the replacement inline content
+        newContent.push({
+          type: replacement.type,
+          props: replacement.props
         });
+        
+        currentPos = replacement.to;
+      });
+      
+      // Add remaining text after last replacement
+      if (currentPos < textContent.length) {
+        const afterText = textContent.slice(currentPos);
+        if (afterText) {
+          newContent.push({
+            type: "text",
+            text: afterText,
+            styles: {}
+          });
+        }
+      }
+      
+      // Update the block with new content using BlockNote's updateBlock method
+      this.editor.updateBlock(block.id, {
+        content: newContent
       });
       
     } catch (error) {
