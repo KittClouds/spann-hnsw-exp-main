@@ -88,7 +88,7 @@ export function NoteEditor() {
         entityHighlighterRef.current?.processAllInactiveBlocks();
       }, 100);
     }
-  }, 2000);
+  }, 500);
 
   // Load content for a specific note
   const loadNoteContent = useCallback((noteId: string, note: any) => {
