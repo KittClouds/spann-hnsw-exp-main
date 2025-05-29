@@ -12,6 +12,40 @@ export class EntityHighlighter {
   }
 
   /**
+   * Process a block with cursor position preservation to prevent jumping
+   */
+  public processBlockWithCursorPreservation(block: Block) {
+    if (this.isProcessing || block.type !== 'paragraph') return;
+    
+    // Skip blocks that don't have raw entity syntax
+    if (!hasRawEntitySyntax(block)) {
+      return;
+    }
+    
+    this.isProcessing = true;
+    
+    try {
+      // Store cursor position before making changes
+      const cursorPosition = this.editor.getTextCursorPosition();
+      const cursorBlockId = cursorPosition?.block?.id;
+      const isCurrentBlock = cursorBlockId === block.id;
+      
+      // Only process if this isn't the currently active block to avoid cursor jumping
+      if (isCurrentBlock) {
+        this.isProcessing = false;
+        return;
+      }
+      
+      this.processBlock(block);
+      
+    } catch (error) {
+      console.warn('EntityHighlighter: Error processing block with cursor preservation', error);
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  /**
    * Process a block and atomically convert raw entity syntax to inline specs
    * This is a one-shot migration layer that preserves the canonical data
    */
@@ -189,52 +223,55 @@ export class EntityHighlighter {
    */
   private applyReplacementsAtomically(block: Block, replacements: Array<{from: number; to: number; type: string; props: Record<string, any>}>) {
     try {
-      // Build new content array by replacing text segments with inline content
-      const textContent = this.extractTextFromBlock(block);
-      const newContent: any[] = [];
-      
-      // Sort replacements by position
-      const sortedReplacements = replacements.sort((a, b) => a.from - b.from);
-      
-      let currentPos = 0;
-      
-      sortedReplacements.forEach(replacement => {
-        // Add text before the replacement
-        if (replacement.from > currentPos) {
-          const beforeText = textContent.slice(currentPos, replacement.from);
-          if (beforeText) {
+      // Use editor transaction to make atomic changes
+      this.editor.transact(() => {
+        // Build new content array by replacing text segments with inline content
+        const textContent = this.extractTextFromBlock(block);
+        const newContent: any[] = [];
+        
+        // Sort replacements by position
+        const sortedReplacements = replacements.sort((a, b) => a.from - b.from);
+        
+        let currentPos = 0;
+        
+        sortedReplacements.forEach(replacement => {
+          // Add text before the replacement
+          if (replacement.from > currentPos) {
+            const beforeText = textContent.slice(currentPos, replacement.from);
+            if (beforeText) {
+              newContent.push({
+                type: "text",
+                text: beforeText,
+                styles: {}
+              });
+            }
+          }
+          
+          // Add the replacement inline content
+          newContent.push({
+            type: replacement.type,
+            props: replacement.props
+          });
+          
+          currentPos = replacement.to;
+        });
+        
+        // Add remaining text after last replacement
+        if (currentPos < textContent.length) {
+          const afterText = textContent.slice(currentPos);
+          if (afterText) {
             newContent.push({
               type: "text",
-              text: beforeText,
+              text: afterText,
               styles: {}
             });
           }
         }
         
-        // Add the replacement inline content
-        newContent.push({
-          type: replacement.type,
-          props: replacement.props
+        // Update the block with new content atomically
+        this.editor.updateBlock(block.id, {
+          content: newContent
         });
-        
-        currentPos = replacement.to;
-      });
-      
-      // Add remaining text after last replacement
-      if (currentPos < textContent.length) {
-        const afterText = textContent.slice(currentPos);
-        if (afterText) {
-          newContent.push({
-            type: "text",
-            text: afterText,
-            styles: {}
-          });
-        }
-      }
-      
-      // Update the block with new content atomically
-      this.editor.updateBlock(block.id, {
-        content: newContent
       });
       
     } catch (error) {

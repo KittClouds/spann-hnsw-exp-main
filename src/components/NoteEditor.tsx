@@ -1,3 +1,4 @@
+
 import { useActiveNote, useActiveNoteId, useNotes, useNoteActions } from '@/hooks/useLiveStore';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -6,7 +7,6 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { Block } from '@blocknote/core';
-import { debounce } from 'lodash';
 import { Button } from './ui/button';
 import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
@@ -14,7 +14,7 @@ import { ConnectionsPanel } from './connections/ConnectionsPanel';
 import { EmptyNoteState } from './EmptyNoteState';
 import { NoteSerializer } from '@/services/NoteSerializer';
 import { createEmptyBlock } from '@/lib/utils/blockUtils';
-import { entityEditorSchema, EntityEditorSchema } from '@/lib/editor/EntityEditorSchema';
+import { entityEditorSchema } from '@/lib/editor/EntityEditorSchema';
 import { EntityHighlighter } from '@/services/EntityHighlighter';
 
 export function NoteEditor() {
@@ -29,11 +29,11 @@ export function NoteEditor() {
     return 'dark';
   });
   
-  // Track the current note being edited to prevent cross-contamination
+  // Single refs for managing operations
   const currentNoteRef = useRef<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const entityHighlighterRef = useRef<EntityHighlighter | null>(null);
-  const migrationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Ensure we always have valid initial content
   const getInitialContent = useCallback((): Block[] => {
@@ -90,15 +90,14 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Improved save function that captures the current note at call time
+  // Save function without entity processing interference
   const saveChanges = useCallback(() => {
     if (!editor || !activeNote) return;
     
-    // Capture the current note at the time this function is called
     const noteToSave = activeNote;
     const noteIdToSave = noteToSave.id;
     
-    // Clear any existing timeout
+    // Clear any existing save timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
@@ -128,58 +127,64 @@ export function NoteEditor() {
     }, 500);
   }, [editor, activeNote, updateNote]);
 
-  // Set up content change listener with atomic entity migration
+  // Entity highlighting with longer debounce to avoid cursor jumping
+  const highlightEntities = useCallback(() => {
+    if (!entityHighlighterRef.current || !editor) return;
+    
+    // Clear any existing highlight timeout
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+    
+    highlightTimeoutRef.current = setTimeout(() => {
+      const currentBlocks = editor.document as Block[];
+      currentBlocks.forEach(block => {
+        if (block.type === 'paragraph') {
+          entityHighlighterRef.current?.processBlockWithCursorPreservation(block);
+        }
+      });
+    }, 1000); // Longer delay to ensure user has stopped typing
+  }, [editor]);
+
+  // Set up content change listener with separated concerns
   useEffect(() => {
     if (!editor) return;
     
     const handleContentChange = () => {
-      // Clear any pending migration
-      if (migrationTimeoutRef.current) {
-        clearTimeout(migrationTimeoutRef.current);
-      }
+      // Save changes immediately (short debounce)
+      saveChanges();
       
-      // Process entity migration atomically before saving
-      migrationTimeoutRef.current = setTimeout(() => {
-        if (entityHighlighterRef.current) {
-          const changedBlocks = editor.document as Block[];
-          changedBlocks.forEach(block => {
-            if (block.type === 'paragraph') {
-              entityHighlighterRef.current?.processBlock(block);
-            }
-          });
-        }
-        
-        // Save changes after migration is complete
-        // This ensures sidebar reads canonical data
-        setTimeout(() => {
-          saveChanges();
-        }, 50);
-      }, 100);
+      // Highlight entities with longer debounce to avoid cursor jumping
+      highlightEntities();
     };
     
     editor.onEditorContentChange(handleContentChange);
     
     return () => {
-      // Cancel any pending saves and migrations when component unmounts or editor changes
+      // Cancel any pending operations when component unmounts or editor changes
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = null;
       }
-      if (migrationTimeoutRef.current) {
-        clearTimeout(migrationTimeoutRef.current);
-        migrationTimeoutRef.current = null;
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+        highlightTimeoutRef.current = null;
       }
     };
-  }, [editor, saveChanges]);
+  }, [editor, saveChanges, highlightEntities]);
 
   // Handle note switching - this is the critical fix
   useEffect(() => {
     if (!editor) return;
     
-    // Cancel any pending saves from the previous note
+    // Cancel any pending operations from the previous note
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
+    }
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+      highlightTimeoutRef.current = null;
     }
     
     // Update the current note reference
@@ -193,15 +198,15 @@ export function NoteEditor() {
         // Replace blocks with new content
         editor.replaceBlocks(editor.document, newContent);
         
-        // Process entity highlighting for initial content
+        // Process entity highlighting for initial content with delay
         if (entityHighlighterRef.current) {
           setTimeout(() => {
             newContent.forEach(block => {
               if (block.type === 'paragraph') {
-                entityHighlighterRef.current?.processBlock(block);
+                entityHighlighterRef.current?.processBlockWithCursorPreservation(block);
               }
             });
-          }, 100);
+          }, 500); // Initial processing delay
         }
       } catch (error) {
         console.error("Error replacing blocks:", error);
