@@ -1,7 +1,8 @@
 
 import { SerializationAdapter } from '../JSONManager';
-import { Note } from '@/lib/store';
+import { Note, NoteId } from '@/lib/store';
 import { blockNoteAdapter } from './BlockNoteAdapter';
+import { generateNoteId } from '@/lib/utils/ids';
 
 /**
  * Note JSON Serialization Adapter
@@ -54,8 +55,11 @@ export class NoteAdapter implements SerializationAdapter<Note> {
       }
     }
     
+    // Ensure id is properly typed as NoteId
+    const noteId: NoteId = json.id.startsWith('note-') ? json.id as NoteId : generateNoteId();
+    
     return {
-      id: json.id,
+      id: noteId,
       title: json.title,
       content: content,
       createdAt: json.createdAt || new Date().toISOString(),

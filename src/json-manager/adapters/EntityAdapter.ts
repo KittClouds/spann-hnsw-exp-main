@@ -15,7 +15,6 @@ export class EntityAdapter implements SerializationAdapter<Entity> {
       kind: entity.kind,
       label: entity.label,
       attributes: entity.attributes || {},
-      id: entity.id,
       serializedAt: new Date().toISOString()
     };
   }
@@ -32,8 +31,7 @@ export class EntityAdapter implements SerializationAdapter<Entity> {
     return {
       kind: json.kind,
       label: json.label,
-      attributes: json.attributes || {},
-      id: json.id
+      attributes: json.attributes || {}
     };
   }
   
@@ -59,7 +57,6 @@ export class EntityAdapter implements SerializationAdapter<Entity> {
       kind: { type: 'string' },
       label: { type: 'string' },
       attributes: { type: 'object' },
-      id: { type: 'string' },
       serializedAt: { type: 'string' }
     },
     required: ['kind', 'label']
