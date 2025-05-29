@@ -1,4 +1,3 @@
-
 import { Block } from '@blocknote/core';
 
 export interface ValidationResult {
@@ -278,10 +277,10 @@ export class StateValidator {
         console.warn('StateValidator: Fixed invalid block content');
       }
 
-      // Ensure props is object if present - use a safe default
+      // Fix props handling - either keep existing valid props or remove them entirely
       if (sanitizedBlock.props && typeof sanitizedBlock.props !== 'object') {
-        sanitizedBlock.props = {};
-        console.warn('StateValidator: Fixed invalid block props');
+        delete sanitizedBlock.props; // Remove invalid props instead of setting to empty object
+        console.warn('StateValidator: Removed invalid block props');
       }
 
       sanitized.push(sanitizedBlock);
