@@ -5,6 +5,10 @@ export * from './adapters';
 export * from './schemas';
 export * from './interfaces/UnifiedSerializable';
 
+// Phase 4: Safety & Monitoring exports
+export { JSONSafetyManager, jsonSafetyManager } from './SafetyManager';
+export { AtomicJSONManager, atomicJSONManager } from './AtomicJSONManager';
+
 export type { 
   JSONOperation, 
   SerializationAdapter, 
@@ -18,6 +22,15 @@ export type {
 export type {
   UnifiedSerializable
 } from './interfaces/UnifiedSerializable';
+
+// Safety & Monitoring types
+export type {
+  JSONCorruptionReport,
+  JSONBackupEntry,
+  SafetyMetrics,
+  AtomicOperation,
+  BatchOperation
+} from './SafetyManager';
 
 // Convenience re-exports
 export { 

@@ -25,5 +25,20 @@ export type {
 } from './StateMonitor';
 
 // Fort Knox JSON Management System exports
-export { jsonManager, JSONRegistry } from '@/json-manager';
-export type { JSONOperation, SerializationAdapter, JSONManagerOptions } from '@/json-manager';
+export { 
+  jsonManager, 
+  JSONRegistry, 
+  jsonSafetyManager, 
+  atomicJSONManager 
+} from '@/json-manager';
+
+export type { 
+  JSONOperation, 
+  SerializationAdapter, 
+  JSONManagerOptions,
+  JSONCorruptionReport,
+  JSONBackupEntry,
+  SafetyMetrics,
+  AtomicOperation,
+  BatchOperation
+} from '@/json-manager';

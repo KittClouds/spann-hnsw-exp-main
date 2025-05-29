@@ -1,6 +1,7 @@
 import { stateValidator } from '@/cursor-stability/StateValidator';
 import { stateMonitor } from '@/cursor-stability/StateMonitor';
 import { jsonSchemaRegistry } from './schemas';
+import { jsonSafetyManager } from './SafetyManager';
 
 export interface JSONOperation {
   id: string;
@@ -42,6 +43,7 @@ export class JSONManager {
   private operations: JSONOperation[] = [];
   private backups = new Map<string, any>();
   private options: Required<JSONManagerOptions>;
+  private healthCheckInterval: NodeJS.Timeout | null = null;
   
   private constructor(options: JSONManagerOptions = {}) {
     this.options = {
@@ -54,7 +56,10 @@ export class JSONManager {
       ...options
     };
     
-    console.log('JSONManager: Fort Knox JSON Management System initialized');
+    console.log('JSONManager: Fort Knox JSON Management System initialized with Safety & Monitoring');
+    
+    // Start health monitoring
+    this.startHealthMonitoring();
   }
   
   static getInstance(options?: JSONManagerOptions): JSONManager {
@@ -65,15 +70,59 @@ export class JSONManager {
   }
   
   /**
-   * Register a serialization adapter for a specific data type
+   * Start integrated health monitoring
    */
-  registerAdapter<T>(dataType: string, adapter: SerializationAdapter<T>): void {
-    console.log(`JSONManager: Registering adapter for ${dataType}`);
-    this.adapters.set(dataType, adapter);
+  private startHealthMonitoring(): void {
+    if (this.healthCheckInterval) return;
+    
+    this.healthCheckInterval = setInterval(() => {
+      this.performIntegratedHealthCheck();
+    }, 30000); // Every 30 seconds
+    
+    console.log('JSONManager: Integrated health monitoring started');
   }
   
   /**
-   * Safe JSON serialization with validation and monitoring
+   * Perform comprehensive health check with safety integration
+   */
+  private performIntegratedHealthCheck(): void {
+    try {
+      // Perform safety health check
+      jsonSafetyManager.performHealthCheck();
+      
+      // Get safety diagnostics
+      const safetyDiag = jsonSafetyManager.getDiagnostics();
+      
+      // Check for critical issues
+      if (safetyDiag.metrics.healthScore < 50) {
+        console.error('JSONManager: Critical safety health score detected:', safetyDiag.metrics.healthScore);
+        // Could trigger emergency protocols here
+      }
+      
+      // Check corruption trends
+      const recentCorruptions = safetyDiag.recentCorruptions.filter(
+        r => Date.now() - r.timestamp < 300000 // Last 5 minutes
+      );
+      
+      if (recentCorruptions.length > 3) {
+        console.warn('JSONManager: High corruption rate detected:', recentCorruptions.length);
+      }
+      
+      // Integration with state monitor
+      if (this.options.enableMonitoring) {
+        const successRate = this.getOperationStats().successRate;
+        if (successRate < 90) {
+          stateMonitor.recordOperation(1000, false); // Record health issue
+        }
+      }
+      
+    } catch (error) {
+      console.error('JSONManager: Health check failed:', error);
+    }
+  }
+  
+  /**
+   * Enhanced serialize with safety integration
    */
   serialize<T>(dataType: string, data: T): string {
     const operationId = this.generateOperationId();
@@ -84,6 +133,9 @@ export class JSONManager {
       dataType,
       timestamp: startTime
     };
+    
+    // Create safety backup
+    const backupId = jsonSafetyManager.createBackup(dataType, 'serialize', data);
     
     try {
       // Get adapter for this data type
@@ -104,14 +156,16 @@ export class JSONManager {
       // Use adapter to convert to JSON object
       const jsonObject = adapter.serialize(data);
       
-      // Add metadata
+      // Add metadata with safety checksums
       const enrichedObject = {
         ...jsonObject,
         _json_meta: {
           dataType,
           version: adapter.version,
           timestamp: Date.now(),
-          managedBy: 'JSONManager'
+          managedBy: 'JSONManager',
+          safetyBackupId: backupId,
+          checksum: this.calculateSafetyChecksum(jsonObject)
         }
       };
       
@@ -134,6 +188,12 @@ export class JSONManager {
       // Serialize to string
       const jsonString = JSON.stringify(enrichedObject);
       
+      // Corruption detection
+      const corruption = jsonSafetyManager.detectCorruption(dataType, jsonString, operationId);
+      if (corruption && corruption.severity === 'critical') {
+        throw new Error(`Critical corruption detected during serialization: ${corruption.details}`);
+      }
+      
       // Create backup if enabled
       if (this.options.enableBackup) {
         this.backups.set(`${dataType}-${operationId}`, { ...enrichedObject });
@@ -144,7 +204,7 @@ export class JSONManager {
       operation.size = jsonString.length;
       this.recordOperation(operation);
       
-      console.log(`JSONManager: Successfully serialized ${dataType} (${jsonString.length} bytes)`);
+      console.log(`JSONManager: Successfully serialized ${dataType} (${jsonString.length} bytes) with safety checks`);
       return jsonString;
       
     } catch (error) {
@@ -152,13 +212,22 @@ export class JSONManager {
       operation.error = error instanceof Error ? error.message : 'Unknown error';
       this.recordOperation(operation);
       
+      // Attempt recovery from backup
+      if (backupId) {
+        const recovered = jsonSafetyManager.restoreFromBackup(backupId);
+        if (recovered) {
+          console.warn(`JSONManager: Attempting recovery from backup for ${dataType}`);
+          // Could retry serialization with recovered data
+        }
+      }
+      
       console.error(`JSONManager: Serialization failed for ${dataType}:`, error);
       throw error;
     }
   }
   
   /**
-   * Safe JSON deserialization with validation and monitoring
+   * Enhanced deserialize with safety integration
    */
   deserialize<T>(dataType: string, jsonString: string): T {
     const operationId = this.generateOperationId();
@@ -172,8 +241,30 @@ export class JSONManager {
     };
     
     try {
+      // Corruption detection first
+      const corruption = jsonSafetyManager.detectCorruption(dataType, jsonString, operationId);
+      let workingData = jsonString;
+      
+      if (corruption) {
+        if (corruption.autoRepairable && this.options.enableAutoMigration) {
+          console.log(`JSONManager: Attempting auto-repair for ${corruption.corruptionType} corruption`);
+          const parsedData = JSON.parse(jsonString);
+          const repairedData = jsonSafetyManager.attemptAutoRepair(corruption, parsedData);
+          
+          if (repairedData) {
+            workingData = JSON.stringify(repairedData);
+            operation.migrated = true;
+            console.log(`JSONManager: Auto-repair successful for ${dataType}`);
+          } else if (corruption.severity === 'critical') {
+            throw new Error(`Critical corruption detected and auto-repair failed: ${corruption.details}`);
+          }
+        } else if (corruption.severity === 'critical') {
+          throw new Error(`Critical corruption detected: ${corruption.details}`);
+        }
+      }
+      
       // Parse JSON string
-      const jsonObject = JSON.parse(jsonString);
+      const jsonObject = JSON.parse(workingData);
       
       // Get adapter for this data type
       const adapter = this.adapters.get(dataType);
@@ -211,6 +302,17 @@ export class JSONManager {
         if (meta.version !== adapter.version) {
           console.warn(`JSONManager: Version mismatch - expected ${adapter.version}, got ${meta.version}`);
         }
+        
+        // Verify safety checksum if present
+        if (meta.checksum) {
+          const expectedChecksum = meta.checksum;
+          const { checksum, ...dataWithoutMeta } = jsonObject;
+          const actualChecksum = this.calculateSafetyChecksum(dataWithoutMeta);
+          
+          if (expectedChecksum !== actualChecksum) {
+            console.warn(`JSONManager: Safety checksum mismatch for ${dataType}`);
+          }
+        }
       }
       
       // Validate with adapter if available
@@ -228,7 +330,7 @@ export class JSONManager {
       operation.success = true;
       this.recordOperation(operation);
       
-      console.log(`JSONManager: Successfully deserialized ${dataType}`);
+      console.log(`JSONManager: Successfully deserialized ${dataType} with safety checks`);
       return data;
       
     } catch (error) {
@@ -403,6 +505,50 @@ export class JSONManager {
       schemaVersions,
       validationStats
     };
+  }
+  
+  /**
+   * Calculate safety checksum for data integrity
+   */
+  private calculateSafetyChecksum(data: any): string {
+    const dataString = JSON.stringify(data);
+    let hash = 0;
+    for (let i = 0; i < dataString.length; i++) {
+      const char = dataString.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash.toString(16);
+  }
+  
+  /**
+   * Get comprehensive diagnostics including safety metrics
+   */
+  getComprehensiveDiagnostics() {
+    const baseStats = this.getOperationStats();
+    const safetyDiag = jsonSafetyManager.getDiagnostics();
+    
+    return {
+      operations: baseStats,
+      safety: safetyDiag,
+      integrationHealth: {
+        monitoringActive: !!this.healthCheckInterval,
+        lastHealthCheck: Date.now(),
+        criticalIssues: safetyDiag.recentCorruptions.filter(r => r.severity === 'critical').length
+      }
+    };
+  }
+  
+  /**
+   * Shutdown with cleanup
+   */
+  shutdown(): void {
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+    }
+    
+    console.log('JSONManager: Fort Knox JSON Management System shutdown completed');
   }
   
   private generateOperationId(): string {
