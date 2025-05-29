@@ -233,37 +233,71 @@ export class GraphStateValidator {
   }
 
   private validateCircularReferences(result: ValidationResult): void {
-    // Check for cycles in parent-child relationships
-    const visited = new Set<string>();
-    const recursionStack = new Set<string>();
+    // Track visited nodes and current path for cycle detection
+    const globalVisited = new Set<string>();
+    const currentPath = new Set<string>();
     
-    const hasCycle = (nodeId: string): boolean => {
-      if (recursionStack.has(nodeId)) {
-        return true;
-      }
-      
-      if (visited.has(nodeId)) {
+    // Define the cycle detection function with explicit typing
+    const detectCycle = (nodeId: string): boolean => {
+      // If we've already processed this node globally, skip it
+      if (globalVisited.has(nodeId)) {
         return false;
       }
       
-      visited.add(nodeId);
-      recursionStack.add(nodeId);
-      
-      const node = this.cy.getElementById(nodeId);
-      const parentId = node.data('parent') || node.data('parentId');
-      
-      if (parentId && hasCycle(parentId)) {
+      // If this node is in our current path, we found a cycle
+      if (currentPath.has(nodeId)) {
         return true;
       }
       
-      recursionStack.delete(nodeId);
-      return false;
+      // Add to current path
+      currentPath.add(nodeId);
+      
+      try {
+        // Get the node from cytoscape
+        const node = this.cy.getElementById(nodeId);
+        if (node.empty()) {
+          // Node doesn't exist, remove from path and continue
+          currentPath.delete(nodeId);
+          return false;
+        }
+        
+        // Check parent relationships
+        const nodeData = node.data();
+        const parentId = nodeData.parent || nodeData.parentId;
+        
+        if (parentId && typeof parentId === 'string') {
+          // Recursively check parent for cycles
+          if (detectCycle(parentId)) {
+            return true;
+          }
+        }
+        
+        // Remove from current path and mark as globally visited
+        currentPath.delete(nodeId);
+        globalVisited.add(nodeId);
+        
+        return false;
+        
+      } catch (error) {
+        // Handle any errors gracefully
+        currentPath.delete(nodeId);
+        console.warn(`Error checking node ${nodeId} for cycles:`, error);
+        return false;
+      }
     };
     
+    // Check each node for circular references
     this.cy.nodes().forEach(node => {
       const nodeId = node.id();
-      if (!visited.has(nodeId) && hasCycle(nodeId)) {
-        result.errors.push(`Circular reference detected involving node ${nodeId}`);
+      
+      // Only check nodes we haven't processed yet
+      if (!globalVisited.has(nodeId)) {
+        // Clear the current path for each new traversal
+        currentPath.clear();
+        
+        if (detectCycle(nodeId)) {
+          result.errors.push(`Circular reference detected involving node ${nodeId}`);
+        }
       }
     });
   }
