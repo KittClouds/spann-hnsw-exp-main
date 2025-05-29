@@ -1,4 +1,3 @@
-
 import { useActiveNote, useActiveNoteId, useNotes, useNoteActions } from '@/hooks/useLiveStore';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -22,7 +21,7 @@ export function NoteEditor() {
   const activeNote = useActiveNote();
   const [activeNoteId, setActiveNoteId] = useActiveNoteId();
   const notes = useNotes();
-  const { updateNote, deleteNote } = useNoteActions();
+  const { updateNote, deleteNote, persistNoteSilently } = useNoteActions();
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -97,8 +96,8 @@ export function NoteEditor() {
       const currentBlocks = editor.document as Block[];
       console.log("NoteEditor: Auto-saving changes for", activeNote.id);
       
-      // Update the note content
-      updateNote(activeNote.id, { content: currentBlocks });
+      // Use silent persistence to avoid re-renders during autosave
+      persistNoteSilently(activeNote.id, currentBlocks);
       
       // Serialize the note for potential external usage
       try {
@@ -181,6 +180,7 @@ export function NoteEditor() {
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
+      // Use regular update for title changes to get immediate UI feedback
       updateNote(activeNote.id, { title: e.target.value });
       
       // Serialize the updated note
