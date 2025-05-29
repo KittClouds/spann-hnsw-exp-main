@@ -272,6 +272,7 @@ export class JSONPerformanceManager {
     }
   ): ReadableStream<string> {
     const streamId = `stream-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const self = this;
     
     const stream = new ReadableStream<string>({
       start(controller) {
@@ -281,7 +282,7 @@ export class JSONPerformanceManager {
       async pull(controller) {
         try {
           const jsonString = JSON.stringify(data);
-          const chunks = this.chunkString(jsonString, options.chunkSize);
+          const chunks = self.chunkString(jsonString, options.chunkSize);
           
           for (const chunk of chunks) {
             controller.enqueue(chunk);
@@ -293,12 +294,12 @@ export class JSONPerformanceManager {
           }
           
           controller.close();
-          this.updateStreamingMetrics(jsonString.length, chunks.length);
+          self.updateStreamingMetrics(jsonString.length, chunks.length);
           console.log(`JSONPerformance: Completed streaming ${chunks.length} chunks`);
         } catch (error) {
           controller.error(error);
         }
-      }.bind(this)
+      }
     });
     
     this.activeStreams.set(streamId, stream);
