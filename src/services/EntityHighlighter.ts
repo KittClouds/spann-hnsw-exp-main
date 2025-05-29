@@ -12,40 +12,6 @@ export class EntityHighlighter {
   }
 
   /**
-   * Process a block with cursor position preservation to prevent jumping
-   */
-  public processBlockWithCursorPreservation(block: Block) {
-    if (this.isProcessing || block.type !== 'paragraph') return;
-    
-    // Skip blocks that don't have raw entity syntax
-    if (!hasRawEntitySyntax(block)) {
-      return;
-    }
-    
-    this.isProcessing = true;
-    
-    try {
-      // Store cursor position before making changes
-      const cursorPosition = this.editor.getTextCursorPosition();
-      const cursorBlockId = cursorPosition?.block?.id;
-      const isCurrentBlock = cursorBlockId === block.id;
-      
-      // Only process if this isn't the currently active block to avoid cursor jumping
-      if (isCurrentBlock) {
-        this.isProcessing = false;
-        return;
-      }
-      
-      this.processBlock(block);
-      
-    } catch (error) {
-      console.warn('EntityHighlighter: Error processing block with cursor preservation', error);
-    } finally {
-      this.isProcessing = false;
-    }
-  }
-
-  /**
    * Process a block and atomically convert raw entity syntax to inline specs
    * This is a one-shot migration layer that preserves the canonical data
    */
@@ -218,7 +184,7 @@ export class EntityHighlighter {
   }
 
   /**
-   * Apply all replacements atomically using BlockNote's updateBlock method
+   * Apply all replacements atomically in a single editor transaction
    * This prevents race conditions by ensuring sidebar reads happen after migration
    */
   private applyReplacementsAtomically(block: Block, replacements: Array<{from: number; to: number; type: string; props: Record<string, any>}>) {
@@ -266,7 +232,7 @@ export class EntityHighlighter {
         }
       }
       
-      // Update the block with new content using BlockNote's updateBlock method
+      // Update the block with new content atomically
       this.editor.updateBlock(block.id, {
         content: newContent
       });
