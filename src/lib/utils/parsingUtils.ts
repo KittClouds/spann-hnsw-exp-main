@@ -82,6 +82,22 @@ function parseAttributesJSON(jsonStr: string | undefined): Record<string, any> |
   }
 }
 
+// Convert tags to CONCEPT entities for unified entity promotion
+function promoteTagsToEntities(tags: string[]): Entity[] {
+  return tags.map(tag => ({
+    kind: 'CONCEPT',
+    label: tag
+  }));
+}
+
+// Convert mentions to MENTION entities for unified entity promotion
+function promoteMentionsToEntities(mentions: string[]): Entity[] {
+  return mentions.map(mention => ({
+    kind: 'MENTION',
+    label: mention
+  }));
+}
+
 export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnections {
   const connections: ParsedConnections = { tags: [], mentions: [], links: [], entities: [], triples: [] };
   if (!blocks) return connections;
@@ -179,7 +195,29 @@ export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnect
   connections.tags = Array.from(uniqueTags);
   connections.mentions = Array.from(uniqueMentions);
   connections.links = Array.from(uniqueLinks);
-  connections.entities = Array.from(uniqueEntities.values());
+  
+  // Unified entity promotion: combine explicit entities with promoted tags/mentions
+  const allEntities = new Map<string, Entity>();
+  
+  // Add explicit entities
+  Array.from(uniqueEntities.values()).forEach(entity => {
+    const key = `${entity.kind}|${entity.label}`;
+    allEntities.set(key, entity);
+  });
+  
+  // Promote tags to CONCEPT entities
+  promoteTagsToEntities(connections.tags).forEach(entity => {
+    const key = `${entity.kind}|${entity.label}`;
+    allEntities.set(key, entity);
+  });
+  
+  // Promote mentions to MENTION entities
+  promoteMentionsToEntities(connections.mentions).forEach(entity => {
+    const key = `${entity.kind}|${entity.label}`;
+    allEntities.set(key, entity);
+  });
+  
+  connections.entities = Array.from(allEntities.values());
   connections.triples = triples;
 
   return connections;

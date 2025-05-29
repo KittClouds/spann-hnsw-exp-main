@@ -661,6 +661,7 @@ export class GraphService implements IGraphService {
 
   /**
    * Updates the connections (tags, mentions, links, entities, triples) for a specific note in the graph
+   * Updated to use unified entity promotion and canonical IDs
    * @param noteId ID of the note to update connections for
    * @param tags Array of tag strings
    * @param mentions Array of mention strings (usernames without @)
@@ -685,123 +686,77 @@ export class GraphService implements IGraphService {
     this.cy.startBatch();
     
     try {
-      // Remove existing tag connections
+      // Remove existing connections for this note
       this.cy.edges(`[label = "${EdgeType.HAS_TAG}"][source = "${noteId}"]`).remove();
-      
-      // Add new tag connections
-      tags.forEach(tag => {
-        // Check if tag node exists, create if needed
-        const tagSlug = slug(tag);
-        let tagNode = this.cy.getElementById(`tag-${tagSlug}`);
-        
-        if (tagNode.empty()) {
-          tagNode = this.cy.add({
-            group: 'nodes',
-            data: {
-              id: `tag-${tagSlug}`,
-              type: NodeType.TAG,
-              title: tag,
-              createdAt: new Date().toISOString()
-            }
-          });
-        }
-        
-        // Add edge if it doesn't exist
-        if (this.cy.edges(`[source = "${noteId}"][target = "${tagNode.id()}"][label = "${EdgeType.HAS_TAG}"]`).empty()) {
-          this.cy.add({
-            group: 'edges',
-            data: {
-              id: `${noteId}-tag-${tagSlug}`,
-              source: noteId,
-              target: tagNode.id(),
-              label: EdgeType.HAS_TAG
-            }
-          });
-        }
-      });
-      
-      // Handle mentions
       this.cy.edges(`[label = "${EdgeType.MENTIONS}"][source = "${noteId}"]`).remove();
+      this.cy.edges(`[label = "${EdgeType.LINKS_TO}"][source = "${noteId}"]`).remove();
+      this.cy.edges(`[label = "${EdgeType.MENTIONED_IN}"][target = "${noteId}"]`).remove();
       
-      mentions.forEach(mention => {
-        const targetNoteId = this.findNoteIdByTitle(mention);
-        if (targetNoteId && targetNoteId !== noteId) {
-          this.cy.add({
-            group: 'edges',
-            data: {
-              id: `${noteId}-mention-${targetNoteId}`,
-              source: noteId,
-              target: targetNoteId,
-              label: EdgeType.MENTIONS
-            }
-          });
+      // Unified entity promotion: process all entities (including promoted tags/mentions)
+      entities.forEach(entity => {
+        const entityId = generateEntityId(entity.kind, entity.label);
+        
+        // Ensure entity node exists with canonical ID
+        ensureEntityNode(entityId, entity, this.cy);
+        
+        // Create provenance edge (Entity → Note)
+        addEdgeIfMissing(entityId, noteId, EdgeType.MENTIONED_IN, this.cy);
+        
+        // For backwards compatibility, also create type-specific edges
+        if (entity.kind === 'CONCEPT' && tags.includes(entity.label)) {
+          // Create HAS_TAG edge for promoted tag entities
+          addEdgeIfMissing(noteId, entityId, EdgeType.HAS_TAG, this.cy);
+        } else if (entity.kind === 'MENTION' && mentions.includes(entity.label)) {
+          // Try to find target note for mention
+          const targetNoteId = this.findNoteIdByTitle(entity.label);
+          if (targetNoteId && targetNoteId !== noteId) {
+            addEdgeIfMissing(noteId, targetNoteId, EdgeType.MENTIONS, this.cy);
+          }
         }
       });
       
-      // Handle links
-      this.cy.edges(`[label = "${EdgeType.LINKS_TO}"][source = "${noteId}"]`).remove();
-      
+      // Handle links (find target notes)
       links.forEach(linkTitle => {
         const targetNoteId = this.findNoteIdByTitle(linkTitle);
         if (targetNoteId && targetNoteId !== noteId) {
-          this.cy.add({
-            group: 'edges',
-            data: {
-              id: `${noteId}-link-${targetNoteId}`,
-              source: noteId,
-              target: targetNoteId,
-              label: EdgeType.LINKS_TO
-            }
-          });
+          addEdgeIfMissing(noteId, targetNoteId, EdgeType.LINKS_TO, this.cy);
         }
       });
       
-      // Handle entities
-      // Remove existing entity mentions
-      this.cy.edges(`[label = "${EdgeType.MENTIONED_IN}"][target = "${noteId}"]`).remove();
-      
-      entities.forEach(ent => {
-        const entId = generateEntityId(ent.kind, ent.label);
-        ensureEntityNode(entId, ent, this.cy);
+      // Handle triples with canonical entity IDs
+      triples.forEach(triple => {
+        const subjId = generateEntityId(triple.subject.kind, triple.subject.label);
+        const objId = generateEntityId(triple.object.kind, triple.object.label);
 
-        // provenance edge (Entity → Note)
-        addEdgeIfMissing(entId, noteId, EdgeType.MENTIONED_IN, this.cy);
-      });
-      
-      // Handle triples
-      triples.forEach(t => {
-        const subjId = generateEntityId(t.subject.kind, t.subject.label);
-        const objId = generateEntityId(t.object.kind, t.object.label);
+        // Ensure participants exist with canonical IDs
+        ensureEntityNode(subjId, triple.subject, this.cy);
+        ensureEntityNode(objId, triple.object, this.cy);
 
-        // ensure participants exist
-        ensureEntityNode(subjId, t.subject, this.cy);
-        ensureEntityNode(objId, t.object, this.cy);
-
-        // create TRIPLE node
-        const tripleId = t.id || generateTripleId();  // Use optional chaining and provide default
+        // Create TRIPLE node
+        const tripleId = triple.id || generateTripleId();
         if (this.cy.getElementById(tripleId).empty()) {
           this.cy.add({
             group: 'nodes',
             data: {
               id: tripleId,
               type: NodeType.TRIPLE,
-              predicate: t.predicate,
-              createdIn: noteId         // provenance
+              predicate: triple.predicate,
+              createdIn: noteId
             },
             style: schema.getNodeDef('TRIPLE')?.defaultStyle
           });
           
-          // Assign ID to triple if it doesn't have one already
-          if (!t.id) {
-            t.id = tripleId; // write-back so caller can store it if desired
+          // Write back ID for caller reference
+          if (!triple.id) {
+            triple.id = tripleId;
           }
         }
 
-        // link subject & object
-        addEdgeIfMissing(subjId, tripleId, EdgeType.SUBJECT_OF, this.cy, t.predicate);
-        addEdgeIfMissing(objId, tripleId, EdgeType.OBJECT_OF, this.cy, t.predicate);
+        // Link subject & object to triple
+        addEdgeIfMissing(subjId, tripleId, EdgeType.SUBJECT_OF, this.cy, triple.predicate);
+        addEdgeIfMissing(objId, tripleId, EdgeType.OBJECT_OF, this.cy, triple.predicate);
 
-        // provenance edge (Triple node is *mentioned in* this note)
+        // Provenance edge (Triple is mentioned in this note)
         addEdgeIfMissing(tripleId, noteId, EdgeType.MENTIONED_IN, this.cy);
       });
       
@@ -810,7 +765,7 @@ export class GraphService implements IGraphService {
     }
     
     this.cy.endBatch();
-    console.log(`[GraphService] Updated connections for note ${noteId}`);
+    console.log(`[GraphService] Updated connections for note ${noteId} using unified entity promotion`);
   }
   
   // Helper method to find note by title

@@ -1,16 +1,20 @@
 
-import { Entity } from '@/lib/utils/parsingUtils';
 import { EntityWithReferences } from '@/livestore/queries/entities';
 import { GraphService } from './GraphService';
-import { NodeType, EdgeType } from './types';
 import { generateEntityId } from '@/lib/utils/ids';
+import { Entity } from '@/lib/utils/parsingUtils';
+import { NodeType, EdgeType } from './types';
 
 /**
  * Extension methods for GraphService to support entity browser functionality
+ * Updated to use LiveStore queries instead of Cytoscape scanning
  */
 export function extendGraphService(service: GraphService): void {
-  // Add getAllEntities method to GraphService
+  // Note: This method is now deprecated in favor of LiveStore queries
+  // It's kept for backwards compatibility but should be replaced with useAllEntitiesArray()
   service.getAllEntities = function(): EntityWithReferences[] {
+    console.warn('[GraphServiceExtension] getAllEntities() is deprecated. Use LiveStore queries instead.');
+    
     const entities: EntityWithReferences[] = [];
     const entityNodes = this.cy.nodes(`[type = "${NodeType.ENTITY}"]`);
     
@@ -41,7 +45,7 @@ export function extendGraphService(service: GraphService): void {
     return entities;
   };
   
-  // Add createEntity method to GraphService
+  // Create entity using canonical ID generation
   service.createEntity = function(entity: Entity): boolean {
     const { kind, label } = entity;
     const entityId = generateEntityId(kind, label);
@@ -51,7 +55,7 @@ export function extendGraphService(service: GraphService): void {
       return false;
     }
     
-    // Add entity node
+    // Add entity node with proper type
     this.cy.add({
       group: 'nodes',
       data: {
@@ -59,14 +63,15 @@ export function extendGraphService(service: GraphService): void {
         type: NodeType.ENTITY,
         kind,
         label,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        attributes: entity.attributes || {}
       }
     });
     
     return true;
   };
   
-  // Add getEntityReferences method to GraphService
+  // Get entity references - simplified to use direct edge queries
   service.getEntityReferences = function(kind: string, label: string): {id: string, title: string}[] {
     const entityId = generateEntityId(kind, label);
     const entityNode = this.cy.getElementById(entityId);
@@ -93,7 +98,7 @@ export function extendGraphService(service: GraphService): void {
     return references;
   };
   
-  // Add getEntityRelationships method to GraphService
+  // Get entity relationships using canonical IDs
   service.getEntityRelationships = function(kind: string, label: string): any[] {
     const entityId = generateEntityId(kind, label);
     const entityNode = this.cy.getElementById(entityId);

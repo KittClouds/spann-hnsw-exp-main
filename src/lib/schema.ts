@@ -1,7 +1,6 @@
-
 import { atomWithStorage } from 'jotai/utils';
-import { v4 as uuidv4 } from 'uuid';
 import { slug } from './utils';
+import { generateEntityId } from './utils/ids';
 
 export interface NodeDef {
   kind: string;
@@ -148,7 +147,7 @@ class SchemaRegistry {
       }
     });
     
-    // Register built-in edge types
+    // Register built-in edge types (remove automatic RELATED_TO creation)
     this.registerEdge('HAS_TAG', { from: 'NOTE', to: 'TAG', directed: true });
     this.registerEdge('MENTIONS', { from: 'NOTE', to: 'MENTION', directed: true });
     this.registerEdge('CONTAINS', { from: 'FOLDER', to: ['NOTE', 'FOLDER'], directed: true });
@@ -173,6 +172,8 @@ class SchemaRegistry {
       directed: true,
       defaultStyle: { 'line-color': '#2FA84F' }
     });
+    
+    // Keep RELATED_TO for explicit relationships only
     this.registerEdge('RELATED_TO', { from: '*', to: '*', directed: false });
     
     // Example reflexive predicate
@@ -290,11 +291,8 @@ export const schemaAtom = atomWithStorage<SchemaDefinitions>('galaxy-schema-defs
   edges: []
 });
 
-// Function to generate unique IDs for entities
-export const generateEntityId = (kind: string, label: string): string => {
-  const slugLabel = slug(label);
-  return `${kind.toLowerCase()}-${slugLabel}-${uuidv4().substring(0, 8)}`;
-};
+// Use the canonical generateEntityId from utils/ids.ts
+export { generateEntityId } from './utils/ids';
 
 // Helper to check if two entity types are compatible for an edge
 export function areTypesCompatible(edgeDef: EdgeDef, sourceKind: string, targetKind: string): boolean {
