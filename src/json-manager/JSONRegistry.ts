@@ -1,4 +1,3 @@
-
 import { jsonManager } from './JSONManager';
 import { 
   blockNoteAdapter, 
@@ -6,17 +5,22 @@ import {
   entityAdapter, 
   noteAdapter 
 } from './adapters';
+import { 
+  liveStoreAdapter, 
+  backwardCompatibilityAdapter,
+  initializeUnifiedAdapters 
+} from './adapters/UnifiedAdapters';
 import { initializeSchemas } from './schemas';
 
 /**
- * JSON Registry - Central registration point for all adapters
- * Initializes the Fort Knox JSON Management System
+ * JSON Registry - Central registration point for all adapters including unified serialization
+ * Initializes the Fort Knox JSON Management System with backward compatibility
  */
 export class JSONRegistry {
   private static initialized = false;
   
   /**
-   * Initialize all JSON adapters and protection systems
+   * Initialize all JSON adapters, unified serialization, and protection systems
    */
   static initialize(): void {
     if (this.initialized) {
@@ -24,16 +28,21 @@ export class JSONRegistry {
       return;
     }
     
-    console.log('JSONRegistry: Initializing Fort Knox JSON Management System');
+    console.log('JSONRegistry: Initializing Fort Knox JSON Management System with Unified Serialization');
     
     // Initialize schemas first
     initializeSchemas();
     
-    // Register all adapters
+    // Initialize unified adapters and namespace mappings
+    initializeUnifiedAdapters();
+    
+    // Register all adapters including new ones
     jsonManager.registerAdapter('blocknote', blockNoteAdapter);
     jsonManager.registerAdapter('cytoscape', cytoscapeAdapter);
     jsonManager.registerAdapter('entity', entityAdapter);
     jsonManager.registerAdapter('note', noteAdapter);
+    jsonManager.registerAdapter('livestore', liveStoreAdapter);
+    jsonManager.registerAdapter('compatibility', backwardCompatibilityAdapter);
     
     // Set up periodic cleanup
     setInterval(() => {
@@ -41,11 +50,12 @@ export class JSONRegistry {
     }, 300000); // Clean every 5 minutes
     
     this.initialized = true;
-    console.log('JSONRegistry: Fort Knox JSON Management System ready');
+    console.log('JSONRegistry: Fort Knox JSON Management System with Unified Serialization ready');
     
-    // Log schema report
+    // Log comprehensive report
     const report = jsonManager.getSchemaReport();
     console.log('JSONRegistry: Schema validation ready for types:', report.registeredTypes);
+    console.log('JSONRegistry: Unified serialization adapters initialized');
   }
   
   /**
