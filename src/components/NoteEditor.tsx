@@ -33,29 +33,12 @@ export function NoteEditor() {
   
   const entityHighlighterRef = useRef<EntityHighlighter | null>(null);
   const currentNoteIdRef = useRef<string | null>(null);
+  const editorInitializedRef = useRef(false);
   
-  // Get initial content from buffer or LiveStore
-  const getInitialContent = useCallback((): Block[] => {
-    if (!activeNote) {
-      return [createEmptyBlock()];
-    }
-    
-    // Try buffer first, then fallback to LiveStore content
-    const bufferedContent = getBuffer(activeNote.id);
-    if (bufferedContent && bufferedContent.length > 0) {
-      return bufferedContent;
-    }
-    
-    if (activeNote.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
-      return activeNote.content as Block[];
-    }
-    
-    return [createEmptyBlock()];
-  }, [activeNote]);
-  
+  // Initialize editor with empty content first
   const editor = useBlockNote({
     schema: entityEditorSchema,
-    initialContent: getInitialContent(),
+    initialContent: [createEmptyBlock()],
   });
 
   // Initialize entity highlighter
@@ -95,7 +78,7 @@ export function NoteEditor() {
     const bufferedBlocks = getBuffer(activeNote.id);
     if (!bufferedBlocks) return;
     
-    console.log("NoteEditor: Idle save triggered for", activeNote.id);
+    console.log("NoteEditor: Idle save triggered for note", activeNote.id);
     
     // Persist to LiveStore
     updateNote(activeNote.id, { content: bufferedBlocks });
@@ -108,12 +91,53 @@ export function NoteEditor() {
     }
   }, 2000);
 
-  // Editor content change handler - write to buffer only, no re-renders
+  // Load content for a specific note
+  const loadNoteContent = useCallback((noteId: string, note: any) => {
+    if (!editor) return;
+    
+    console.log("NoteEditor: Loading content for note", noteId);
+    
+    // Try buffer first, then fallback to LiveStore content
+    let contentToLoad: Block[] = [createEmptyBlock()];
+    
+    const bufferedContent = getBuffer(noteId);
+    if (bufferedContent && bufferedContent.length > 0) {
+      console.log("NoteEditor: Using buffered content for", noteId, bufferedContent);
+      contentToLoad = bufferedContent;
+    } else if (note?.content && Array.isArray(note.content) && note.content.length > 0) {
+      console.log("NoteEditor: Using LiveStore content for", noteId, note.content);
+      contentToLoad = note.content as Block[];
+      // Initialize buffer with LiveStore content
+      setBuffer(noteId, contentToLoad);
+    } else {
+      console.log("NoteEditor: Using empty content for", noteId);
+      // Initialize buffer with empty content
+      setBuffer(noteId, contentToLoad);
+    }
+    
+    try {
+      // Replace editor content
+      editor.replaceBlocks(editor.document, contentToLoad);
+      
+      // Process entity highlighting after content load
+      if (entityHighlighterRef.current) {
+        setTimeout(() => {
+          entityHighlighterRef.current?.processAllInactiveBlocks();
+        }, 200);
+      }
+    } catch (error) {
+      console.error("NoteEditor: Error loading content for note", noteId, error);
+    }
+  }, [editor]);
+
+  // Editor content change handler - write to buffer only
   useEffect(() => {
     if (!editor || !activeNote) return;
     
     const handleContentChange = () => {
       const currentBlocks = editor.document as Block[];
+      
+      console.log("NoteEditor: Content changed for note", activeNote.id, "blocks:", currentBlocks.length);
       
       // Write to buffer (no re-renders)
       setBuffer(activeNote.id, currentBlocks);
@@ -125,57 +149,53 @@ export function NoteEditor() {
     editor.onEditorContentChange(handleContentChange);
     
     return () => {
-      // Cleanup but don't cancel - let pending saves complete
+      // Cleanup - let pending saves complete
     };
   }, [editor, activeNote, idleSave]);
 
-  // Handle note switching
+  // Handle note switching and initial load
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || !activeNoteId) return;
     
-    const newNoteId = activeNoteId;
     const previousNoteId = currentNoteIdRef.current;
     
-    // Skip if same note
-    if (newNoteId === previousNoteId) return;
+    console.log("NoteEditor: Note change detected", {
+      previous: previousNoteId,
+      current: activeNoteId,
+      editorInitialized: editorInitializedRef.current
+    });
+    
+    // Skip if same note and already initialized
+    if (activeNoteId === previousNoteId && editorInitializedRef.current) {
+      return;
+    }
     
     // Flush any pending saves from previous note
-    if (previousNoteId) {
+    if (previousNoteId && previousNoteId !== activeNoteId) {
+      console.log("NoteEditor: Flushing pending saves for previous note", previousNoteId);
       idleSave.flush();
     }
     
-    currentNoteIdRef.current = newNoteId;
+    // Update current note reference
+    currentNoteIdRef.current = activeNoteId;
     
+    // Load content for the new note
     if (activeNote) {
-      const newContent = getInitialContent();
-      console.log("NoteEditor: Switching to note", newNoteId, "with content", newContent);
-      
-      try {
-        // Replace blocks with new content
-        editor.replaceBlocks(editor.document, newContent);
-        
-        // Initialize buffer with current content
-        setBuffer(activeNote.id, newContent);
-        
-        // Process entity highlighting after a short delay
-        if (entityHighlighterRef.current) {
-          setTimeout(() => {
-            entityHighlighterRef.current?.processAllInactiveBlocks();
-          }, 200);
-        }
-      } catch (error) {
-        console.error("Error replacing blocks:", error);
-      }
+      loadNoteContent(activeNoteId, activeNote);
+      editorInitializedRef.current = true;
     }
-  }, [activeNoteId, activeNote, editor, getInitialContent, idleSave]);
+    
+  }, [activeNoteId, activeNote, editor, loadNoteContent, idleSave]);
 
   // Handle window blur/beforeunload to save immediately
   useEffect(() => {
     const handleBlur = () => {
+      console.log("NoteEditor: Window blur - flushing pending saves");
       idleSave.flush();
     };
     
     const handleBeforeUnload = () => {
+      console.log("NoteEditor: Before unload - flushing pending saves");
       idleSave.flush();
     };
     
@@ -202,6 +222,8 @@ export function NoteEditor() {
       return;
     }
     
+    console.log("NoteEditor: Deleting note", activeNote.id);
+    
     // Clear buffer for deleted note
     clearBuffer(activeNote.id);
     
@@ -213,6 +235,8 @@ export function NoteEditor() {
     const nextNoteId = notes[nextNoteIndex === noteIndex ? nextNoteIndex - 1 : nextNoteIndex]?.id;
     
     if (nextNoteId) {
+      // Reset editor initialized flag to force content reload
+      editorInitializedRef.current = false;
       setActiveNoteId(nextNoteId);
     }
     
