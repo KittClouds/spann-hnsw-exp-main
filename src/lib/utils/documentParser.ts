@@ -27,48 +27,51 @@ export function parseNoteConnectionsFromDocument(blocks: Block[]): DocumentConne
     // Process block content
     if (block.content && Array.isArray(block.content)) {
       for (const item of block.content) {
+        // Use type assertion to handle custom inline content
+        const inlineItem = item as any;
+        
         // Extract data from custom inline content specs
-        switch (item.type) {
+        switch (inlineItem.type) {
           case 'tag':
-            if (item.props?.text) {
-              connections.tags.push(item.props.text);
+            if (inlineItem.props?.text) {
+              connections.tags.push(inlineItem.props.text);
             }
             break;
             
           case 'mention':
-            if (item.props?.text) {
-              connections.mentions.push(item.props.text);
+            if (inlineItem.props?.text) {
+              connections.mentions.push(inlineItem.props.text);
             }
             break;
             
           case 'wikilink':
-            if (item.props?.text) {
-              connections.links.push(item.props.text);
+            if (inlineItem.props?.text) {
+              connections.links.push(inlineItem.props.text);
             }
             break;
             
           case 'entity':
-            if (item.props?.kind && item.props?.label) {
+            if (inlineItem.props?.kind && inlineItem.props?.label) {
               connections.entities.push({
-                kind: item.props.kind,
-                label: item.props.label,
-                attributes: item.props.attributes ? JSON.parse(item.props.attributes) : undefined
+                kind: inlineItem.props.kind,
+                label: inlineItem.props.label,
+                attributes: inlineItem.props.attributes ? JSON.parse(inlineItem.props.attributes) : undefined
               });
             }
             break;
             
           case 'triple':
-            if (item.props?.subjectKind && item.props?.subjectLabel && 
-                item.props?.predicate && item.props?.objectKind && item.props?.objectLabel) {
+            if (inlineItem.props?.subjectKind && inlineItem.props?.subjectLabel && 
+                inlineItem.props?.predicate && inlineItem.props?.objectKind && inlineItem.props?.objectLabel) {
               connections.triples.push({
                 subject: {
-                  kind: item.props.subjectKind,
-                  label: item.props.subjectLabel
+                  kind: inlineItem.props.subjectKind,
+                  label: inlineItem.props.subjectLabel
                 },
-                predicate: item.props.predicate,
+                predicate: inlineItem.props.predicate,
                 object: {
-                  kind: item.props.objectKind,
-                  label: item.props.objectLabel
+                  kind: inlineItem.props.objectKind,
+                  label: inlineItem.props.objectLabel
                 }
               });
             }
@@ -76,7 +79,7 @@ export function parseNoteConnectionsFromDocument(blocks: Block[]): DocumentConne
             
           case 'text':
             // Fallback: still detect raw syntax in plain text for migration
-            const text = item.text || '';
+            const text = inlineItem.text || '';
             
             // Extract raw tags
             const tagMatches = text.match(/#(\w+)/g);
@@ -141,8 +144,9 @@ export function hasRawEntitySyntax(block: Block): boolean {
   if (!block.content || !Array.isArray(block.content)) return false;
   
   for (const item of block.content) {
-    if (item.type === 'text' && item.text) {
-      const text = item.text;
+    const inlineItem = item as any;
+    if (inlineItem.type === 'text' && inlineItem.text) {
+      const text = inlineItem.text;
       // Check for any raw entity patterns
       if (
         /\[[\w]+\|[^\]]+\]/.test(text) ||           // Entity syntax
