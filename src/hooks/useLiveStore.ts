@@ -109,24 +109,12 @@ export function useNoteActions() {
 
   // Silent persistence - updates data without triggering re-renders
   const persistNoteSilently = (id: string, content: any) => {
-    // Use a special event that doesn't trigger reactive updates during active editing
-    // This mutates the underlying data but keeps the same object reference
-    const currentNotes = store.query(notes$);
-    const noteIndex = currentNotes.findIndex(note => note.id === id);
-    
-    if (noteIndex !== -1) {
-      // Direct mutation to avoid triggering reactive subscriptions
-      const note = currentNotes[noteIndex];
-      note.content = content;
-      note.updatedAt = new Date().toISOString();
-      
-      // Commit a silent update that won't cause component re-renders
-      store.commit(events.noteContentSilentlyUpdated({
-        id,
-        content,
-        updatedAt: note.updatedAt
-      }));
-    }
+    // Use the silent update event that won't trigger reactive updates during active editing
+    store.commit(events.noteContentSilentlyUpdated({
+      id,
+      content,
+      updatedAt: new Date().toISOString()
+    }));
   };
 
   const createNote = (note: any) => {

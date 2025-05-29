@@ -1,3 +1,4 @@
+
 import {
   Events,
   makeSchema,
@@ -161,6 +162,16 @@ export const events = {
     })
   }),
 
+  // Silent note content update event
+  noteContentSilentlyUpdated: Events.synced({
+    name: 'v1.NoteContentSilentlyUpdated',
+    schema: Schema.Struct({
+      id: Schema.String,
+      content: Schema.Array(Schema.Any),
+      updatedAt: Schema.String
+    })
+  }),
+
   noteDeleted: Events.synced({
     name: 'v1.NoteDeleted',
     schema: Schema.Struct({
@@ -262,6 +273,9 @@ const materializers = State.SQLite.materializers(events, {
 
   'v1.NoteUpdated': ({ id, updates, updatedAt }) =>
     tables.notes.update({ ...updates, updatedAt }).where({ id }),
+
+  'v1.NoteContentSilentlyUpdated': ({ id, content, updatedAt }) =>
+    tables.notes.update({ content, updatedAt }).where({ id }),
 
   'v1.NoteDeleted': ({ id }) =>
     tables.notes.delete().where({ id }),
