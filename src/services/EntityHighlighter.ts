@@ -22,6 +22,11 @@ export class EntityHighlighter {
     if (!hasRawEntitySyntax(block)) {
       return;
     }
+
+    // Skip the currently active block to prevent cursor jumping
+    if (this.isBlockActive(block)) {
+      return;
+    }
     
     this.isProcessing = true;
     
@@ -173,7 +178,7 @@ export class EntityHighlighter {
 
       // Apply replacements atomically in a single transaction
       if (replacements.length > 0) {
-        this.applyReplacementsAtomically(block, replacements);
+        this.applyReplacementsWithCursorPreservation(block, replacements);
       }
 
     } catch (error) {
@@ -184,11 +189,27 @@ export class EntityHighlighter {
   }
 
   /**
-   * Apply all replacements atomically in a single editor transaction
-   * This prevents race conditions by ensuring sidebar reads happen after migration
+   * Check if a block is currently active (has cursor/selection)
    */
-  private applyReplacementsAtomically(block: Block, replacements: Array<{from: number; to: number; type: string; props: Record<string, any>}>) {
+  private isBlockActive(block: Block): boolean {
     try {
+      const textCursorPosition = this.editor.getTextCursorPosition();
+      return textCursorPosition.block.id === block.id;
+    } catch {
+      // If we can't get cursor position, assume it's not active
+      return false;
+    }
+  }
+
+  /**
+   * Apply replacements while preserving cursor position
+   */
+  private applyReplacementsWithCursorPreservation(block: Block, replacements: Array<{from: number; to: number; type: string; props: Record<string, any>}>) {
+    try {
+      // Capture current selection state
+      const currentSelection = this.editor.getSelection();
+      const currentCursor = this.editor.getTextCursorPosition();
+      
       // Build new content array by replacing text segments with inline content
       const textContent = this.extractTextFromBlock(block);
       const newContent: any[] = [];
@@ -232,10 +253,20 @@ export class EntityHighlighter {
         }
       }
       
-      // Update the block with new content atomically
+      // Update the block with new content
       this.editor.updateBlock(block.id, {
         content: newContent
       });
+      
+      // Restore cursor position if this was the active block
+      // Note: We skip active blocks above, but this is defensive programming
+      if (currentCursor && currentCursor.block.id === block.id) {
+        try {
+          this.editor.setTextCursorPosition(block.id, "end");
+        } catch {
+          // If cursor restoration fails, it's not critical
+        }
+      }
       
     } catch (error) {
       console.warn('EntityHighlighter: Error applying replacements', error);
@@ -256,7 +287,7 @@ export class EntityHighlighter {
   // Debounced processing for performance
   private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
   
-  public processBlockDebounced(block: Block, delay = 150) {
+  public processBlockDebounced(block: Block, delay = 500) {
     if (this.debounceTimeout) {
       clearTimeout(this.debounceTimeout);
     }
@@ -264,5 +295,21 @@ export class EntityHighlighter {
     this.debounceTimeout = setTimeout(() => {
       this.processBlock(block);
     }, delay);
+  }
+
+  /**
+   * Process all blocks that are not currently active
+   */
+  public processAllInactiveBlocks() {
+    try {
+      const allBlocks = this.editor.document as Block[];
+      allBlocks.forEach(block => {
+        if (block.type === 'paragraph' && !this.isBlockActive(block)) {
+          this.processBlock(block);
+        }
+      });
+    } catch (error) {
+      console.warn('EntityHighlighter: Error processing inactive blocks', error);
+    }
   }
 }

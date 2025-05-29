@@ -1,3 +1,4 @@
+
 import { useActiveNote, useActiveNoteId, useNotes, useNoteActions } from '@/hooks/useLiveStore';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -31,9 +32,7 @@ export function NoteEditor() {
   
   // Track the current note being edited to prevent cross-contamination
   const currentNoteRef = useRef<string | null>(null);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const entityHighlighterRef = useRef<EntityHighlighter | null>(null);
-  const migrationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Ensure we always have valid initial content
   const getInitialContent = useCallback((): Block[] => {
@@ -90,97 +89,68 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Improved save function that captures the current note at call time
-  const saveChanges = useCallback(() => {
-    if (!editor || !activeNote) return;
-    
-    // Capture the current note at the time this function is called
-    const noteToSave = activeNote;
-    const noteIdToSave = noteToSave.id;
-    
-    // Clear any existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    
-    saveTimeoutRef.current = setTimeout(() => {
-      // Double-check we're still on the same note
-      if (currentNoteRef.current !== noteIdToSave) {
-        console.log("NoteEditor: Skipping save - note changed during debounce");
-        return;
-      }
+  // Debounced save function
+  const debouncedSave = useCallback(
+    debounce(() => {
+      if (!editor || !activeNote) return;
       
       const currentBlocks = editor.document as Block[];
-      console.log("NoteEditor: Saving changes for", noteIdToSave);
+      console.log("NoteEditor: Saving changes for", activeNote.id);
       
       // Update the note content
-      updateNote(noteIdToSave, { content: currentBlocks });
+      updateNote(activeNote.id, { content: currentBlocks });
       
       // Serialize the note for potential external usage
       try {
-        const updatedNote = { ...noteToSave, content: currentBlocks };
+        const updatedNote = { ...activeNote, content: currentBlocks };
         const doc = NoteSerializer.toDocument(updatedNote);
         const json = doc.toJSON();
         console.log("NoteEditor: Serialized note:", json);
       } catch (err) {
         console.error("Error serializing note:", err);
       }
-    }, 500);
-  }, [editor, activeNote, updateNote]);
+    }, 500),
+    [editor, activeNote, updateNote]
+  );
 
-  // Set up content change listener with atomic entity migration
+  // Debounced entity processing
+  const debouncedEntityProcessing = useCallback(
+    debounce(() => {
+      if (entityHighlighterRef.current) {
+        entityHighlighterRef.current.processAllInactiveBlocks();
+      }
+    }, 1000), // Longer delay to ensure user has stopped typing
+    []
+  );
+
+  // Set up content change listener with simplified debouncing
   useEffect(() => {
     if (!editor) return;
     
     const handleContentChange = () => {
-      // Clear any pending migration
-      if (migrationTimeoutRef.current) {
-        clearTimeout(migrationTimeoutRef.current);
-      }
+      // Save changes with debouncing
+      debouncedSave();
       
-      // Process entity migration atomically before saving
-      migrationTimeoutRef.current = setTimeout(() => {
-        if (entityHighlighterRef.current) {
-          const changedBlocks = editor.document as Block[];
-          changedBlocks.forEach(block => {
-            if (block.type === 'paragraph') {
-              entityHighlighterRef.current?.processBlock(block);
-            }
-          });
-        }
-        
-        // Save changes after migration is complete
-        // This ensures sidebar reads canonical data
-        setTimeout(() => {
-          saveChanges();
-        }, 50);
-      }, 100);
+      // Process entity highlighting with longer debouncing
+      debouncedEntityProcessing();
     };
     
     editor.onEditorContentChange(handleContentChange);
     
     return () => {
-      // Cancel any pending saves and migrations when component unmounts or editor changes
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = null;
-      }
-      if (migrationTimeoutRef.current) {
-        clearTimeout(migrationTimeoutRef.current);
-        migrationTimeoutRef.current = null;
-      }
+      // Cancel any pending operations when component unmounts or editor changes
+      debouncedSave.cancel();
+      debouncedEntityProcessing.cancel();
     };
-  }, [editor, saveChanges]);
+  }, [editor, debouncedSave, debouncedEntityProcessing]);
 
-  // Handle note switching - this is the critical fix
+  // Handle note switching
   useEffect(() => {
     if (!editor) return;
     
-    // Cancel any pending saves from the previous note
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
+    // Cancel any pending operations from the previous note
+    debouncedSave.cancel();
+    debouncedEntityProcessing.cancel();
     
     // Update the current note reference
     currentNoteRef.current = activeNoteId;
@@ -193,21 +163,17 @@ export function NoteEditor() {
         // Replace blocks with new content
         editor.replaceBlocks(editor.document, newContent);
         
-        // Process entity highlighting for initial content
+        // Process entity highlighting for initial content after a short delay
         if (entityHighlighterRef.current) {
           setTimeout(() => {
-            newContent.forEach(block => {
-              if (block.type === 'paragraph') {
-                entityHighlighterRef.current?.processBlock(block);
-              }
-            });
-          }, 100);
+            entityHighlighterRef.current?.processAllInactiveBlocks();
+          }, 200);
         }
       } catch (error) {
         console.error("Error replacing blocks:", error);
       }
     }
-  }, [activeNoteId, activeNote, editor, getInitialContent]);
+  }, [activeNoteId, activeNote, editor, getInitialContent, debouncedSave, debouncedEntityProcessing]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
