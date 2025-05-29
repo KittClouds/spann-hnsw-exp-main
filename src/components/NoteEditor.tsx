@@ -15,8 +15,8 @@ import { EmptyNoteState } from './EmptyNoteState';
 import { createEmptyBlock } from '@/lib/utils/blockUtils';
 import { entityEditorSchema } from '@/lib/editor/EntityEditorSchema';
 import { EntityHighlighter } from '@/services/EntityHighlighter';
-import { setBuffer, getBuffer, clearBuffer, hasBuffer, validateBuffer } from '@/hooks/useEditorBuffer';
 import { useIdleCallback } from '@/hooks/useIdleCallback';
+import { useHardenedState } from '@/cursor-stability/useHardenedState';
 
 export function NoteEditor() {
   const activeNote = useActiveNote();
@@ -34,18 +34,33 @@ export function NoteEditor() {
   const currentNoteIdRef = useRef<string | null>(null);
   const isLoadingContentRef = useRef(false);
   
+  // Initialize hardened state management
+  const {
+    setEditor,
+    loadNote,
+    saveNote,
+    switchNote,
+    updateNote: updateNoteState,
+    validateState,
+    getHealthMetrics,
+    emergencyRecovery,
+    getCurrentNoteId
+  } = useHardenedState();
+  
   // Initialize editor with empty content only - no reactive dependencies
   const editor = useBlockNote({
     schema: entityEditorSchema,
     initialContent: [createEmptyBlock()],
   });
 
-  // Initialize entity highlighter
+  // Register editor with hardened state system
   useEffect(() => {
     if (editor) {
+      setEditor(editor);
       entityHighlighterRef.current = new EntityHighlighter(editor as any);
+      console.log('NoteEditor: Editor registered with hardened state system');
     }
-  }, [editor]);
+  }, [editor, setEditor]);
 
   // Theme change handler
   useEffect(() => {
@@ -70,52 +85,75 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Idle save to LiveStore
-  const idleSave = useIdleCallback(() => {
+  // Hardened idle save to LiveStore
+  const idleSave = useIdleCallback(async () => {
     if (!activeNote || isLoadingContentRef.current) return;
     
-    const bufferedBlocks = getBuffer(activeNote.id);
-    if (!bufferedBlocks || !validateBuffer(activeNote.id)) return;
+    const currentNoteId = getCurrentNoteId();
+    if (currentNoteId !== activeNote.id) {
+      console.warn('NoteEditor: Note ID mismatch during idle save, skipping');
+      return;
+    }
     
-    console.log("NoteEditor: Idle save triggered for", activeNote.id);
+    // Validate state before saving
+    if (!validateState(activeNote.id)) {
+      console.error('NoteEditor: State validation failed during idle save');
+      return;
+    }
     
-    // Persist to LiveStore
-    updateNote(activeNote.id, { content: bufferedBlocks });
+    console.log("NoteEditor: Hardened idle save triggered for", activeNote.id);
     
-    // Process entity highlighting after save
-    if (entityHighlighterRef.current) {
-      setTimeout(() => {
-        entityHighlighterRef.current?.processAllInactiveBlocks();
-      }, 100);
+    // Get current content from editor
+    const currentBlocks = editor?.document as Block[];
+    if (!currentBlocks) {
+      console.warn('NoteEditor: No editor content available for save');
+      return;
+    }
+    
+    // Save through hardened state system
+    const success = await saveNote(activeNote.id, currentBlocks);
+    
+    if (success) {
+      // Persist to LiveStore
+      updateNote(activeNote.id, { content: currentBlocks });
+      
+      // Process entity highlighting after save
+      if (entityHighlighterRef.current) {
+        setTimeout(() => {
+          entityHighlighterRef.current?.processAllInactiveBlocks();
+        }, 100);
+      }
+    } else {
+      console.error('NoteEditor: Hardened save failed for note', activeNote.id);
+      toast("Save failed", {
+        description: "Your changes may not be saved. Please try again.",
+      });
     }
   }, 500);
 
-  // Load content for a specific note
-  const loadNoteContent = useCallback((noteId: string, note: any) => {
+  // Hardened content loading for a specific note
+  const loadNoteContent = useCallback(async (noteId: string, note: any) => {
     if (!editor || isLoadingContentRef.current) return;
     
-    console.log("NoteEditor: Loading content for note", noteId);
+    console.log("NoteEditor: Loading content with hardened protection for note", noteId);
     isLoadingContentRef.current = true;
     
     try {
-      // Clear any existing buffer for this note to prevent contamination
-      clearBuffer(noteId);
-      
-      // Get content from LiveStore (not from buffer)
-      let contentToLoad: Block[];
+      // Prepare fallback content
+      let fallbackContent: Block[];
       if (note.content && Array.isArray(note.content) && note.content.length > 0) {
-        contentToLoad = note.content as Block[];
+        fallbackContent = note.content as Block[];
       } else {
-        contentToLoad = [createEmptyBlock()];
+        fallbackContent = [createEmptyBlock()];
       }
+      
+      // Load through hardened state system
+      const contentToLoad = await loadNote(noteId, fallbackContent);
       
       console.log("NoteEditor: Replacing blocks with", contentToLoad.length, "blocks for note", noteId);
       
       // Replace editor content
       editor.replaceBlocks(editor.document, contentToLoad);
-      
-      // Initialize buffer with correct content
-      setBuffer(noteId, contentToLoad);
       
       // Process entity highlighting after content is loaded
       if (entityHighlighterRef.current) {
@@ -124,33 +162,41 @@ export function NoteEditor() {
         }, 200);
       }
     } catch (error) {
-      console.error("Error loading note content:", error);
+      console.error("NoteEditor: Hardened content loading failed:", error);
+      toast("Content loading failed", {
+        description: "There was an issue loading the note content.",
+      });
     } finally {
       isLoadingContentRef.current = false;
     }
-  }, [editor]);
+  }, [editor, loadNote]);
 
-  // Editor content change handler - write to buffer only, no re-renders
+  // Hardened editor content change handler
   useEffect(() => {
     if (!editor || !activeNote) return;
     
-    const handleContentChange = () => {
+    const handleContentChange = async () => {
       // Skip if we're currently loading content
       if (isLoadingContentRef.current) return;
       
       const currentBlocks = editor.document as Block[];
+      const currentNoteId = getCurrentNoteId();
       
-      // Validate that we're updating the correct note's buffer
-      if (activeNote.id !== currentNoteIdRef.current) {
-        console.warn("NoteEditor: Content change for wrong note, skipping buffer update");
+      // Validate that we're updating the correct note
+      if (activeNote.id !== currentNoteId) {
+        console.warn("NoteEditor: Content change for wrong note, skipping update");
         return;
       }
       
-      // Write to buffer (no re-renders)
-      setBuffer(activeNote.id, currentBlocks);
+      // Update through hardened state system
+      const success = await updateNoteState(activeNote.id, currentBlocks);
       
-      // Touch idle save timer
-      idleSave.touch();
+      if (success) {
+        // Touch idle save timer
+        idleSave.touch();
+      } else {
+        console.error("NoteEditor: Hardened state update failed");
+      }
     };
     
     editor.onEditorContentChange(handleContentChange);
@@ -158,9 +204,9 @@ export function NoteEditor() {
     return () => {
       // Cleanup but don't cancel - let pending saves complete
     };
-  }, [editor, activeNote, idleSave]);
+  }, [editor, activeNote, updateNoteState, getCurrentNoteId, idleSave]);
 
-  // Handle note switching - this is the critical part
+  // Hardened note switching - this is the critical part
   useEffect(() => {
     if (!editor) return;
     
@@ -170,21 +216,49 @@ export function NoteEditor() {
     // Skip if same note
     if (newNoteId === previousNoteId) return;
     
-    console.log("NoteEditor: Switching from note", previousNoteId, "to", newNoteId);
+    console.log("NoteEditor: Hardened note switch from", previousNoteId, "to", newNoteId);
     
-    // Flush any pending saves from previous note
-    if (previousNoteId) {
-      idleSave.flush();
-    }
+    // Perform hardened note switch
+    const performSwitch = async () => {
+      try {
+        // Flush any pending saves from previous note
+        if (previousNoteId) {
+          idleSave.flush();
+        }
+        
+        // Perform atomic switch through hardened state system
+        const success = await switchNote(previousNoteId, newNoteId);
+        
+        if (!success) {
+          console.error('NoteEditor: Hardened note switch failed');
+          toast("Note switch failed", {
+            description: "There was an issue switching notes. Please try again.",
+          });
+          return;
+        }
+        
+        // Update current note reference
+        currentNoteIdRef.current = newNoteId;
+        
+        // Load content for the new note
+        if (activeNote) {
+          await loadNoteContent(newNoteId, activeNote);
+        }
+      } catch (error) {
+        console.error('NoteEditor: Hardened note switch error:', error);
+        
+        // Emergency recovery if switch fails
+        console.warn('NoteEditor: Attempting emergency recovery');
+        emergencyRecovery();
+        
+        toast("Critical error", {
+          description: "Emergency recovery initiated. Please reload the page if issues persist.",
+        });
+      }
+    };
     
-    // Update current note reference
-    currentNoteIdRef.current = newNoteId;
-    
-    // Load content for the new note
-    if (activeNote) {
-      loadNoteContent(newNoteId, activeNote);
-    }
-  }, [activeNoteId, activeNote, editor, loadNoteContent, idleSave]);
+    performSwitch();
+  }, [activeNoteId, activeNote, editor, loadNoteContent, idleSave, switchNote, emergencyRecovery]);
 
   // Handle window blur/beforeunload to save immediately
   useEffect(() => {
@@ -205,6 +279,20 @@ export function NoteEditor() {
     };
   }, [idleSave]);
 
+  // Periodic health monitoring (development helper)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      const healthCheck = setInterval(() => {
+        const health = getHealthMetrics();
+        if (!health.stateHealth.isHealthy || health.alerts.length > 0) {
+          console.warn('NoteEditor: Health issues detected', health);
+        }
+      }, 30000); // Check every 30 seconds
+      
+      return () => clearInterval(healthCheck);
+    }
+  }, [getHealthMetrics]);
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
       updateNote(activeNote.id, { title: e.target.value });
@@ -218,9 +306,6 @@ export function NoteEditor() {
       });
       return;
     }
-    
-    // Clear buffer for deleted note
-    clearBuffer(activeNote.id);
     
     const noteIndex = notes.findIndex(note => note.id === activeNoteId);
     
