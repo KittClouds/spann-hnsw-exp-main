@@ -7,7 +7,6 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import { Block } from '@blocknote/core';
-import { debounce } from 'lodash';
 import { Button } from './ui/button';
 import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,8 +14,10 @@ import { ConnectionsPanel } from './connections/ConnectionsPanel';
 import { EmptyNoteState } from './EmptyNoteState';
 import { NoteSerializer } from '@/services/NoteSerializer';
 import { createEmptyBlock } from '@/lib/utils/blockUtils';
-import { entityEditorSchema, EntityEditorSchema } from '@/lib/editor/EntityEditorSchema';
+import { entityEditorSchema } from '@/lib/editor/EntityEditorSchema';
 import { EntityHighlighter } from '@/services/EntityHighlighter';
+import { setBuffer, getBuffer, clearBuffer } from '@/hooks/useEditorBuffer';
+import { useIdleCallback } from '@/hooks/useIdleCallback';
 
 export function NoteEditor() {
   const activeNote = useActiveNote();
@@ -30,28 +31,25 @@ export function NoteEditor() {
     return 'dark';
   });
   
-  // Track the current note being edited to prevent cross-contamination
-  const currentNoteRef = useRef<string | null>(null);
   const entityHighlighterRef = useRef<EntityHighlighter | null>(null);
+  const currentNoteIdRef = useRef<string | null>(null);
   
-  // Ensure we always have valid initial content
+  // Get initial content from buffer or LiveStore
   const getInitialContent = useCallback((): Block[] => {
-    console.log("NoteEditor: getInitialContent called", { activeNote, content: activeNote?.content });
-    
-    // If no active note, return default content
     if (!activeNote) {
-      console.log("NoteEditor: No active note, returning default content");
       return [createEmptyBlock()];
     }
     
-    // Check if content exists and is a valid array
+    // Try buffer first, then fallback to LiveStore content
+    const bufferedContent = getBuffer(activeNote.id);
+    if (bufferedContent && bufferedContent.length > 0) {
+      return bufferedContent;
+    }
+    
     if (activeNote.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
-      console.log("NoteEditor: Using existing content", activeNote.content);
       return activeNote.content as Block[];
     }
     
-    // Return a default empty paragraph block if no content
-    console.log("NoteEditor: No valid content found, creating default block");
     return [createEmptyBlock()];
   }, [activeNote]);
   
@@ -60,13 +58,14 @@ export function NoteEditor() {
     initialContent: getInitialContent(),
   });
 
-  // Initialize entity highlighter when editor is ready
+  // Initialize entity highlighter
   useEffect(() => {
     if (editor) {
       entityHighlighterRef.current = new EntityHighlighter(editor as any);
     }
   }, [editor]);
 
+  // Theme change handler
   useEffect(() => {
     const handleThemeChange = () => {
       const isDark = document.documentElement.classList.contains('dark');
@@ -89,81 +88,76 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Debounced save function
-  const debouncedSave = useCallback(
-    debounce(() => {
-      if (!editor || !activeNote) return;
-      
-      const currentBlocks = editor.document as Block[];
-      console.log("NoteEditor: Saving changes for", activeNote.id);
-      
-      // Update the note content
-      updateNote(activeNote.id, { content: currentBlocks });
-      
-      // Serialize the note for potential external usage
-      try {
-        const updatedNote = { ...activeNote, content: currentBlocks };
-        const doc = NoteSerializer.toDocument(updatedNote);
-        const json = doc.toJSON();
-        console.log("NoteEditor: Serialized note:", json);
-      } catch (err) {
-        console.error("Error serializing note:", err);
-      }
-    }, 500),
-    [editor, activeNote, updateNote]
-  );
+  // Idle save to LiveStore
+  const idleSave = useIdleCallback(() => {
+    if (!activeNote) return;
+    
+    const bufferedBlocks = getBuffer(activeNote.id);
+    if (!bufferedBlocks) return;
+    
+    console.log("NoteEditor: Idle save triggered for", activeNote.id);
+    
+    // Persist to LiveStore
+    updateNote(activeNote.id, { content: bufferedBlocks });
+    
+    // Process entity highlighting after save
+    if (entityHighlighterRef.current) {
+      setTimeout(() => {
+        entityHighlighterRef.current?.processAllInactiveBlocks();
+      }, 100);
+    }
+  }, 2000);
 
-  // Debounced entity processing
-  const debouncedEntityProcessing = useCallback(
-    debounce(() => {
-      if (entityHighlighterRef.current) {
-        entityHighlighterRef.current.processAllInactiveBlocks();
-      }
-    }, 1000), // Longer delay to ensure user has stopped typing
-    []
-  );
-
-  // Set up content change listener with simplified debouncing
+  // Editor content change handler - write to buffer only, no re-renders
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || !activeNote) return;
     
     const handleContentChange = () => {
-      // Save changes with debouncing
-      debouncedSave();
+      const currentBlocks = editor.document as Block[];
       
-      // Process entity highlighting with longer debouncing
-      debouncedEntityProcessing();
+      // Write to buffer (no re-renders)
+      setBuffer(activeNote.id, currentBlocks);
+      
+      // Touch idle save timer
+      idleSave.touch();
     };
     
     editor.onEditorContentChange(handleContentChange);
     
     return () => {
-      // Cancel any pending operations when component unmounts or editor changes
-      debouncedSave.cancel();
-      debouncedEntityProcessing.cancel();
+      // Cleanup but don't cancel - let pending saves complete
     };
-  }, [editor, debouncedSave, debouncedEntityProcessing]);
+  }, [editor, activeNote, idleSave]);
 
   // Handle note switching
   useEffect(() => {
     if (!editor) return;
     
-    // Cancel any pending operations from the previous note
-    debouncedSave.cancel();
-    debouncedEntityProcessing.cancel();
+    const newNoteId = activeNoteId;
+    const previousNoteId = currentNoteIdRef.current;
     
-    // Update the current note reference
-    currentNoteRef.current = activeNoteId;
+    // Skip if same note
+    if (newNoteId === previousNoteId) return;
+    
+    // Flush any pending saves from previous note
+    if (previousNoteId) {
+      idleSave.flush();
+    }
+    
+    currentNoteIdRef.current = newNoteId;
     
     if (activeNote) {
+      const newContent = getInitialContent();
+      console.log("NoteEditor: Switching to note", newNoteId, "with content", newContent);
+      
       try {
-        const newContent = getInitialContent();
-        console.log("NoteEditor: Switching to note", activeNoteId, "with content", newContent);
-        
         // Replace blocks with new content
         editor.replaceBlocks(editor.document, newContent);
         
-        // Process entity highlighting for initial content after a short delay
+        // Initialize buffer with current content
+        setBuffer(activeNote.id, newContent);
+        
+        // Process entity highlighting after a short delay
         if (entityHighlighterRef.current) {
           setTimeout(() => {
             entityHighlighterRef.current?.processAllInactiveBlocks();
@@ -173,21 +167,30 @@ export function NoteEditor() {
         console.error("Error replacing blocks:", error);
       }
     }
-  }, [activeNoteId, activeNote, editor, getInitialContent, debouncedSave, debouncedEntityProcessing]);
+  }, [activeNoteId, activeNote, editor, getInitialContent, idleSave]);
+
+  // Handle window blur/beforeunload to save immediately
+  useEffect(() => {
+    const handleBlur = () => {
+      idleSave.flush();
+    };
+    
+    const handleBeforeUnload = () => {
+      idleSave.flush();
+    };
+    
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [idleSave]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeNote) {
       updateNote(activeNote.id, { title: e.target.value });
-      
-      // Serialize the updated note
-      try {
-        const updatedNote = { ...activeNote, title: e.target.value };
-        const doc = NoteSerializer.toDocument(updatedNote);
-        const json = doc.toJSON();
-        console.log("NoteEditor: Serialized note with updated title:", json);
-      } catch (err) {
-        console.error("Error serializing note:", err);
-      }
     }
   };
 
@@ -198,6 +201,9 @@ export function NoteEditor() {
       });
       return;
     }
+    
+    // Clear buffer for deleted note
+    clearBuffer(activeNote.id);
     
     const noteIndex = notes.findIndex(note => note.id === activeNoteId);
     
