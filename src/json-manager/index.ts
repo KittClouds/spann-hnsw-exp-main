@@ -23,14 +23,17 @@ export type {
   UnifiedSerializable
 } from './interfaces/UnifiedSerializable';
 
-// Safety & Monitoring types
+// Safety & Monitoring types - import from correct modules
 export type {
   JSONCorruptionReport,
   JSONBackupEntry,
-  SafetyMetrics,
+  SafetyMetrics
+} from './SafetyManager';
+
+export type {
   AtomicOperation,
   BatchOperation
-} from './SafetyManager';
+} from './AtomicJSONManager';
 
 // Convenience re-exports
 export { 

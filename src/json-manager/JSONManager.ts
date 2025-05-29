@@ -70,6 +70,32 @@ export class JSONManager {
   }
   
   /**
+   * Register a serialization adapter for a specific data type
+   */
+  registerAdapter<T>(dataType: string, adapter: SerializationAdapter<T>): void {
+    this.adapters.set(dataType, adapter);
+    console.log(`JSONManager: Registered adapter for data type: ${dataType}`);
+  }
+  
+  /**
+   * Unregister a serialization adapter
+   */
+  unregisterAdapter(dataType: string): boolean {
+    const removed = this.adapters.delete(dataType);
+    if (removed) {
+      console.log(`JSONManager: Unregistered adapter for data type: ${dataType}`);
+    }
+    return removed;
+  }
+  
+  /**
+   * Check if an adapter is registered for a data type
+   */
+  hasAdapter(dataType: string): boolean {
+    return this.adapters.has(dataType);
+  }
+  
+  /**
    * Start integrated health monitoring
    */
   private startHealthMonitoring(): void {
