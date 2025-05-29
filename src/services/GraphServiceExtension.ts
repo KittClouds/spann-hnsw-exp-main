@@ -1,9 +1,9 @@
 
 import { Entity } from '@/lib/utils/parsingUtils';
-import { EntityWithReferences } from '@/components/entity-browser/EntityBrowser';
+import { EntityWithReferences } from '@/livestore/queries/entities';
 import { GraphService } from './GraphService';
 import { NodeType, EdgeType } from './types';
-import { generateEntityId } from '@/lib/schema';
+import { generateEntityId } from '@/lib/utils/ids';
 
 /**
  * Extension methods for GraphService to support entity browser functionality
@@ -25,7 +25,15 @@ export function extendGraphService(service: GraphService): void {
         entities.push({
           kind,
           label,
-          referenceCount: references
+          id: generateEntityId(kind, label),
+          referenceCount: references,
+          referencingNotes: [],
+          lastModified: node.data('lastModified') || new Date().toISOString(),
+          createdAt: node.data('createdAt') || new Date().toISOString(),
+          relationships: {
+            asSubject: [],
+            asObject: []
+          }
         });
       }
     });
