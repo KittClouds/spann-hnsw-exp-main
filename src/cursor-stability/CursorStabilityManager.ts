@@ -1,4 +1,4 @@
-import { Block, BlockNoteEditor } from '@blocknote/core';
+import { Block } from '@blocknote/core';
 
 export interface BufferState {
   noteId: string;
@@ -207,7 +207,7 @@ export class CursorStabilityManager {
   /**
    * Layer 5: Monitoring & Recovery
    */
-  saveCursorPosition(editor: BlockNoteEditor): void {
+  saveCursorPosition(editor: any): void { // Use any to handle different editor types
     try {
       const selection = editor.getTextCursorPosition();
       if (selection) {
@@ -219,7 +219,7 @@ export class CursorStabilityManager {
     }
   }
 
-  restoreCursorPosition(editor: BlockNoteEditor): void {
+  restoreCursorPosition(editor: any): void { // Use any to handle different editor types
     if (this.cursorPosition) {
       try {
         // Implementation would depend on BlockNote API

@@ -132,7 +132,7 @@ export class StateValidator {
       result.warnings.push(`Block at index ${index} has non-array content field`);
     }
 
-    // Validate block props if present
+    // Validate block props if present - fix the type issue
     if (block.props && typeof block.props !== 'object') {
       result.warnings.push(`Block at index ${index} has non-object props field`);
     }
@@ -278,7 +278,7 @@ export class StateValidator {
         console.warn('StateValidator: Fixed invalid block content');
       }
 
-      // Ensure props is object if present
+      // Ensure props is object if present - use a safe default
       if (sanitizedBlock.props && typeof sanitizedBlock.props !== 'object') {
         sanitizedBlock.props = {};
         console.warn('StateValidator: Fixed invalid block props');

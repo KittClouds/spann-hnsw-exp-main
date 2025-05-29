@@ -1,3 +1,4 @@
+
 export { CursorStabilityManager, cursorStabilityManager } from './CursorStabilityManager';
 export { useHardenedEditorBuffer } from './useHardenedEditorBuffer';
 export type { BufferState, EditorState, OperationLock } from './CursorStabilityManager';
@@ -10,9 +11,15 @@ export { useHardenedState } from './useHardenedState';
 export type { 
   StateSnapshot, 
   StateOperation, 
-  StateHealth,
-  ValidationResult,
-  ContentIntegrity,
-  MonitorMetrics,
-  AlertThresholds
+  StateHealth
 } from './StateManager';
+
+export type { 
+  ValidationResult, 
+  ContentIntegrity
+} from './StateValidator';
+
+export type { 
+  MonitorMetrics, 
+  AlertThresholds
+} from './StateMonitor';

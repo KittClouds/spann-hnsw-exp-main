@@ -1,6 +1,5 @@
-
 import { useCallback, useRef, useEffect } from 'react';
-import { Block, BlockNoteEditor } from '@blocknote/core';
+import { Block } from '@blocknote/core';
 import { stateManager } from './StateManager';
 import { stateValidator } from './StateValidator';
 import { stateMonitor } from './StateMonitor';
@@ -11,7 +10,7 @@ import { cursorStabilityManager } from './CursorStabilityManager';
  * Integrates all protection layers for bulletproof state management
  */
 export function useHardenedState() {
-  const editorRef = useRef<BlockNoteEditor | null>(null);
+  const editorRef = useRef<any>(null); // Use any to handle different editor schema types
   const currentNoteIdRef = useRef<string | null>(null);
   const isInitializedRef = useRef(false);
 
@@ -37,7 +36,7 @@ export function useHardenedState() {
     };
   }, []);
 
-  const setEditor = useCallback((editor: BlockNoteEditor | null) => {
+  const setEditor = useCallback((editor: any) => { // Use any to handle different schema types
     console.log('HardenedState: Setting editor instance');
     editorRef.current = editor;
     cursorStabilityManager.setEditorReady(!!editor);
