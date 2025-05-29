@@ -1,4 +1,3 @@
-
 import { useStore } from '@livestore/react';
 import { 
   activeNoteId$, 
@@ -110,22 +109,12 @@ export function useNoteActions() {
 
   // Silent persistence - updates data without triggering re-renders
   const persistNoteSilently = (id: string, content: any) => {
-    // Check if the silent update event exists, otherwise fall back to regular update
-    if (events.noteContentSilentlyUpdated) {
-      store.commit(events.noteContentSilentlyUpdated({
-        id,
-        content,
-        updatedAt: new Date().toISOString()
-      }));
-    } else {
-      // Fallback to regular update if silent event doesn't exist
-      console.warn('Silent update event not available, using regular update');
-      store.commit(events.noteUpdated({
-        id,
-        updates: { content },
-        updatedAt: new Date().toISOString()
-      }));
-    }
+    // Use the silent update event that won't trigger reactive updates during active editing
+    store.commit(events.noteContentSilentlyUpdated({
+      id,
+      content,
+      updatedAt: new Date().toISOString()
+    }));
   };
 
   const createNote = (note: any) => {
