@@ -1,4 +1,3 @@
-
 import { Core } from 'cytoscape';
 
 export interface ValidationResult {
@@ -262,8 +261,9 @@ export class GraphStateValidator {
     };
     
     this.cy.nodes().forEach(node => {
-      if (hasCycle(node.id())) {
-        result.errors.push(`Circular reference detected involving node ${node.id()}`);
+      const nodeId = node.id();
+      if (!visited.has(nodeId) && hasCycle(nodeId)) {
+        result.errors.push(`Circular reference detected involving node ${nodeId}`);
       }
     });
   }
