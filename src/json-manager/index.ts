@@ -1,4 +1,3 @@
-
 export { JSONManager, jsonManager } from './JSONManager';
 export { JSONRegistry } from './JSONRegistry';
 export * from './adapters';
@@ -34,6 +33,22 @@ export type {
   AtomicOperation,
   BatchOperation
 } from './AtomicJSONManager';
+
+// Phase 5: Performance & Optimization exports
+export { JSONPerformanceManager, jsonPerformanceManager, LazyJSONProxy } from './PerformanceManager';
+export { EnhancedJSONManager, enhancedJSONManager } from './EnhancedJSONManager';
+
+export type {
+  CacheEntry,
+  CompressionOptions,
+  StreamingOptions,
+  LazyLoadOptions,
+  PerformanceMetrics
+} from './PerformanceManager';
+
+export type {
+  EnhancedJSONManagerOptions
+} from './EnhancedJSONManager';
 
 // Convenience re-exports
 export { 
