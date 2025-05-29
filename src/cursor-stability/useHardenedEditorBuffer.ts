@@ -1,7 +1,6 @@
 
 import { useCallback, useRef, useEffect } from 'react';
-import { Block } from '@blocknote/core';
-import { BlockNoteEditor } from '@blocknote/react';
+import { Block, BlockNoteEditor } from '@blocknote/core';
 import { cursorStabilityManager } from './CursorStabilityManager';
 
 /**

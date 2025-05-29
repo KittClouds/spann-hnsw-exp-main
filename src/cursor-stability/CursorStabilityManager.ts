@@ -1,6 +1,4 @@
-
-import { Block } from '@blocknote/core';
-import { BlockNoteEditor } from '@blocknote/react';
+import { Block, BlockNoteEditor } from '@blocknote/core';
 
 export interface BufferState {
   noteId: string;
