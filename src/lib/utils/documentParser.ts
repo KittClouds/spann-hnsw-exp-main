@@ -1,0 +1,160 @@
+
+import { Block } from '@blocknote/core';
+import { Entity, Triple } from './parsingUtils';
+
+export interface DocumentConnections {
+  tags: string[];
+  mentions: string[];
+  links: string[];
+  entities: Entity[];
+  triples: Triple[];
+}
+
+/**
+ * Parse connections directly from BlockNote document structure
+ * This eliminates the race condition by reading from canonical inline content specs
+ */
+export function parseNoteConnectionsFromDocument(blocks: Block[]): DocumentConnections {
+  const connections: DocumentConnections = {
+    tags: [],
+    mentions: [],
+    links: [],
+    entities: [],
+    triples: []
+  };
+
+  const walkBlock = (block: Block) => {
+    // Process block content
+    if (block.content && Array.isArray(block.content)) {
+      for (const item of block.content) {
+        // Extract data from custom inline content specs
+        switch (item.type) {
+          case 'tag':
+            if (item.props?.text) {
+              connections.tags.push(item.props.text);
+            }
+            break;
+            
+          case 'mention':
+            if (item.props?.text) {
+              connections.mentions.push(item.props.text);
+            }
+            break;
+            
+          case 'wikilink':
+            if (item.props?.text) {
+              connections.links.push(item.props.text);
+            }
+            break;
+            
+          case 'entity':
+            if (item.props?.kind && item.props?.label) {
+              connections.entities.push({
+                kind: item.props.kind,
+                label: item.props.label,
+                attributes: item.props.attributes ? JSON.parse(item.props.attributes) : undefined
+              });
+            }
+            break;
+            
+          case 'triple':
+            if (item.props?.subjectKind && item.props?.subjectLabel && 
+                item.props?.predicate && item.props?.objectKind && item.props?.objectLabel) {
+              connections.triples.push({
+                subject: {
+                  kind: item.props.subjectKind,
+                  label: item.props.subjectLabel
+                },
+                predicate: item.props.predicate,
+                object: {
+                  kind: item.props.objectKind,
+                  label: item.props.objectLabel
+                }
+              });
+            }
+            break;
+            
+          case 'text':
+            // Fallback: still detect raw syntax in plain text for migration
+            const text = item.text || '';
+            
+            // Extract raw tags
+            const tagMatches = text.match(/#(\w+)/g);
+            if (tagMatches) {
+              tagMatches.forEach(match => {
+                const tag = match.slice(1);
+                if (!connections.tags.includes(tag)) {
+                  connections.tags.push(tag);
+                }
+              });
+            }
+            
+            // Extract raw mentions
+            const mentionMatches = text.match(/@(\w+)/g);
+            if (mentionMatches) {
+              mentionMatches.forEach(match => {
+                const mention = match.slice(1);
+                if (!connections.mentions.includes(mention)) {
+                  connections.mentions.push(mention);
+                }
+              });
+            }
+            
+            // Extract raw wiki links
+            const linkMatches = text.match(/\[\[\s*([^\]\s|][^\]|]*?)\s*(?:\|[^\]]*)?\]\]/g);
+            if (linkMatches) {
+              linkMatches.forEach(match => {
+                const linkMatch = match.match(/\[\[\s*([^\]\s|][^\]|]*?)\s*(?:\|[^\]]*)?\]\]/);
+                if (linkMatch) {
+                  const link = linkMatch[1].trim();
+                  if (!connections.links.includes(link)) {
+                    connections.links.push(link);
+                  }
+                }
+              });
+            }
+            break;
+        }
+      }
+    }
+    
+    // Recursively process nested blocks
+    if (block.children && Array.isArray(block.children)) {
+      block.children.forEach(walkBlock);
+    }
+  };
+
+  blocks.forEach(walkBlock);
+  
+  // Remove duplicates
+  connections.tags = [...new Set(connections.tags)];
+  connections.mentions = [...new Set(connections.mentions)];
+  connections.links = [...new Set(connections.links)];
+  
+  return connections;
+}
+
+/**
+ * Check if a block contains any raw (unconverted) entity syntax
+ */
+export function hasRawEntitySyntax(block: Block): boolean {
+  if (!block.content || !Array.isArray(block.content)) return false;
+  
+  for (const item of block.content) {
+    if (item.type === 'text' && item.text) {
+      const text = item.text;
+      // Check for any raw entity patterns
+      if (
+        /\[[\w]+\|[^\]]+\]/.test(text) ||           // Entity syntax
+        /\[\[\s*[^\]]+\s*\]\]/.test(text) ||        // Wiki links
+        /#\w+/.test(text) ||                        // Tags
+        /@\w+/.test(text) ||                        // Mentions
+        /\[[\w]+\|[^\]]+\]\s*\([^)]+\)\s*\[[\w]+\|[^\]]+\]/.test(text) // Triples
+      ) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}

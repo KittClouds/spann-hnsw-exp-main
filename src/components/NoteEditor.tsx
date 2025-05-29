@@ -1,4 +1,3 @@
-
 import { useActiveNote, useActiveNoteId, useNotes, useNoteActions } from '@/hooks/useLiveStore';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -34,6 +33,7 @@ export function NoteEditor() {
   const currentNoteRef = useRef<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const entityHighlighterRef = useRef<EntityHighlighter | null>(null);
+  const migrationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Ensure we always have valid initial content
   const getInitialContent = useCallback((): Block[] => {
@@ -128,31 +128,46 @@ export function NoteEditor() {
     }, 500);
   }, [editor, activeNote, updateNote]);
 
-  // Set up content change listener with entity highlighting
+  // Set up content change listener with atomic entity migration
   useEffect(() => {
     if (!editor) return;
     
     const handleContentChange = () => {
-      // Process entity highlighting for changed blocks
-      if (entityHighlighterRef.current) {
-        const changedBlocks = editor.document as Block[];
-        changedBlocks.forEach(block => {
-          if (block.type === 'paragraph') {
-            entityHighlighterRef.current?.processBlockDebounced(block, 150);
-          }
-        });
+      // Clear any pending migration
+      if (migrationTimeoutRef.current) {
+        clearTimeout(migrationTimeoutRef.current);
       }
       
-      saveChanges();
+      // Process entity migration atomically before saving
+      migrationTimeoutRef.current = setTimeout(() => {
+        if (entityHighlighterRef.current) {
+          const changedBlocks = editor.document as Block[];
+          changedBlocks.forEach(block => {
+            if (block.type === 'paragraph') {
+              entityHighlighterRef.current?.processBlock(block);
+            }
+          });
+        }
+        
+        // Save changes after migration is complete
+        // This ensures sidebar reads canonical data
+        setTimeout(() => {
+          saveChanges();
+        }, 50);
+      }, 100);
     };
     
     editor.onEditorContentChange(handleContentChange);
     
     return () => {
-      // Cancel any pending saves when component unmounts or editor changes
+      // Cancel any pending saves and migrations when component unmounts or editor changes
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = null;
+      }
+      if (migrationTimeoutRef.current) {
+        clearTimeout(migrationTimeoutRef.current);
+        migrationTimeoutRef.current = null;
       }
     };
   }, [editor, saveChanges]);

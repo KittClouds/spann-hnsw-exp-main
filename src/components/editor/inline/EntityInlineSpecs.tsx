@@ -11,52 +11,72 @@ export const ENTITY_COLORS = {
   triple: 'bg-gradient-to-r from-pink-500/20 to-purple-500/20 text-pink-400 border-pink-500/30'
 };
 
-// Tag inline component
+// Enhanced Tag inline component with full data
 const TagInline = ({ inlineContent }: { inlineContent: any }) => (
   <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.tag} cursor-pointer hover:opacity-80 transition-opacity`}>
     #{inlineContent.props.text}
   </span>
 );
 
-// Mention inline component
+// Enhanced Mention inline component with full data
 const MentionInline = ({ inlineContent }: { inlineContent: any }) => (
   <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.mention} cursor-pointer hover:opacity-80 transition-opacity`}>
     @{inlineContent.props.text}
   </span>
 );
 
-// Wiki link inline component
+// Enhanced Wiki link inline component with full data
 const WikiLinkInline = ({ inlineContent }: { inlineContent: any }) => (
   <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.wikilink} cursor-pointer hover:opacity-80 transition-opacity`}>
     {inlineContent.props.text}
   </span>
 );
 
-// Entity inline component
-const EntityInline = ({ inlineContent }: { inlineContent: any }) => (
-  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.entity} cursor-pointer hover:opacity-80 transition-opacity`}>
-    <span className="text-xs opacity-70">{inlineContent.props.kind}</span>
-    {inlineContent.props.label}
-  </span>
-);
+// Enhanced Entity inline component with complete metadata
+const EntityInline = ({ inlineContent }: { inlineContent: any }) => {
+  const { kind, label, attributes, originalSyntax } = inlineContent.props;
+  
+  return (
+    <span 
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.entity} cursor-pointer hover:opacity-80 transition-opacity`}
+      data-entity-kind={kind}
+      data-entity-label={label}
+      data-original-syntax={originalSyntax}
+    >
+      <span className="text-xs opacity-70">{kind}</span>
+      {label}
+    </span>
+  );
+};
 
-// Triple inline component
-const TripleInline = ({ inlineContent }: { inlineContent: any }) => (
-  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.triple} cursor-pointer hover:opacity-80 transition-opacity`}>
-    <span className="opacity-70">{inlineContent.props.subjectKind}</span>
-    {inlineContent.props.subjectLabel}
-    <span className="opacity-60 mx-1">({inlineContent.props.predicate})</span>
-    <span className="opacity-70">{inlineContent.props.objectKind}</span>
-    {inlineContent.props.objectLabel}
-  </span>
-);
+// Enhanced Triple inline component with complete relationship data
+const TripleInline = ({ inlineContent }: { inlineContent: any }) => {
+  const { subjectKind, subjectLabel, predicate, objectKind, objectLabel, originalSyntax } = inlineContent.props;
+  
+  return (
+    <span 
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold border ${ENTITY_COLORS.triple} cursor-pointer hover:opacity-80 transition-opacity`}
+      data-triple-subject={`${subjectKind}:${subjectLabel}`}
+      data-triple-predicate={predicate}
+      data-triple-object={`${objectKind}:${objectLabel}`}
+      data-original-syntax={originalSyntax}
+    >
+      <span className="opacity-70">{subjectKind}</span>
+      {subjectLabel}
+      <span className="opacity-60 mx-1">({predicate})</span>
+      <span className="opacity-70">{objectKind}</span>
+      {objectLabel}
+    </span>
+  );
+};
 
-// Create custom inline content specs
+// Create enhanced custom inline content specs with rich metadata
 export const TagInlineSpec = createReactInlineContentSpec(
   {
     type: "tag",
     propSchema: {
-      text: { default: "" }
+      text: { default: "" },
+      originalSyntax: { default: "" }
     },
     content: "none"
   },
@@ -69,7 +89,8 @@ export const MentionInlineSpec = createReactInlineContentSpec(
   {
     type: "mention", 
     propSchema: {
-      text: { default: "" }
+      text: { default: "" },
+      originalSyntax: { default: "" }
     },
     content: "none"
   },
@@ -82,7 +103,8 @@ export const WikiLinkInlineSpec = createReactInlineContentSpec(
   {
     type: "wikilink",
     propSchema: {
-      text: { default: "" }
+      text: { default: "" },
+      originalSyntax: { default: "" }
     },
     content: "none"
   },
@@ -97,7 +119,8 @@ export const EntityInlineSpec = createReactInlineContentSpec(
     propSchema: {
       kind: { default: "" },
       label: { default: "" },
-      attributes: { default: "" }
+      attributes: { default: "{}" },
+      originalSyntax: { default: "" }
     },
     content: "none"
   },
@@ -114,7 +137,8 @@ export const TripleInlineSpec = createReactInlineContentSpec(
       subjectLabel: { default: "" },
       predicate: { default: "" },
       objectKind: { default: "" },
-      objectLabel: { default: "" }
+      objectLabel: { default: "" },
+      originalSyntax: { default: "" }
     },
     content: "none"
   },

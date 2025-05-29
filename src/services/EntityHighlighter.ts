@@ -1,6 +1,7 @@
 
 import { BlockNoteEditor, Block } from '@blocknote/core';
 import { parseNoteConnections } from '@/lib/utils/parsingUtils';
+import { hasRawEntitySyntax } from '@/lib/utils/documentParser';
 
 export class EntityHighlighter {
   private editor: BlockNoteEditor;
@@ -10,9 +11,17 @@ export class EntityHighlighter {
     this.editor = editor;
   }
 
-  // Process a block and replace entity syntax with styled inline components
+  /**
+   * Process a block and atomically convert raw entity syntax to inline specs
+   * This is a one-shot migration layer that preserves the canonical data
+   */
   public processBlock(block: Block) {
     if (this.isProcessing || block.type !== 'paragraph') return;
+    
+    // Skip blocks that don't have raw entity syntax
+    if (!hasRawEntitySyntax(block)) {
+      return;
+    }
     
     this.isProcessing = true;
     
@@ -24,7 +33,7 @@ export class EntityHighlighter {
         return;
       }
 
-      // Parse entities from the text
+      // Parse entities from the text (migration layer)
       const connections = parseNoteConnections([block]);
       
       // Create replacement operations (process in reverse order to maintain positions)
@@ -53,7 +62,8 @@ export class EntityHighlighter {
               subjectLabel: triple.subject.label,
               predicate: triple.predicate,
               objectKind: triple.object.kind,
-              objectLabel: triple.object.label
+              objectLabel: triple.object.label,
+              originalSyntax: match[0]
             }
           });
         }
@@ -81,7 +91,8 @@ export class EntityHighlighter {
               props: {
                 kind: entity.kind,
                 label: entity.label,
-                attributes: entity.attributes ? JSON.stringify(entity.attributes) : ""
+                attributes: entity.attributes ? JSON.stringify(entity.attributes) : "{}",
+                originalSyntax: match[0]
               }
             });
           }
@@ -104,7 +115,8 @@ export class EntityHighlighter {
               to: match.index + match[0].length,
               type: "wikilink",
               props: {
-                text: link
+                text: link,
+                originalSyntax: match[0]
               }
             });
           }
@@ -127,7 +139,8 @@ export class EntityHighlighter {
               to: match.index + match[0].length,
               type: "tag",
               props: {
-                text: tag
+                text: tag,
+                originalSyntax: match[0]
               }
             });
           }
@@ -150,16 +163,17 @@ export class EntityHighlighter {
               to: match.index + match[0].length,
               type: "mention",
               props: {
-                text: mention
+                text: mention,
+                originalSyntax: match[0]
               }
             });
           }
         }
       });
 
-      // Apply replacements using BlockNote's text replacement capabilities
+      // Apply replacements atomically in a single transaction
       if (replacements.length > 0) {
-        this.applyReplacements(block, replacements);
+        this.applyReplacementsAtomically(block, replacements);
       }
 
     } catch (error) {
@@ -169,7 +183,11 @@ export class EntityHighlighter {
     }
   }
 
-  private applyReplacements(block: Block, replacements: Array<{from: number; to: number; type: string; props: Record<string, any>}>) {
+  /**
+   * Apply all replacements atomically in a single editor transaction
+   * This prevents race conditions by ensuring sidebar reads happen after migration
+   */
+  private applyReplacementsAtomically(block: Block, replacements: Array<{from: number; to: number; type: string; props: Record<string, any>}>) {
     try {
       // Build new content array by replacing text segments with inline content
       const textContent = this.extractTextFromBlock(block);
@@ -214,7 +232,7 @@ export class EntityHighlighter {
         }
       }
       
-      // Update the block with new content
+      // Update the block with new content atomically
       this.editor.updateBlock(block.id, {
         content: newContent
       });
@@ -238,7 +256,7 @@ export class EntityHighlighter {
   // Debounced processing for performance
   private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
   
-  public processBlockDebounced(block: Block, delay = 300) {
+  public processBlockDebounced(block: Block, delay = 150) {
     if (this.debounceTimeout) {
       clearTimeout(this.debounceTimeout);
     }

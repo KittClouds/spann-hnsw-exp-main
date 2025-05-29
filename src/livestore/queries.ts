@@ -1,7 +1,7 @@
-
 import { queryDb, computed } from '@livestore/livestore';
 import { tables } from './schema';
 import { parseAllNotes } from '@/lib/utils/parsingUtils';
+import { parseNoteConnectionsFromDocument } from '@/lib/utils/documentParser';
 
 // Basic entity queries with proper typing
 export const clusters$ = queryDb(
@@ -86,7 +86,7 @@ export const activeThreadMessages$ = queryDb((get) => {
   return tables.threadMessages.where({ threadId: activeThreadId }).orderBy('createdAt', 'asc');
 }, { label: 'activeThreadMessages$' });
 
-// Derived connection queries (replaces parsing atoms)
+// Legacy parsing for backward compatibility
 export const noteConnections$ = computed((get) => {
   const notes = get(notes$);
   if (!Array.isArray(notes)) {
@@ -98,7 +98,7 @@ export const noteConnections$ = computed((get) => {
       triplesMap: new Map()
     };
   }
-  console.log("LiveStore: Recalculating all parsed connections");
+  console.log("LiveStore: Recalculating all parsed connections (legacy)");
   return parseAllNotes(notes);
 }, { label: 'noteConnections$' });
 
@@ -122,16 +122,22 @@ export const noteTriplesMap$ = computed((get) => {
   return get(noteConnections$).triplesMap;
 }, { label: 'noteTriplesMap$' });
 
-// Active note connections
+// New document-based parsing for canonical data
 export const activeNoteConnections$ = computed((get) => {
-  const activeId = get(activeNoteId$);
-  if (!activeId) return { tags: [], mentions: [], links: [], entities: [], triples: [] };
+  const activeNote = get(activeNote$);
+  if (!activeNote || !activeNote.content) {
+    return { tags: [], mentions: [], links: [], entities: [], triples: [] };
+  }
 
+  // Use document-based parsing for canonical data
+  console.log("LiveStore: Parsing active note connections from document structure");
+  const connections = parseNoteConnectionsFromDocument(activeNote.content);
+  
   return {
-    tags: get(noteTagsMap$).get(activeId) ?? [],
-    mentions: get(noteMentionsMap$).get(activeId) ?? [],
-    links: get(noteLinksMap$).get(activeId) ?? [],
-    entities: get(noteEntitiesMap$).get(activeId) ?? [],
-    triples: get(noteTriplesMap$).get(activeId) ?? []
+    tags: connections.tags,
+    mentions: connections.mentions,
+    links: connections.links,
+    entities: connections.entities,
+    triples: connections.triples
   };
 }, { label: 'activeNoteConnections$' });
