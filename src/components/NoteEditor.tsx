@@ -12,11 +12,10 @@ import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConnectionsPanel } from './connections/ConnectionsPanel';
 import { EmptyNoteState } from './EmptyNoteState';
-import { NoteSerializer } from '@/services/NoteSerializer';
 import { createEmptyBlock } from '@/lib/utils/blockUtils';
 import { entityEditorSchema } from '@/lib/editor/EntityEditorSchema';
 import { EntityHighlighter } from '@/services/EntityHighlighter';
-import { setBuffer, getBuffer, clearBuffer } from '@/hooks/useEditorBuffer';
+import { setBuffer, getBuffer, clearBuffer, hasBuffer, validateBuffer } from '@/hooks/useEditorBuffer';
 import { useIdleCallback } from '@/hooks/useIdleCallback';
 
 export function NoteEditor() {
@@ -33,29 +32,12 @@ export function NoteEditor() {
   
   const entityHighlighterRef = useRef<EntityHighlighter | null>(null);
   const currentNoteIdRef = useRef<string | null>(null);
+  const isLoadingContentRef = useRef(false);
   
-  // Get initial content from buffer or LiveStore
-  const getInitialContent = useCallback((): Block[] => {
-    if (!activeNote) {
-      return [createEmptyBlock()];
-    }
-    
-    // Try buffer first, then fallback to LiveStore content
-    const bufferedContent = getBuffer(activeNote.id);
-    if (bufferedContent && bufferedContent.length > 0) {
-      return bufferedContent;
-    }
-    
-    if (activeNote.content && Array.isArray(activeNote.content) && activeNote.content.length > 0) {
-      return activeNote.content as Block[];
-    }
-    
-    return [createEmptyBlock()];
-  }, [activeNote]);
-  
+  // Initialize editor with empty content only - no reactive dependencies
   const editor = useBlockNote({
     schema: entityEditorSchema,
-    initialContent: getInitialContent(),
+    initialContent: [createEmptyBlock()],
   });
 
   // Initialize entity highlighter
@@ -90,10 +72,10 @@ export function NoteEditor() {
 
   // Idle save to LiveStore
   const idleSave = useIdleCallback(() => {
-    if (!activeNote) return;
+    if (!activeNote || isLoadingContentRef.current) return;
     
     const bufferedBlocks = getBuffer(activeNote.id);
-    if (!bufferedBlocks) return;
+    if (!bufferedBlocks || !validateBuffer(activeNote.id)) return;
     
     console.log("NoteEditor: Idle save triggered for", activeNote.id);
     
@@ -108,12 +90,61 @@ export function NoteEditor() {
     }
   }, 2000);
 
+  // Load content for a specific note
+  const loadNoteContent = useCallback((noteId: string, note: any) => {
+    if (!editor || isLoadingContentRef.current) return;
+    
+    console.log("NoteEditor: Loading content for note", noteId);
+    isLoadingContentRef.current = true;
+    
+    try {
+      // Clear any existing buffer for this note to prevent contamination
+      clearBuffer(noteId);
+      
+      // Get content from LiveStore (not from buffer)
+      let contentToLoad: Block[];
+      if (note.content && Array.isArray(note.content) && note.content.length > 0) {
+        contentToLoad = note.content as Block[];
+      } else {
+        contentToLoad = [createEmptyBlock()];
+      }
+      
+      console.log("NoteEditor: Replacing blocks with", contentToLoad.length, "blocks for note", noteId);
+      
+      // Replace editor content
+      editor.replaceBlocks(editor.document, contentToLoad);
+      
+      // Initialize buffer with correct content
+      setBuffer(noteId, contentToLoad);
+      
+      // Process entity highlighting after content is loaded
+      if (entityHighlighterRef.current) {
+        setTimeout(() => {
+          entityHighlighterRef.current?.processAllInactiveBlocks();
+        }, 200);
+      }
+    } catch (error) {
+      console.error("Error loading note content:", error);
+    } finally {
+      isLoadingContentRef.current = false;
+    }
+  }, [editor]);
+
   // Editor content change handler - write to buffer only, no re-renders
   useEffect(() => {
     if (!editor || !activeNote) return;
     
     const handleContentChange = () => {
+      // Skip if we're currently loading content
+      if (isLoadingContentRef.current) return;
+      
       const currentBlocks = editor.document as Block[];
+      
+      // Validate that we're updating the correct note's buffer
+      if (activeNote.id !== currentNoteIdRef.current) {
+        console.warn("NoteEditor: Content change for wrong note, skipping buffer update");
+        return;
+      }
       
       // Write to buffer (no re-renders)
       setBuffer(activeNote.id, currentBlocks);
@@ -129,7 +160,7 @@ export function NoteEditor() {
     };
   }, [editor, activeNote, idleSave]);
 
-  // Handle note switching
+  // Handle note switching - this is the critical part
   useEffect(() => {
     if (!editor) return;
     
@@ -139,35 +170,21 @@ export function NoteEditor() {
     // Skip if same note
     if (newNoteId === previousNoteId) return;
     
+    console.log("NoteEditor: Switching from note", previousNoteId, "to", newNoteId);
+    
     // Flush any pending saves from previous note
     if (previousNoteId) {
       idleSave.flush();
     }
     
+    // Update current note reference
     currentNoteIdRef.current = newNoteId;
     
+    // Load content for the new note
     if (activeNote) {
-      const newContent = getInitialContent();
-      console.log("NoteEditor: Switching to note", newNoteId, "with content", newContent);
-      
-      try {
-        // Replace blocks with new content
-        editor.replaceBlocks(editor.document, newContent);
-        
-        // Initialize buffer with current content
-        setBuffer(activeNote.id, newContent);
-        
-        // Process entity highlighting after a short delay
-        if (entityHighlighterRef.current) {
-          setTimeout(() => {
-            entityHighlighterRef.current?.processAllInactiveBlocks();
-          }, 200);
-        }
-      } catch (error) {
-        console.error("Error replacing blocks:", error);
-      }
+      loadNoteContent(newNoteId, activeNote);
     }
-  }, [activeNoteId, activeNote, editor, getInitialContent, idleSave]);
+  }, [activeNoteId, activeNote, editor, loadNoteContent, idleSave]);
 
   // Handle window blur/beforeunload to save immediately
   useEffect(() => {
