@@ -1,3 +1,4 @@
+
 import { Core } from 'cytoscape';
 
 export interface ValidationResult {
