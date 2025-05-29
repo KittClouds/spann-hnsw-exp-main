@@ -5,10 +5,10 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
 import App from './App'
-import { Index } from './pages/Index'
-import { EntityBrowser } from './pages/EntityBrowser'
+import Index from './pages/Index'
+import EntityBrowserPage from './pages/EntityBrowser'
 import { Migration } from './pages/Migration'
-import { NotFound } from './pages/NotFound'
+import NotFound from './pages/NotFound'
 import { Toaster } from "@/components/ui/sonner"
 import './index.css'
 
@@ -25,7 +25,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'entities',
-        element: <EntityBrowser />,
+        element: <EntityBrowserPage />,
       },
       {
         path: 'migration',

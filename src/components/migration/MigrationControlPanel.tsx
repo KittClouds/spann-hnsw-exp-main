@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useGraphContext } from '@/contexts/GraphContext';
+import { useGraph } from '@/contexts/GraphContext';
 import { MigrationCoordinator, Phase0Result, MigrationExecutionResult } from '@/lib/migration/MigrationCoordinator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { CheckCircle, XCircle, AlertTriangle, Play, Download } from 'lucide-react';
 
 export const MigrationControlPanel: React.FC = () => {
-  const { cy } = useGraphContext();
+  const { cy } = useGraph();
   const [coordinator] = useState(() => cy ? new MigrationCoordinator(cy) : null);
   const [phase0Result, setPhase0Result] = useState<Phase0Result | null>(null);
   const [migrationResult, setMigrationResult] = useState<MigrationExecutionResult | null>(null);
