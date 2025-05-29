@@ -1,39 +1,21 @@
 
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
-// Type definitions for our different ID types
-export type NoteId = `note-${string}`;
-export type ClusterId = `cluster-${string}`;
-export type NodeId = `node-${string}`;
-export type TripleId = `triple-${string}`;  
-export type DocumentId = `doc-${string}`;   // New: Document ID type
-export type RelationshipId = `rel-${string}`; // New: Relationship ID type
+export type NoteId = string;
+export type ClusterId = string;
+export type TripleId = string;
+export type NodeId = string;
+export type EntityId = string;
 
-// Helper to ensure type safety for ID generators
-const prefixUuid = (prefix: string): string => 
-  `${prefix}-${uuidv4()}`;
+export const generateNoteId = (): NoteId => `note_${nanoid()}`;
+export const generateClusterId = (): ClusterId => `cluster_${nanoid()}`;
+export const generateTripleId = (): TripleId => `triple_${nanoid()}`;
+export const generateNodeId = (): NodeId => `node_${nanoid()}`;
 
-// Generate IDs for different entities
-export const generateNoteId = (): NoteId => 
-  prefixUuid('note') as NoteId;
-
-export const generateClusterId = (): ClusterId => 
-  prefixUuid('cluster') as ClusterId;
-
-export const generateNodeId = (): NodeId => 
-  prefixUuid('node') as NodeId;
-
-export const generateTripleId = (): TripleId =>
-  prefixUuid('triple') as TripleId;
-
-export const generateDocumentId = (): DocumentId => 
-  prefixUuid('doc') as DocumentId;
-
-export const generateRelationshipId = (): RelationshipId => 
-  prefixUuid('rel') as RelationshipId;
-
-// Helper to validate ID formats
-export const isValidId = (id: string, type: 'note' | 'cluster' | 'node' | 'triple' | 'doc' | 'rel'): boolean => {
-  const prefix = `${type}-`;
-  return id.startsWith(prefix) && id.length > prefix.length;
+// Generate a deterministic entity ID from kind and label
+export const generateEntityId = (kind: string, label: string): EntityId => {
+  // Create a deterministic ID by combining kind and label
+  // This ensures the same entity always gets the same ID
+  const normalized = `${kind.toUpperCase()}_${label.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+  return `entity_${normalized}`;
 };

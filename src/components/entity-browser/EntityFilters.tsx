@@ -3,7 +3,6 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useGraph } from '@/contexts/GraphContext';
 import { Search } from 'lucide-react';
 import { SortOption } from './EntityBrowser';
 
@@ -14,6 +13,7 @@ interface EntityFiltersProps {
   currentFilter: string | null;
   currentSort: SortOption;
   currentSearch: string;
+  availableTypes: string[];
 }
 
 export function EntityFilters({
@@ -22,11 +22,9 @@ export function EntityFilters({
   onSortChange,
   currentFilter,
   currentSort,
-  currentSearch
+  currentSearch,
+  availableTypes
 }: EntityFiltersProps) {
-  const graph = useGraph();
-  const entityTypes = graph.getEntityTypes();
-  
   return (
     <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
       <div className="relative">
@@ -50,8 +48,8 @@ export function EntityFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="">All entity types</SelectItem>
-            {entityTypes.map(type => (
-              <SelectItem key={type.kind} value={type.kind}>{type.kind}</SelectItem>
+            {availableTypes.map(type => (
+              <SelectItem key={type} value={type}>{type}</SelectItem>
             ))}
           </SelectContent>
         </Select>

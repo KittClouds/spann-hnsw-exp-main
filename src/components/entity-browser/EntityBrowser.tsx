@@ -1,22 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { useGraph } from '@/contexts/GraphContext';
 import { EntityFilters } from './EntityFilters';
 import { EntityList } from './EntityList';
 import { EntityGrid } from './EntityGrid';
 import { EntityDetailPanel } from './EntityDetailPanel';
 import { QuickEntryForm } from './QuickEntryForm';
-import { Entity } from '@/lib/utils/parsingUtils';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { List, GridIcon } from 'lucide-react';
+import { EntityWithReferences } from '@/livestore/queries/entities';
+import { useAllEntitiesArray, useEntitiesByType } from '@/hooks/useLiveStore';
 
-export interface EntityWithReferences extends Entity {
-  referenceCount: number;
-}
-
+export type { EntityWithReferences };
 export type ViewMode = 'list' | 'grid';
 export type SortOption = 'alpha-asc' | 'alpha-desc' | 'recent' | 'references';
 
@@ -29,31 +26,18 @@ export function EntityBrowser() {
   const [sortOption, setSortOption] = useState<SortOption>('alpha-asc');
   const [filterType, setFilterType] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [entities, setEntities] = useState<EntityWithReferences[]>([]);
   const [selectedEntity, setSelectedEntity] = useState<EntityWithReferences | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
   
-  const graph = useGraph();
-  
-  // Load entities from graph when component mounts
-  useEffect(() => {
-    loadEntities();
-  }, []);
+  // Use reactive LiveStore queries
+  const entities = useAllEntitiesArray();
+  const entitiesByType = useEntitiesByType();
   
   // Save view mode to local storage when it changes
   useEffect(() => {
     localStorage.setItem('entityBrowserViewMode', viewMode);
   }, [viewMode]);
-  
-  // Load entities from graph
-  const loadEntities = () => {
-    if (!graph) return;
-    
-    // This will be implemented in the GraphService extensions
-    const graphEntities = graph.getAllEntities ? graph.getAllEntities() : [];
-    setEntities(graphEntities);
-  };
   
   // Filter entities based on current filters and search
   const filteredEntities = entities.filter(entity => {
@@ -80,8 +64,7 @@ export function EntityBrowser() {
       case 'alpha-desc':
         return b.label.localeCompare(a.label);
       case 'recent':
-        // This would require created/updated timestamps on entities
-        return 0; // Placeholder for now
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       case 'references':
         return b.referenceCount - a.referenceCount;
       default:
@@ -96,10 +79,13 @@ export function EntityBrowser() {
   };
   
   // Handle entity creation from quick entry form
-  const handleEntityCreated = (entity: Entity) => {
-    loadEntities(); // Reload entities after creation
+  const handleEntityCreated = () => {
     setIsQuickEntryOpen(false);
+    // Entities will automatically update via reactive queries
   };
+  
+  // Get available entity types from the reactive data
+  const availableTypes = Array.from(entitiesByType.keys());
   
   return (
     <div className="flex flex-col h-full gap-4">
@@ -111,6 +97,7 @@ export function EntityBrowser() {
           currentFilter={filterType}
           currentSort={sortOption}
           currentSearch={searchQuery}
+          availableTypes={availableTypes}
         />
         
         <div className="flex items-center gap-2">
@@ -154,7 +141,9 @@ export function EntityBrowser() {
           <EntityDetailPanel 
             entity={selectedEntity}
             onClose={() => setIsDetailOpen(false)} 
-            onEntityUpdated={loadEntities}
+            onEntityUpdated={() => {
+              // Entities will automatically update via reactive queries
+            }}
           />
         )}
       </Dialog>

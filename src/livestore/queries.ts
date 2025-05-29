@@ -1,7 +1,11 @@
+
 import { queryDb, computed } from '@livestore/livestore';
 import { tables } from './schema';
 import { parseAllNotes } from '@/lib/utils/parsingUtils';
 import { parseNoteConnectionsFromDocument } from '@/lib/utils/documentParser';
+
+// Re-export entity queries
+export * from './queries/entities';
 
 // Basic entity queries with proper typing
 export const clusters$ = queryDb(

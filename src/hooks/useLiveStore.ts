@@ -11,7 +11,17 @@ import {
   standardNotes$,
   activeNoteConnections$,
   entityAttributes$,
-  blueprints$
+  blueprints$,
+  // New entity queries
+  globalEntities$,
+  clusterEntitiesMap$,
+  folderEntitiesMap$,
+  activeNoteEntities$,
+  entitiesByType$,
+  entityReferenceCounts$,
+  recentEntities$,
+  orphanedEntities$,
+  allEntitiesArray$
 } from '../livestore/queries';
 import { events } from '../livestore/schema';
 
@@ -94,6 +104,52 @@ export function useBlueprintsArray() {
   const { store } = useStore();
   const blueprints = store.useQuery(blueprints$);
   return Array.isArray(blueprints) ? blueprints : [];
+}
+
+// New entity-specific hooks
+export function useGlobalEntities() {
+  const { store } = useStore();
+  return store.useQuery(globalEntities$);
+}
+
+export function useAllEntitiesArray() {
+  const { store } = useStore();
+  return store.useQuery(allEntitiesArray$);
+}
+
+export function useClusterEntitiesMap() {
+  const { store } = useStore();
+  return store.useQuery(clusterEntitiesMap$);
+}
+
+export function useFolderEntitiesMap() {
+  const { store } = useStore();
+  return store.useQuery(folderEntitiesMap$);
+}
+
+export function useActiveNoteEntities() {
+  const { store } = useStore();
+  return store.useQuery(activeNoteEntities$);
+}
+
+export function useEntitiesByType() {
+  const { store } = useStore();
+  return store.useQuery(entitiesByType$);
+}
+
+export function useEntityReferenceCounts() {
+  const { store } = useStore();
+  return store.useQuery(entityReferenceCounts$);
+}
+
+export function useRecentEntities() {
+  const { store } = useStore();
+  return store.useQuery(recentEntities$);
+}
+
+export function useOrphanedEntities() {
+  const { store } = useStore();
+  return store.useQuery(orphanedEntities$);
 }
 
 // Helper to commit note updates
