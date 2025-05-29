@@ -31,9 +31,12 @@ export class UnifiedNoteDocument extends UnifiedSerializableBase {
   
   /**
    * Enhanced fromJSON that handles both new and legacy formats
-   * Fixed to return specific type instead of generic T
+   * Override with proper generic constraint
    */
-  static fromUnifiedJSON(json: Record<string, any>): UnifiedNoteDocument {
+  static fromUnifiedJSON<T extends UnifiedNoteDocument>(
+    this: new (...args: any[]) => T,
+    json: Record<string, any>
+  ): T {
     try {
       // Check for unified metadata
       const namespace = json.gn_namespace || [];
@@ -42,7 +45,7 @@ export class UnifiedNoteDocument extends UnifiedSerializableBase {
           namespace[1] === 'note') {
         
         // Create instance with unified data
-        return new UnifiedNoteDocument(
+        return new this(
           json.id || 'unknown',
           json.title || 'Untitled',
           json.blocks || json.content || [],
@@ -54,7 +57,7 @@ export class UnifiedNoteDocument extends UnifiedSerializableBase {
       
       // Handle legacy format
       if (json.id && json.title) {
-        return new UnifiedNoteDocument(
+        return new this(
           json.id,
           json.title,
           json.blocks || json.content || [],
@@ -70,7 +73,7 @@ export class UnifiedNoteDocument extends UnifiedSerializableBase {
       console.warn('UnifiedNoteDocument: Falling back to legacy deserialization:', error);
       
       // Last resort: manual construction
-      return new UnifiedNoteDocument(
+      return new this(
         json.id || 'unknown',
         json.title || 'Untitled',
         json.blocks || json.content || [],
