@@ -22,6 +22,7 @@ export enum NodeType {
   THREAD_MESSAGE = 'thread_message',
   TRIPLE = 'TRIPLE',         // reified statement
   ENTITY = 'entity',         // Add this line for entity type
+  GLOBAL_TRIPLE = 'GLOBAL_TRIPLE', // New: consolidated triple node
   // Story-specific entity types
   SCENE = 'SCENE',
   FACTION = 'FACTION',
@@ -46,6 +47,9 @@ export enum EdgeType {
   // reification links
   SUBJECT_OF = 'SUBJECT_OF',   // Entity ──SUBJECT_OF──► Triple
   OBJECT_OF = 'OBJECT_OF',     // Entity ──OBJECT_OF──► Triple
+  // New cross-note relation types
+  CO_OCCURS = 'CO_OCCURS',     // Entity co-occurrence across notes
+  GLOBAL_TRIPLE_MEMBER = 'GLOBAL_TRIPLE_MEMBER', // Entity to global triple
   // Story-specific relationships
   PART_OF = 'PART_OF',
   OCCURS_IN = 'OCCURS_IN',

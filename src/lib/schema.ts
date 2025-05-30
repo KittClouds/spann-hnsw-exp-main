@@ -88,6 +88,13 @@ class SchemaRegistry {
       defaultStyle: { shape: 'rectangle', 'background-color': '#7C5BF1' }
     });
     
+    // Register new GLOBAL_TRIPLE node
+    this.registerNode('GLOBAL_TRIPLE', {
+      kind: 'GLOBAL_TRIPLE',
+      labelProp: 'predicate',
+      defaultStyle: { shape: 'diamond', 'background-color': '#9B59B6', width: 20, height: 20 }
+    });
+    
     // Register new story-specific entity types
     this.registerNode('SCENE', {
       kind: 'SCENE',
@@ -191,6 +198,20 @@ class SchemaRegistry {
     
     // Register provenance edge
     this.registerEdge('MENTIONED_IN', { from: '*', to: 'NOTE', directed: true });
+    
+    // Register new cross-note relation edges
+    this.registerEdge('CO_OCCURS', { 
+      from: '*', 
+      to: '*', 
+      directed: false,
+      defaultStyle: { 'line-style': 'dashed', 'line-color': '#95A5A6', 'width': 2 }
+    });
+    this.registerEdge('GLOBAL_TRIPLE_MEMBER', { 
+      from: '*', 
+      to: 'GLOBAL_TRIPLE', 
+      directed: true,
+      defaultStyle: { 'line-color': '#9B59B6', 'width': 2 }
+    });
     
     // Register new story-specific relationships
     this.registerEdge('PART_OF', {

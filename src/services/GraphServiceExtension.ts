@@ -1,15 +1,36 @@
-
 import { EntityWithReferences } from '@/livestore/queries/entities';
 import { GraphService } from './GraphService';
 import { generateEntityId } from '@/lib/utils/ids';
 import { Entity } from '@/lib/utils/parsingUtils';
 import { NodeType, EdgeType } from './types';
+import { schema } from '@/lib/schema';
 
 /**
  * Extension methods for GraphService to support entity browser functionality
  * Updated to use LiveStore queries instead of Cytoscape scanning
  */
 export function extendGraphService(service: GraphService): void {
+  // Register new cross-note relation types in the schema
+  schema.registerNode('GLOBAL_TRIPLE', {
+    kind: 'GLOBAL_TRIPLE',
+    labelProp: 'predicate',
+    defaultStyle: { shape: 'diamond', 'background-color': '#9B59B6', width: 20, height: 20 }
+  });
+  
+  schema.registerEdge('CO_OCCURS', {
+    from: '*',
+    to: '*',
+    directed: false,
+    defaultStyle: { 'line-style': 'dashed', 'line-color': '#95A5A6', 'width': 2 }
+  });
+  
+  schema.registerEdge('GLOBAL_TRIPLE_MEMBER', {
+    from: '*',
+    to: 'GLOBAL_TRIPLE',
+    directed: true,
+    defaultStyle: { 'line-color': '#9B59B6', 'width': 2 }
+  });
+
   // Note: This method is now deprecated in favor of LiveStore queries
   // It's kept for backwards compatibility but should be replaced with useAllEntitiesArray()
   service.getAllEntities = function(): EntityWithReferences[] {
