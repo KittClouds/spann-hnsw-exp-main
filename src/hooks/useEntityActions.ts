@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { selectedEntityAtom, pinnedEntitiesAtom, SelectedEntity } from '@/lib/entityDetailStore';
@@ -9,7 +8,7 @@ import { toast } from 'sonner';
 
 export function useEntityActions() {
   const [, setSelectedEntity] = useAtom(selectedEntityAtom);
-  const setRightSidebarContent = useSetAtom(rightSidebarContentAtom);
+  const setRightSidebarContent = useSetAtom(rightSidebarContentAtom) as (value: RightSidebarContentType) => void;
   const [pinnedEntities, setPinnedEntities] = useAtom(pinnedEntitiesAtom);
   const rightSidebar = useRightSidebar();
 
