@@ -6,6 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { EntityDialogContent } from './EntityDialogContent';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useEntitiesForScope } from '@/hooks/useEntitiesForScope';
+import { useActiveNoteConnections } from '@/hooks/useLiveStore';
 import { Badge } from '@/components/ui/badge';
 
 interface EntityPanelProps {
@@ -14,13 +15,13 @@ interface EntityPanelProps {
 
 export function EntityPanel({ entitiesScope }: EntityPanelProps) {
   const { entities, entityGroups } = entitiesScope;
+  const activeNoteConnections = useActiveNoteConnections();
   const [isEntitiesOpen, setIsEntitiesOpen] = useState(true);
   const [isTriplesOpen, setIsTriplesOpen] = useState(true);
   const [selectedEntity, setSelectedEntity] = useState<any>(null);
 
-  // For triples, we'll use the active note connections for now
-  // TODO: In future, we could aggregate triples across scopes
-  const triples: any[] = []; // Simplified for now
+  // Get triples from active note connections
+  const triples = activeNoteConnections?.triples || [];
 
   return (
     <div className="space-y-4">
