@@ -1,13 +1,41 @@
-
 import { graphService } from './GraphService';
 import { Note, Cluster } from '@/lib/store';
 import { NodeType, Thread, ThreadMessage } from './types';
+import { CrossNoteGraphSyncWorker } from './CrossNoteGraphSyncWorker';
 
 /**
  * SyncManager service provides bidirectional synchronization between the store (jotai atoms)
  * and the graph service (cytoscape).
  */
 export class SyncManager {
+  private crossNoteWorker: CrossNoteGraphSyncWorker;
+
+  constructor() {
+    // Initialize the cross-note sync worker
+    this.crossNoteWorker = new CrossNoteGraphSyncWorker(graphService);
+  }
+
+  /**
+   * Starts the cross-note relationship sync worker
+   */
+  public startCrossNoteSync(): void {
+    this.crossNoteWorker.start();
+  }
+
+  /**
+   * Stops the cross-note relationship sync worker
+   */
+  public stopCrossNoteSync(): void {
+    this.crossNoteWorker.stop();
+  }
+
+  /**
+   * Triggers an update of cross-note relationships in the graph
+   */
+  public updateCrossNoteRelationships(): void {
+    this.crossNoteWorker.triggerUpdate();
+  }
+
   /**
    * Synchronizes data from the store to the graph
    * @param notes Notes from the store
