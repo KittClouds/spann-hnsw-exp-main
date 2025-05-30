@@ -3,17 +3,31 @@ import React from "react";
 import { X } from "lucide-react";
 import { useAtom } from "jotai";
 import { rightSidebarContentAtom } from "@/lib/rightSidebarStore";
+import { selectedEntityAtom } from "@/lib/entityDetailStore";
 import { useRightSidebar } from "@/components/RightSidebarProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { EntityAttributePanel } from "@/components/entity-attributes/EntityAttributePanel";
+import { UniversalEntityDetailPanel } from "@/components/entity-detail/UniversalEntityDetailPanel";
 
 export function AppRightSidebar() {
   const [contentType] = useAtom(rightSidebarContentAtom);
+  const [selectedEntity] = useAtom(selectedEntityAtom);
   const { open, toggleSidebar } = useRightSidebar();
 
   const renderContent = () => {
     switch (contentType) {
+      case 'entity-detail':
+        return selectedEntity ? (
+          <UniversalEntityDetailPanel entity={selectedEntity} />
+        ) : (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="text-center text-muted-foreground">
+              <p className="text-sm">No entity selected</p>
+              <p className="text-xs mt-1">Select an entity to view details</p>
+            </div>
+          </div>
+        );
       case 'entity-attributes':
         return <EntityAttributePanel />;
       case 'empty':
@@ -39,7 +53,9 @@ export function AppRightSidebar() {
       {/* Header */}
       <div className="border-b border-[#1a1b23] p-4">
         <div className="flex items-center justify-between w-full">
-          <h2 className="text-sm font-semibold text-foreground">Right Panel</h2>
+          <h2 className="text-sm font-semibold text-foreground">
+            {contentType === 'entity-detail' && selectedEntity ? selectedEntity.label : 'Right Panel'}
+          </h2>
           <Button
             variant="ghost"
             size="icon"

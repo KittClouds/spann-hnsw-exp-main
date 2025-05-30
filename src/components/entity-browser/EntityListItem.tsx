@@ -4,6 +4,7 @@ import { EntityWithReferences } from '@/livestore/queries/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Eye } from 'lucide-react';
+import { useEntityActions } from '@/hooks/useEntityActions';
 
 interface EntityListItemProps {
   entity: EntityWithReferences;
@@ -12,6 +13,20 @@ interface EntityListItemProps {
 }
 
 export const EntityListItem = React.memo(({ entity, onSelectEntity, style }: EntityListItemProps) => {
+  const { openEntityInSidebar } = useEntityActions();
+
+  const handleViewEntity = () => {
+    openEntityInSidebar({
+      kind: entity.kind,
+      label: entity.label,
+      id: entity.id
+    });
+  };
+
+  const handleEditEntity = () => {
+    onSelectEntity(entity);
+  };
+
   return (
     <div style={style} className="flex items-center justify-between p-3 border-b border-border hover:bg-muted/50 transition-colors">
       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -33,7 +48,7 @@ export const EntityListItem = React.memo(({ entity, onSelectEntity, style }: Ent
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={() => onSelectEntity(entity)}
+          onClick={handleViewEntity}
         >
           <Eye className="h-4 w-4" />
         </Button>
@@ -41,7 +56,7 @@ export const EntityListItem = React.memo(({ entity, onSelectEntity, style }: Ent
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={() => onSelectEntity(entity)}
+          onClick={handleEditEntity}
         >
           <Edit className="h-4 w-4" />
         </Button>
