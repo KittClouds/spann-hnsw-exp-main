@@ -1,5 +1,5 @@
 
-import { atom, useAtom, useSetAtom } from 'jotai';
+import { atom, useAtom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { EntityWithReferences } from '@/livestore/queries/entities';
 import { rightSidebarContentAtom, RightSidebarContentType } from '@/lib/rightSidebarStore';
@@ -17,7 +17,7 @@ export function useEntitySelection() {
   const [selectedEntity, setSelectedEntity] = useAtom(selectedEntityAtom);
   const [detailMode, setDetailMode] = useAtom(entityDetailModeAtom);
   const { setOpen: setRightSidebarOpen } = useRightSidebar();
-  const setRightSidebarContent = useSetAtom(rightSidebarContentAtom);
+  const [, setRightSidebarContent] = useAtom(rightSidebarContentAtom);
 
   const selectEntity = (entity: EntityWithReferences, mode?: EntityDetailMode) => {
     setSelectedEntity(entity);
@@ -25,7 +25,7 @@ export function useEntitySelection() {
     const targetMode = mode || detailMode;
     
     if (targetMode === 'sidebar') {
-      setRightSidebarContent('entity-detail' as RightSidebarContentType);
+      setRightSidebarContent('entity-detail');
       setRightSidebarOpen(true);
     }
     // For modal mode, the consuming component handles the modal state
