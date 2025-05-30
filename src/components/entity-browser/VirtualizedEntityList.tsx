@@ -64,6 +64,7 @@ export function VirtualizedEntityList({
           <List
             ref={ref}
             height={height}
+            width="100%"
             itemCount={itemCount}
             itemSize={ITEM_HEIGHT}
             onItemsRendered={onItemsRendered}

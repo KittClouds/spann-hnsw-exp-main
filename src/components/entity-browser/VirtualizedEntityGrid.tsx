@@ -1,7 +1,6 @@
 
 import React, { useCallback } from 'react';
 import { VariableSizeGrid as Grid } from 'react-window';
-import InfiniteLoader from 'react-window-infinite-loader';
 import { EntityWithReferences } from '@/livestore/queries/entities';
 import { EntityGridItem } from './EntityGridItem';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -76,7 +75,7 @@ export function VirtualizedEntityGrid({
   return (
     <Grid
       height={height}
-      width="100%"
+      width={1200}
       columnCount={columnCount}
       rowCount={rowCount}
       columnWidth={getColumnWidth}
