@@ -23,6 +23,14 @@ import {
   orphanedEntities$,
   allEntitiesArray$
 } from '../livestore/queries';
+// Import new cross-note relation queries
+import { 
+  entityCoOccurrences$, 
+  globalTriples$, 
+  createEntityGlobalRelationsQuery,
+  topCoOccurrences$,
+  topGlobalTriples$
+} from '../livestore/queries/derived';
 import { events } from '../livestore/schema';
 
 // Custom hooks that wrap LiveStore usage with proper typing
@@ -150,6 +158,33 @@ export function useRecentEntities() {
 export function useOrphanedEntities() {
   const { store } = useStore();
   return store.useQuery(orphanedEntities$);
+}
+
+// NEW: Cross-note relation hooks
+export function useEntityCoOccurrences() {
+  const { store } = useStore();
+  return store.useQuery(entityCoOccurrences$);
+}
+
+export function useGlobalTriples() {
+  const { store } = useStore();
+  return store.useQuery(globalTriples$);
+}
+
+export function useEntityGlobalRelations(entityId: string) {
+  const { store } = useStore();
+  const query = createEntityGlobalRelationsQuery(entityId);
+  return store.useQuery(query);
+}
+
+export function useTopCoOccurrences() {
+  const { store } = useStore();
+  return store.useQuery(topCoOccurrences$);
+}
+
+export function useTopGlobalTriples() {
+  const { store } = useStore();
+  return store.useQuery(topGlobalTriples$);
 }
 
 // Helper to commit note updates

@@ -3,6 +3,7 @@ import { queryDb, computed } from '@livestore/livestore';
 import { tables } from './schema';
 import { parseAllNotes } from '@/lib/utils/parsingUtils';
 import { parseNoteConnectionsFromDocument } from '@/lib/utils/documentParser';
+import { crossNoteRelationService } from '@/services/CrossNoteRelationService';
 
 // Re-export entity queries
 export * from './queries/entities';
@@ -145,3 +146,85 @@ export const activeNoteConnections$ = computed((get) => {
     triples: connections.triples
   };
 }, { label: 'activeNoteConnections$' });
+
+// NEW: Cross-Note Relation Engine queries
+// These provide reactive access to the computed cross-note relationships
+
+export const entityCoOccurrences$ = computed((get) => {
+  const entitiesMap = get(noteEntitiesMap$);
+  const triplesMap = get(noteTriplesMap$);
+  
+  console.log("LiveStore: Computing entity co-occurrences");
+  
+  // Update the service with current data
+  crossNoteRelationService.updateFromNoteData(entitiesMap, triplesMap);
+  
+  // Get all co-occurrences and structure for UI consumption
+  const allCoOccurrences = crossNoteRelationService.getAllCoOccurrences();
+  const coOccurrenceMap = new Map<string, Array<{
+    entity: { kind: string; label: string };
+    count: number;
+    noteIds: string[];
+  }>>();
+  
+  // Group by entity for easy lookup
+  allCoOccurrences.forEach(coOcc => {
+    const entity1Key = `${coOcc.entity1.kind}::${coOcc.entity1.label}`;
+    const entity2Key = `${coOcc.entity2.kind}::${coOcc.entity2.label}`;
+    
+    // Add to entity1's co-occurrences
+    if (!coOccurrenceMap.has(entity1Key)) {
+      coOccurrenceMap.set(entity1Key, []);
+    }
+    coOccurrenceMap.get(entity1Key)!.push({
+      entity: coOcc.entity2,
+      count: coOcc.count,
+      noteIds: coOcc.noteIds
+    });
+    
+    // Add to entity2's co-occurrences
+    if (!coOccurrenceMap.has(entity2Key)) {
+      coOccurrenceMap.set(entity2Key, []);
+    }
+    coOccurrenceMap.get(entity2Key)!.push({
+      entity: coOcc.entity1,
+      count: coOcc.count,
+      noteIds: coOcc.noteIds
+    });
+  });
+  
+  return coOccurrenceMap;
+}, { label: 'entityCoOccurrences$' });
+
+export const globalTriples$ = computed((get) => {
+  const entitiesMap = get(noteEntitiesMap$);
+  const triplesMap = get(noteTriplesMap$);
+  
+  console.log("LiveStore: Computing global triples");
+  
+  // Update the service with current data
+  crossNoteRelationService.updateFromNoteData(entitiesMap, triplesMap);
+  
+  // Return the global triple index
+  return crossNoteRelationService.getAllGlobalTriples();
+}, { label: 'globalTriples$' });
+
+export const entityGlobalRelations$ = (entityId: string) => computed((get) => {
+  const entitiesMap = get(noteEntitiesMap$);
+  const triplesMap = get(noteTriplesMap$);
+  
+  console.log(`LiveStore: Computing global relations for entity ${entityId}`);
+  
+  // Update the service with current data
+  crossNoteRelationService.updateFromNoteData(entitiesMap, triplesMap);
+  
+  // Get both co-occurrences and global triples for this entity
+  const coOccurrences = crossNoteRelationService.getCoOccurrences(entityId);
+  const globalTriples = crossNoteRelationService.getGlobalTriples(entityId);
+  
+  return {
+    coOccurrences,
+    globalTriples,
+    entityId
+  };
+}, { label: `entityGlobalRelations$_${entityId}` });
