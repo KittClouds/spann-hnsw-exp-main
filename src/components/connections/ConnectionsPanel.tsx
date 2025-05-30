@@ -1,4 +1,3 @@
-
 import { useActiveNote, useActiveNoteConnections } from '@/hooks/useLiveStore';
 import { useGraph } from '@/contexts/GraphContext'; // Keep for backlinks
 import { Badge } from '@/components/ui/badge';
@@ -9,13 +8,18 @@ import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SchemaManager } from "../schema/SchemaManager";
 import { EntityPanel } from "./EntityPanel";
+import { ScopeSelector } from "./ScopeSelector";
+import { useEntitiesForScope } from "@/hooks/useEntitiesForScope";
 
 export function ConnectionsPanel() {
   const activeNote = useActiveNote();
   const connections = useActiveNoteConnections();
   const { getBacklinks } = useGraph(); // Only need backlinks from graph context now
   const [isOpen, setIsOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'links' | 'backlinks' | 'entities'>('links');
+  const [activeView, setActiveView] = useState<'links' | 'backlinks' | 'entities'>('entities'); // Default to entities
+  
+  // Use the new scope-aware entity hook
+  const entitiesScope = useEntitiesForScope();
   
   const backlinks = activeNote?.id ? getBacklinks(activeNote.id) : [];
   const { tags = [], mentions = [], links = [] } = connections;
@@ -31,6 +35,16 @@ export function ConnectionsPanel() {
             transition={{ duration: 0.3 }}
             className="border-t border-[#1a1b23]"
           >
+            {/* Scope Selector - only show for entities view */}
+            {activeView === 'entities' && (
+              <ScopeSelector
+                scope={entitiesScope.scope}
+                scopeInfo={entitiesScope.scopeInfo}
+                onScopeChange={entitiesScope.setScope}
+                stats={entitiesScope.stats}
+              />
+            )}
+            
             <div className="p-4 space-y-4 max-h-[300px] overflow-auto">
               <div className="flex justify-center space-x-2">
                 <Button
@@ -171,7 +185,7 @@ export function ConnectionsPanel() {
                   </CardContent>
                 </Card>
               ) : (
-                <EntityPanel />
+                <EntityPanel entitiesScope={entitiesScope} />
               )}
             </div>
           </motion.div>

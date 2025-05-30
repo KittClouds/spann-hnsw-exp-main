@@ -1,70 +1,66 @@
 
 import React, { useState } from 'react';
-import { useActiveClusterId, useActiveNoteConnections } from '@/hooks/useLiveStore';
+import { useActiveClusterId } from '@/hooks/useLiveStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileText, FolderOpen } from 'lucide-react';
+import { Search, FileText, FolderOpen, Database, Globe } from 'lucide-react';
 import { EntityTypeGroup } from './EntityTypeGroup';
-import { useActiveClusterEntities } from './useActiveClusterEntities';
+import { useEntitiesForScope, EntityScope } from '@/hooks/useEntitiesForScope';
 
-type ViewMode = 'note' | 'cluster';
+const scopeConfig = {
+  note: { icon: FileText, label: 'Current Note' },
+  folder: { icon: FolderOpen, label: 'Current Folder' },
+  cluster: { icon: Database, label: 'Current Cluster' },
+  vault: { icon: Globe, label: 'Entire Vault' }
+};
 
 export function EntityManagerContent() {
-  const [viewMode, setViewMode] = useState<ViewMode>('note');
   const [searchQuery, setSearchQuery] = useState('');
-  const { entities: noteEntities } = useActiveNoteConnections();
-  const [activeClusterId] = useActiveClusterId();
-  const clusterEntities = useActiveClusterEntities();
+  const entitiesScope = useEntitiesForScope();
+  
+  const { scope, setScope, scopeInfo, entities, entityGroups } = entitiesScope;
 
-  const entities = viewMode === 'note' ? (Array.isArray(noteEntities) ? noteEntities : []) : clusterEntities;
-
-  // Group entities by kind
-  const entityGroups = React.useMemo(() => {
-    const groups: Record<string, typeof entities> = {};
+  // Filter entities by search query
+  const filteredEntityGroups = React.useMemo(() => {
+    if (!searchQuery) return entityGroups;
     
-    entities.forEach(entity => {
-      if (!groups[entity.kind]) {
-        groups[entity.kind] = [];
+    const filtered: Record<string, typeof entities> = {};
+    Object.entries(entityGroups).forEach(([kind, entityList]) => {
+      const matchingEntities = entityList.filter(entity => 
+        entity.label.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      if (matchingEntities.length > 0) {
+        filtered[kind] = matchingEntities;
       }
-      groups[entity.kind].push(entity);
     });
     
-    // Filter by search query if provided
-    if (searchQuery) {
-      Object.keys(groups).forEach(kind => {
-        groups[kind] = groups[kind].filter(entity => 
-          entity.label.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        if (groups[kind].length === 0) {
-          delete groups[kind];
-        }
-      });
-    }
-    
-    return groups;
-  }, [entities, searchQuery]);
+    return filtered;
+  }, [entityGroups, searchQuery]);
 
   return (
     <div className="flex flex-col h-full">
-      {/* View Mode Toggle */}
+      {/* Scope Mode Toggle */}
       <div className="p-4 border-b border-[#1a1b23]">
         <div className="flex gap-2 mb-4">
-          <Button
-            variant={viewMode === 'note' ? 'default' : 'ghost'}
-            onClick={() => setViewMode('note')}
-            className="flex items-center gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Current Note
-          </Button>
-          <Button
-            variant={viewMode === 'cluster' ? 'default' : 'ghost'}
-            onClick={() => setViewMode('cluster')}
-            className="flex items-center gap-2"
-          >
-            <FolderOpen className="h-4 w-4" />
-            Current Cluster
-          </Button>
+          {Object.entries(scopeConfig).map(([scopeKey, config]) => {
+            const Icon = config.icon;
+            return (
+              <Button
+                key={scopeKey}
+                variant={scope === scopeKey ? 'default' : 'ghost'}
+                onClick={() => setScope(scopeKey as EntityScope)}
+                className="flex items-center gap-2"
+              >
+                <Icon className="h-4 w-4" />
+                {config.label}
+              </Button>
+            );
+          })}
+        </div>
+        
+        <div className="mb-4 p-2 bg-[#12141f] rounded-md border border-[#1a1b23]">
+          <div className="text-sm font-medium text-primary">{scopeInfo.name}</div>
+          <div className="text-xs text-muted-foreground">{scopeInfo.description}</div>
         </div>
         
         {/* Search */}
@@ -81,20 +77,20 @@ export function EntityManagerContent() {
 
       {/* Entity Groups */}
       <div className="flex-1 overflow-auto p-4 space-y-4">
-        {Object.keys(entityGroups).length === 0 ? (
+        {Object.keys(filteredEntityGroups).length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <p>No entities found {viewMode === 'note' ? 'in this note' : 'in this cluster'}.</p>
+            <p>No entities found in this {scope}.</p>
             <p className="mt-2 text-sm">
               Use <code className="bg-muted px-1 rounded">[TYPE|Label]</code> syntax to create entities.
             </p>
           </div>
         ) : (
-          Object.entries(entityGroups).map(([kind, entityList]) => (
+          Object.entries(filteredEntityGroups).map(([kind, entityList]) => (
             <EntityTypeGroup
               key={kind}
               kind={kind}
               entities={entityList}
-              viewMode={viewMode}
+              viewMode={scope === 'note' ? 'note' : 'cluster'}
             />
           ))
         )}

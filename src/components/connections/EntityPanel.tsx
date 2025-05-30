@@ -1,28 +1,26 @@
 
 import React, { useState } from 'react';
-import { useActiveNoteConnections } from '@/hooks/useLiveStore';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight, Database, Link as LinkIcon } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { EntityDialogContent } from './EntityDialogContent';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { useEntitiesForScope } from '@/hooks/useEntitiesForScope';
+import { Badge } from '@/components/ui/badge';
 
-export function EntityPanel() {
-  const { entities, triples } = useActiveNoteConnections();
+interface EntityPanelProps {
+  entitiesScope: ReturnType<typeof useEntitiesForScope>;
+}
+
+export function EntityPanel({ entitiesScope }: EntityPanelProps) {
+  const { entities, entityGroups } = entitiesScope;
   const [isEntitiesOpen, setIsEntitiesOpen] = useState(true);
   const [isTriplesOpen, setIsTriplesOpen] = useState(true);
   const [selectedEntity, setSelectedEntity] = useState<any>(null);
 
-  const entityGroups = React.useMemo(() => {
-    const groups: Record<string, any[]> = {};
-    (Array.isArray(entities) ? entities : []).forEach(entity => {
-      if (!groups[entity.kind]) {
-        groups[entity.kind] = [];
-      }
-      groups[entity.kind].push(entity);
-    });
-    return groups;
-  }, [entities]);
+  // For triples, we'll use the active note connections for now
+  // TODO: In future, we could aggregate triples across scopes
+  const triples: any[] = []; // Simplified for now
 
   return (
     <div className="space-y-4">
@@ -31,28 +29,40 @@ export function EntityPanel() {
           <Button variant="ghost" className="w-full justify-between">
             <div className="flex items-center gap-2">
               <Database className="h-4 w-4" />
-              <span>Entities ({Array.isArray(entities) ? entities.length : 0})</span>
+              <span>Entities ({entities.length})</span>
             </div>
             {isEntitiesOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-2">
           {Object.keys(entityGroups).length === 0 ? (
-            <p className="text-sm text-muted-foreground p-2">No entities found in this note.</p>
+            <p className="text-sm text-muted-foreground p-2">
+              No entities found in this {entitiesScope.scopeInfo.type}.
+            </p>
           ) : (
             Object.entries(entityGroups).map(([kind, entityList]) => (
               <div key={kind} className="space-y-1">
-                <h4 className="text-sm font-medium text-muted-foreground">{kind}</h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">{kind}</h4>
+                  <Badge variant="outline" className="text-xs">
+                    {entityList.length}
+                  </Badge>
+                </div>
                 {entityList.map((entity, index) => (
-                  <Dialog key={index} onOpenChange={(open) => !open && setSelectedEntity(null)}>
+                  <Dialog key={entity.id || index} onOpenChange={(open) => !open && setSelectedEntity(null)}>
                     <DialogTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-start text-left"
+                        className="w-full justify-between text-left"
                         onClick={() => setSelectedEntity(entity)}
                       >
                         <span className="truncate">{entity.label}</span>
+                        {entity.referenceCount > 1 && (
+                          <Badge variant="secondary" className="text-xs ml-2">
+                            {entity.referenceCount}
+                          </Badge>
+                        )}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl">
@@ -71,14 +81,16 @@ export function EntityPanel() {
           <Button variant="ghost" className="w-full justify-between">
             <div className="flex items-center gap-2">
               <LinkIcon className="h-4 w-4" />
-              <span>Relationships ({Array.isArray(triples) ? triples.length : 0})</span>
+              <span>Relationships ({triples.length})</span>
             </div>
             {isTriplesOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-1">
-          {!Array.isArray(triples) || triples.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-2">No relationships found in this note.</p>
+          {triples.length === 0 ? (
+            <p className="text-sm text-muted-foreground p-2">
+              No relationships found in this {entitiesScope.scopeInfo.type}.
+            </p>
           ) : (
             triples.map((triple, index) => (
               <div key={index} className="p-2 text-sm bg-muted rounded">
