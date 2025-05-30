@@ -5,14 +5,13 @@ import { selectedEntityAtom, pinnedEntitiesAtom, SelectedEntity } from '@/lib/en
 import { rightSidebarContentAtom } from '@/lib/rightSidebarStore';
 import { useRightSidebar } from '@/components/RightSidebarProvider';
 import { copyEntityUrl } from '@/lib/entityUrlUtils';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export function useEntityActions() {
   const [, setSelectedEntity] = useAtom(selectedEntityAtom);
   const [, setRightSidebarContent] = useAtom(rightSidebarContentAtom);
   const [pinnedEntities, setPinnedEntities] = useAtom(pinnedEntitiesAtom);
   const { open: rightSidebarOpen, setOpen: setRightSidebarOpen } = useRightSidebar();
-  const { toast } = useToast();
 
   const openEntityInSidebar = useCallback((entity: SelectedEntity) => {
     setSelectedEntity(entity);
@@ -29,11 +28,8 @@ export function useEntityActions() {
 
   const copyEntityLink = useCallback((entity: SelectedEntity) => {
     copyEntityUrl(entity);
-    toast({
-      title: "Link copied",
-      description: `Entity link copied to clipboard`,
-    });
-  }, [toast]);
+    toast.success("Link copied to clipboard");
+  }, []);
 
   const pinEntity = useCallback((entity: SelectedEntity) => {
     const isAlreadyPinned = pinnedEntities.some(
@@ -44,18 +40,12 @@ export function useEntityActions() {
       setPinnedEntities(prev => prev.filter(
         p => !(p.kind === entity.kind && p.label === entity.label)
       ));
-      toast({
-        title: "Entity unpinned",
-        description: `${entity.label} removed from pinned entities`,
-      });
+      toast.success(`${entity.label} removed from pinned entities`);
     } else {
       setPinnedEntities(prev => [...prev, entity]);
-      toast({
-        title: "Entity pinned",
-        description: `${entity.label} added to pinned entities`,
-      });
+      toast.success(`${entity.label} added to pinned entities`);
     }
-  }, [pinnedEntities, setPinnedEntities, toast]);
+  }, [pinnedEntities, setPinnedEntities]);
 
   const isEntityPinned = useCallback((entity: SelectedEntity) => {
     return pinnedEntities.some(
