@@ -1,3 +1,4 @@
+
 import { useActiveNote, useActiveNoteId, useNotes, useNoteActions } from '@/hooks/useLiveStore';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -46,11 +47,10 @@ export function NoteEditor() {
     getCurrentNoteId
   } = useHardenedState();
   
-  // Initialize editor with empty content - removed AI extension temporarily
+  // Initialize editor with empty content only - no reactive dependencies
   const editor = useBlockNote({
     schema: entityEditorSchema,
     initialContent: [createEmptyBlock()],
-    // extensions: [aiExtension], // Commented out until API is confirmed
   });
 
   // Register editor with hardened state system
@@ -354,12 +354,7 @@ export function NoteEditor() {
             editor={editor} 
             theme={theme}
             className="min-h-full"
-          >
-            {/* AI components commented out until API is confirmed */}
-            {/* <AIMenuController />
-            <FormattingToolbarWithAI />
-            <SuggestionMenuWithAI editor={editor} /> */}
-          </BlockNoteView>
+          />
         </div>
       </div>
       <ConnectionsPanel />
