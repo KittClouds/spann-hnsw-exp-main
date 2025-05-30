@@ -5,8 +5,8 @@ import { atomWithStorage } from 'jotai/utils';
 // Right sidebar specific state - completely independent from left sidebar
 export const rightSidebarOpenAtom = atom<boolean>(false);
 
-// Content type for the right sidebar - can be extended later
-export type RightSidebarContentType = 'empty' | 'entities' | 'connections' | 'graph' | 'entity-attributes';
+// Content type for the right sidebar - extended to include entity detail
+export type RightSidebarContentType = 'empty' | 'entities' | 'connections' | 'graph' | 'entity-attributes' | 'entity-detail';
 
 export const rightSidebarContentAtom = atomWithStorage<RightSidebarContentType>('galaxy-right-sidebar-content', 'empty');
 
