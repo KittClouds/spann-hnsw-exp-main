@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 
 export function useEntityActions() {
   const [, setSelectedEntity] = useAtom(selectedEntityAtom);
-  const [, setRightSidebarContent] = useAtom(rightSidebarContentAtom);
+  const [rightSidebarContent, setRightSidebarContent] = useAtom(rightSidebarContentAtom);
   const [pinnedEntities, setPinnedEntities] = useAtom(pinnedEntitiesAtom);
   const rightSidebar = useRightSidebar();
 
@@ -35,7 +35,7 @@ export function useEntityActions() {
     const isAlreadyPinned = pinnedEntities.some(
       p => p.kind === entity.kind && p.label === entity.label
     );
-    
+
     if (isAlreadyPinned) {
       setPinnedEntities(prev => prev.filter(
         p => !(p.kind === entity.kind && p.label === entity.label)
