@@ -1,13 +1,14 @@
 import { useActiveNote, useActiveNoteConnections } from '@/hooks/useLiveStore';
 import { useGraph } from '@/contexts/GraphContext'; // Keep for backlinks
 import { Badge } from '@/components/ui/badge';
-import { Link, ChevronDown, ChevronUp, Hash, AtSign, Database } from 'lucide-react';
+import { Link, ChevronDown, ChevronUp, Hash, AtSign, Database, Network } from 'lucide-react';
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SchemaManager } from "../schema/SchemaManager";
 import { EntityPanel } from "./EntityPanel";
+import { RelatedPanel } from "./RelatedPanel";
 import { ScopeSelector } from "./ScopeSelector";
 import { useEntitiesForScope } from "@/hooks/useEntitiesForScope";
 
@@ -16,7 +17,7 @@ export function ConnectionsPanel() {
   const connections = useActiveNoteConnections();
   const { getBacklinks } = useGraph(); // Only need backlinks from graph context now
   const [isOpen, setIsOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'links' | 'backlinks' | 'entities'>('entities'); // Default to entities
+  const [activeView, setActiveView] = useState<'links' | 'backlinks' | 'entities' | 'related'>('entities'); // Default to entities
   
   // Use the new scope-aware entity hook
   const entitiesScope = useEntitiesForScope();
@@ -70,6 +71,14 @@ export function ConnectionsPanel() {
                 >
                   <Database className="mr-2 h-4 w-4" />
                   Entities
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setActiveView('related')}
+                  className={`px-4 ${activeView === 'related' ? 'bg-[#1a1b23] text-primary' : 'text-muted-foreground'}`}
+                >
+                  <Network className="mr-2 h-4 w-4" />
+                  Related
                 </Button>
               </div>
 
@@ -184,8 +193,10 @@ export function ConnectionsPanel() {
                     </div>
                   </CardContent>
                 </Card>
-              ) : (
+              ) : activeView === 'entities' ? (
                 <EntityPanel entitiesScope={entitiesScope} />
+              ) : (
+                <RelatedPanel />
               )}
             </div>
           </motion.div>
