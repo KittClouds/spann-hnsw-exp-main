@@ -93,7 +93,7 @@ export function RelatedPanel() {
                       </div>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Found in {triple.noteIds.length} note{triple.noteIds.length !== 1 ? 's' : ''}
+                      Found in {triple.noteIds.size} note{triple.noteIds.size !== 1 ? 's' : ''}
                     </div>
                   </div>
                 ))}

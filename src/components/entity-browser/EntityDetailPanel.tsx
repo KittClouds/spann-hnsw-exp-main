@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { EntityWithReferences } from './EntityBrowser';
 import { Badge } from '@/components/ui/badge';
@@ -209,7 +208,7 @@ export function EntityDetailPanel({ entity, onClose, onEntityUpdated }: EntityDe
                             </div>
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            Found in {triple.noteIds.length} note{triple.noteIds.length !== 1 ? 's' : ''}
+                            Found in {triple.noteIds.size} note{triple.noteIds.size !== 1 ? 's' : ''}
                           </div>
                         </div>
                       </CardContent>
