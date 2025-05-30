@@ -63,13 +63,17 @@ export class GraphStructureSynthesizer {
     }
     
     // Subscribe to entity co-occurrences
-    this.store.subscribe(entityCoOccurrences$, () => {
-      this.scheduleSync('co-occurrences');
+    this.store.subscribe(entityCoOccurrences$, {
+      onUpdate: () => {
+        this.scheduleSync('co-occurrences');
+      }
     });
     
     // Subscribe to global triples
-    this.store.subscribe(globalTriples$, () => {
-      this.scheduleSync('global-triples');
+    this.store.subscribe(globalTriples$, {
+      onUpdate: () => {
+        this.scheduleSync('global-triples');
+      }
     });
   }
   
