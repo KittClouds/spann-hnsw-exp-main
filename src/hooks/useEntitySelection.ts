@@ -2,7 +2,7 @@
 import { atom, useAtom, useSetAtom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { EntityWithReferences } from '@/livestore/queries/entities';
-import { rightSidebarContentAtom } from '@/lib/rightSidebarStore';
+import { rightSidebarContentAtom, RightSidebarContentType } from '@/lib/rightSidebarStore';
 import { useRightSidebar } from '@/components/RightSidebarProvider';
 
 // Selected entity atom for universal entity inspection
@@ -17,7 +17,7 @@ export function useEntitySelection() {
   const [selectedEntity, setSelectedEntity] = useAtom(selectedEntityAtom);
   const [detailMode, setDetailMode] = useAtom(entityDetailModeAtom);
   const { setOpen: setRightSidebarOpen } = useRightSidebar();
-  const setRightSidebarContent = useSetAtom(rightSidebarContentAtom);
+  const setRightSidebarContent = useSetAtom(rightSidebarContentAtom) as (value: RightSidebarContentType) => void;
 
   const selectEntity = (entity: EntityWithReferences, mode?: EntityDetailMode) => {
     setSelectedEntity(entity);
