@@ -17,7 +17,7 @@ export function useEntitySelection() {
   const [selectedEntity, setSelectedEntity] = useAtom(selectedEntityAtom);
   const [detailMode, setDetailMode] = useAtom(entityDetailModeAtom);
   const { setOpen: setRightSidebarOpen } = useRightSidebar();
-  const setRightSidebarContent = useSetAtom(rightSidebarContentAtom) as (value: RightSidebarContentType) => void;
+  const setRightSidebarContent = useSetAtom(rightSidebarContentAtom);
 
   const selectEntity = (entity: EntityWithReferences, mode?: EntityDetailMode) => {
     setSelectedEntity(entity);
@@ -25,7 +25,7 @@ export function useEntitySelection() {
     const targetMode = mode || detailMode;
     
     if (targetMode === 'sidebar') {
-      setRightSidebarContent('entity-detail');
+      setRightSidebarContent('entity-detail' as RightSidebarContentType);
       setRightSidebarOpen(true);
     }
     // For modal mode, the consuming component handles the modal state
