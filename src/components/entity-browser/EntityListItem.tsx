@@ -4,7 +4,7 @@ import { EntityWithReferences } from '@/livestore/queries/entities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Eye, Sidebar } from 'lucide-react';
-import { useEntitySelection } from '@/hooks/useEntitySelection';
+import { useEntityActions } from '@/hooks/useEntityActions';
 
 interface EntityListItemProps {
   entity: EntityWithReferences;
@@ -13,11 +13,16 @@ interface EntityListItemProps {
 }
 
 export const EntityListItem = React.memo(({ entity, onSelectEntity, style }: EntityListItemProps) => {
-  const { selectEntity } = useEntitySelection();
+  const { selectEntity } = useEntityActions();
 
   const handleViewInSidebar = (e: React.MouseEvent) => {
     e.stopPropagation();
     selectEntity(entity, 'sidebar');
+  };
+
+  const handleViewInModal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    selectEntity(entity, 'modal');
   };
 
   return (
@@ -41,7 +46,7 @@ export const EntityListItem = React.memo(({ entity, onSelectEntity, style }: Ent
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={() => onSelectEntity(entity)}
+          onClick={handleViewInModal}
           title="View in modal"
         >
           <Eye className="h-4 w-4" />

@@ -3,16 +3,16 @@ import React from "react";
 import { X } from "lucide-react";
 import { useAtom } from "jotai";
 import { rightSidebarContentAtom } from "@/lib/rightSidebarStore";
-import { selectedEntityAtom } from "@/hooks/useEntitySelection";
 import { useRightSidebar } from "@/components/RightSidebarProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { EntityAttributePanel } from "@/components/entity-attributes/EntityAttributePanel";
 import { UniversalEntityDetailPanel } from "@/components/entity-detail/UniversalEntityDetailPanel";
+import { useEntityActions } from "@/hooks/useEntityActions";
 
 export function AppRightSidebar() {
   const [contentType] = useAtom(rightSidebarContentAtom);
-  const [selectedEntity] = useAtom(selectedEntityAtom);
+  const { selectedEntity } = useEntityActions();
   const { open, toggleSidebar } = useRightSidebar();
 
   const renderContent = () => {

@@ -1,10 +1,17 @@
 
-import React, { useState, useEffect } from 'react';
-import { useGraph } from '@/contexts/GraphContext';
+import React from 'react';
 import { EntityBrowser } from '@/components/entity-browser/EntityBrowser';
+import { EntityDetailModal } from '@/components/entity-detail/EntityDetailModal';
+import { useEntityActions } from '@/hooks/useEntityActions';
+import { useEntityFromUrl } from '@/hooks/useEntityFromUrl';
 import { Toaster } from '@/components/ui/sonner';
 
 export default function EntityBrowserPage() {
+  const { selectedEntity, modalOpen, closeModal } = useEntityActions();
+  
+  // Load entity from URL if present
+  useEntityFromUrl();
+
   return (
     <div className="container mx-auto p-4 flex flex-col min-h-screen">
       <Toaster />
@@ -14,6 +21,15 @@ export default function EntityBrowserPage() {
       <div className="flex-1">
         <EntityBrowser />
       </div>
+      
+      <EntityDetailModal
+        entity={selectedEntity}
+        open={modalOpen}
+        onClose={closeModal}
+        onEntityUpdated={() => {
+          // Entity updates will be reflected via reactive queries
+        }}
+      />
     </div>
   );
 }
