@@ -1055,6 +1055,194 @@ export class GraphService implements IGraphService {
     
     return entity.data('attributes') || {};
   }
+
+  /**
+   * Upserts a CO_OCCURS edge between two entities
+   * @param entityId1 First entity ID
+   * @param entityId2 Second entity ID  
+   * @param coOccurrenceData Co-occurrence data with count and noteIds
+   */
+  public upsertCoOccurrenceEdge(entityId1: string, entityId2: string, coOccurrenceData: { count: number; noteIds: Set<string> }): void {
+    const entity1Node = this.cy.getElementById(entityId1);
+    const entity2Node = this.cy.getElementById(entityId2);
+    
+    if (entity1Node.empty() || entity2Node.empty()) {
+      console.warn(`[GraphService] Cannot create co-occurrence edge: entity nodes not found (${entityId1}, ${entityId2})`);
+      return;
+    }
+
+    // Create canonical edge ID (always order by ID to ensure consistency)
+    const [sourceId, targetId] = entityId1 < entityId2 ? [entityId1, entityId2] : [entityId2, entityId1];
+    const edgeId = `co_occurs_${sourceId}_${targetId}`;
+    
+    const existingEdge = this.cy.getElementById(edgeId);
+    const noteIds = Array.from(coOccurrenceData.noteIds);
+    
+    this.ur.action(
+      'upsertCoOccurrenceEdge',
+      (args: { edgeId: string; sourceId: string; targetId: string; count: number; noteIds: string[]; isUpdate: boolean }) => {
+        let edge;
+        if (args.isUpdate) {
+          edge = this.cy.getElementById(args.edgeId);
+          edge.data({
+            count: args.count,
+            notes: args.noteIds
+          });
+        } else {
+          const edgeDef: ElementDefinition = {
+            group: 'edges' as ElementGroup,
+            data: {
+              id: args.edgeId,
+              source: args.sourceId,
+              target: args.targetId,
+              label: EdgeType.CO_OCCURS,
+              count: args.count,
+              notes: args.noteIds
+            }
+          };
+          edge = this.cy.add(edgeDef);
+        }
+        return { edge: edge.json() as ElementDefinition };
+      },
+      (undoArgs: { edge: ElementDefinition }) => {
+        const edgeToRemove = this.cy.getElementById(undoArgs.edge.data.id);
+        if (edgeToRemove.nonempty()) {
+          edgeToRemove.remove();
+        }
+      }
+    );
+
+    const actionResult = this.ur.lastAction()?.result;
+    if (actionResult?.edge) {
+      this.queueNotify([actionResult.edge]);
+    }
+  }
+
+  /**
+   * Upserts a GLOBAL_TRIPLE node and its member edges
+   * @param canonicalTripleKey Unique key for the triple
+   * @param tripleDetails Triple details with entities and noteIds
+   */
+  public upsertGlobalTripleNode(canonicalTripleKey: string, tripleDetails: { subject: Entity; predicate: string; object: Entity; noteIds: Set<string> }): void {
+    const subjectId = generateEntityId(tripleDetails.subject.kind, tripleDetails.subject.label);
+    const objectId = generateEntityId(tripleDetails.object.kind, tripleDetails.object.label);
+    
+    const subjectNode = this.cy.getElementById(subjectId);
+    const objectNode = this.cy.getElementById(objectId);
+    
+    if (subjectNode.empty() || objectNode.empty()) {
+      console.warn(`[GraphService] Cannot create global triple: entity nodes not found (${subjectId}, ${objectId})`);
+      return;
+    }
+
+    const existingTripleNode = this.cy.getElementById(canonicalTripleKey);
+    const noteIds = Array.from(tripleDetails.noteIds);
+    const isUpdate = existingTripleNode.nonempty();
+    
+    this.ur.action(
+      'upsertGlobalTriple',
+      (args: { 
+        tripleId: string; 
+        subjectId: string; 
+        objectId: string; 
+        predicate: string; 
+        noteIds: string[]; 
+        isUpdate: boolean 
+      }) => {
+        const addedElements: ElementDefinition[] = [];
+        
+        // Create or update the global triple node
+        let tripleNode;
+        if (args.isUpdate) {
+          tripleNode = this.cy.getElementById(args.tripleId);
+          tripleNode.data({
+            notes: args.noteIds,
+            subjectId: args.subjectId,
+            objectId: args.objectId
+          });
+          addedElements.push(tripleNode.json() as ElementDefinition);
+        } else {
+          const tripleNodeDef: ElementDefinition = {
+            group: 'nodes' as ElementGroup,
+            data: {
+              id: args.tripleId,
+              type: NodeType.GLOBAL_TRIPLE,
+              predicate: args.predicate,
+              notes: args.noteIds,
+              subjectId: args.subjectId,
+              objectId: args.objectId,
+              createdAt: new Date().toISOString()
+            }
+          };
+          tripleNode = this.cy.add(tripleNodeDef);
+          addedElements.push(tripleNodeDef);
+        }
+
+        // Create GLOBAL_TRIPLE_MEMBER edges if they don't exist
+        const subjectEdgeId = `global_triple_member_${args.subjectId}_${args.tripleId}_subject`;
+        const objectEdgeId = `global_triple_member_${args.objectId}_${args.tripleId}_object`;
+        
+        if (this.cy.getElementById(subjectEdgeId).empty()) {
+          const subjectEdgeDef: ElementDefinition = {
+            group: 'edges' as ElementGroup,
+            data: {
+              id: subjectEdgeId,
+              source: args.subjectId,
+              target: args.tripleId,
+              label: EdgeType.GLOBAL_TRIPLE_MEMBER,
+              role: 'subject'
+            }
+          };
+          this.cy.add(subjectEdgeDef);
+          addedElements.push(subjectEdgeDef);
+        }
+        
+        if (this.cy.getElementById(objectEdgeId).empty()) {
+          const objectEdgeDef: ElementDefinition = {
+            group: 'edges' as ElementGroup,
+            data: {
+              id: objectEdgeId,
+              source: args.objectId,
+              target: args.tripleId,
+              label: EdgeType.GLOBAL_TRIPLE_MEMBER,
+              role: 'object'
+            }
+          };
+          this.cy.add(objectEdgeDef);
+          addedElements.push(objectEdgeDef);
+        }
+        
+        return { addedElements };
+      },
+      (undoArgs: { addedElements: ElementDefinition[] }) => {
+        undoArgs.addedElements.forEach(elementDef => {
+          const element = this.cy.getElementById(elementDef.data.id);
+          if (element.nonempty()) {
+            element.remove();
+          }
+        });
+      }
+    );
+
+    const actionResult = this.ur.lastAction()?.result;
+    if (actionResult?.addedElements) {
+      this.queueNotify(actionResult.addedElements);
+    }
+  }
+
+  /**
+   * Starts a batch operation for performance
+   */
+  public startBatchOperations(): void {
+    this.cy.startBatch();
+  }
+
+  /**
+   * Ends a batch operation
+   */
+  public endBatchOperations(): void {
+    this.cy.endBatch();
+  }
 }
 
 export const graphService = new GraphService();

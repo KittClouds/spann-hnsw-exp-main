@@ -1,13 +1,15 @@
-
 import { graphService } from './GraphService';
 import { Note, Cluster } from '@/lib/store';
 import { NodeType, Thread, ThreadMessage } from './types';
+import { graphStructureSynthesizer } from './GraphStructureSynthesizer';
 
 /**
  * SyncManager service provides bidirectional synchronization between the store (jotai atoms)
  * and the graph service (cytoscape).
  */
 export class SyncManager {
+  private isGraphStructureSynthesizerInitialized = false;
+  
   /**
    * Synchronizes data from the store to the graph
    * @param notes Notes from the store
@@ -172,6 +174,29 @@ export class SyncManager {
    */
   public deleteThreadMessageFromGraph(id: string): boolean {
     return graphService.deleteThreadMessage(id);
+  }
+
+  /**
+   * Initialize the graph structure synthesizer with the LiveStore
+   * This should be called after the store is available
+   */
+  public initializeGraphStructureSynthesizer(store: any): void {
+    if (!this.isGraphStructureSynthesizerInitialized) {
+      graphStructureSynthesizer.initialize(store);
+      this.isGraphStructureSynthesizerInitialized = true;
+      console.log('[SyncManager] Graph structure synthesizer initialized');
+    }
+  }
+  
+  /**
+   * Clean up the graph structure synthesizer
+   */
+  public destroyGraphStructureSynthesizer(): void {
+    if (this.isGraphStructureSynthesizerInitialized) {
+      graphStructureSynthesizer.destroy();
+      this.isGraphStructureSynthesizerInitialized = false;
+      console.log('[SyncManager] Graph structure synthesizer destroyed');
+    }
   }
 }
 
