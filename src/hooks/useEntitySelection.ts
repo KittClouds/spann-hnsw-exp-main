@@ -16,7 +16,7 @@ export const entityDetailModeAtom = atomWithStorage<EntityDetailMode>('galaxy-en
 export function useEntitySelection() {
   const [selectedEntity, setSelectedEntity] = useAtom(selectedEntityAtom);
   const [detailMode, setDetailMode] = useAtom(entityDetailModeAtom);
-  const { setOpen: setRightSidebarOpen } = useRightSidebar();
+  const rightSidebar = useRightSidebar();
   const [, setRightSidebarContent] = useAtom(rightSidebarContentAtom);
 
   const selectEntity = (entity: EntityWithReferences, mode?: EntityDetailMode) => {
@@ -26,7 +26,7 @@ export function useEntitySelection() {
     
     if (targetMode === 'sidebar') {
       setRightSidebarContent('entity-detail');
-      setRightSidebarOpen(true);
+      rightSidebar.setOpen(true);
     }
     // For modal mode, the consuming component handles the modal state
   };
