@@ -3,6 +3,7 @@ import React from 'react';
 import { makePersistedAdapter } from '@livestore/adapter-web';
 import LiveStoreSharedWorker from '@livestore/adapter-web/shared-worker?sharedworker';
 import { LiveStoreProvider } from '@livestore/react';
+import { flushSync } from 'react-dom';
 import App from './App';
 import LiveStoreWorker from './livestore/livestore.worker?worker';
 import { schema } from './livestore/schema';
@@ -14,6 +15,11 @@ const adapter = makePersistedAdapter({
   worker: LiveStoreWorker,
   sharedWorker: LiveStoreSharedWorker,
 });
+
+// React 19 compatible batch function - since batching is automatic, we just execute the callback
+const batchUpdates = (callback: () => void) => {
+  callback();
+};
 
 export const Root: React.FC = () => (
   <LiveStoreProvider
@@ -27,6 +33,7 @@ export const Root: React.FC = () => (
         </div>
       </div>
     )}
+    batchUpdates={batchUpdates}
     storeId={storeId}
   >
     <App />
