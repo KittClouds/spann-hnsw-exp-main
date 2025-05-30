@@ -17,6 +17,13 @@ import { entityEditorSchema } from '@/lib/editor/EntityEditorSchema';
 import { EntityHighlighter } from '@/services/EntityHighlighter';
 import { useIdleCallback } from '@/hooks/useIdleCallback';
 import { useHardenedState } from '@/cursor-stability/useHardenedState';
+import { aiExtension } from "@/lib/ai/blocknoteGoogleClient";
+import {
+  AIMenuController,
+  FormattingToolbarWithAI,
+  SuggestionMenuWithAI,
+  getAISlashMenuItems,
+} from "@blocknote/xl-ai";
 
 export function NoteEditor() {
   const activeNote = useActiveNote();
@@ -47,10 +54,11 @@ export function NoteEditor() {
     getCurrentNoteId
   } = useHardenedState();
   
-  // Initialize editor with empty content only - no reactive dependencies
+  // Initialize editor with empty content and AI extension
   const editor = useBlockNote({
     schema: entityEditorSchema,
     initialContent: [createEmptyBlock()],
+    extensions: [aiExtension],
   });
 
   // Register editor with hardened state system
@@ -354,7 +362,14 @@ export function NoteEditor() {
             editor={editor} 
             theme={theme}
             className="min-h-full"
-          />
+            slashMenu={getAISlashMenuItems(editor)}
+          >
+            {/* AI menu that pops when user types `/ai` or clicks toolbar button */}
+            <AIMenuController />
+            {/* optional convenience buttons */}
+            <FormattingToolbarWithAI />
+            <SuggestionMenuWithAI editor={editor} />
+          </BlockNoteView>
         </div>
       </div>
       <ConnectionsPanel />
