@@ -3,7 +3,6 @@ import React from 'react';
 import { makePersistedAdapter } from '@livestore/adapter-web';
 import LiveStoreSharedWorker from '@livestore/adapter-web/shared-worker?sharedworker';
 import { LiveStoreProvider } from '@livestore/react';
-import { flushSync } from 'react-dom';
 import App from './App';
 import LiveStoreWorker from './livestore/livestore.worker?worker';
 import { schema } from './livestore/schema';
@@ -46,9 +45,6 @@ export const Root: React.FC = () => {
       }}
       batchUpdates={batchUpdates}
       storeId={storeId}
-      onError={(error) => {
-        console.error("LiveStore error:", error);
-      }}
     >
       <App />
     </LiveStoreProvider>
