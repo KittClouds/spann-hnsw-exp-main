@@ -97,7 +97,7 @@ export class CrossNoteGraphSyncWorker {
       
       this.graphService.upsertCoOccurEdge(entity1Id, entity2Id, {
         count: coOcc.count,
-        noteIds: Array.from(coOcc.noteIds) // Convert Set to Array
+        noteIds: coOcc.noteIds
       });
     });
   }
@@ -119,7 +119,7 @@ export class CrossNoteGraphSyncWorker {
         subject: triple.subject,
         predicate: triple.predicate,
         object: triple.object,
-        noteIds: Array.from(triple.noteIds) // Convert Set to Array
+        noteIds: triple.noteIds
       });
     });
   }
