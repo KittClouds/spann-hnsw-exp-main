@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { EntityFilters } from './EntityFilters';
-import { EntityList } from './EntityList';
-import { EntityGrid } from './EntityGrid';
+import { VirtualizedEntityList } from './VirtualizedEntityList';
+import { VirtualizedEntityGrid } from './VirtualizedEntityGrid';
 import { EntityDetailPanel } from './EntityDetailPanel';
 import { QuickEntryForm } from './QuickEntryForm';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { List, GridIcon } from 'lucide-react';
 import { EntityWithReferences } from '@/livestore/queries/entities';
-import { useAllEntitiesArray, useEntitiesByType } from '@/hooks/useLiveStore';
+import { useVirtualizedEntities } from '@/hooks/useVirtualizedEntities';
 
 export type { EntityWithReferences };
 export type ViewMode = 'list' | 'grid';
@@ -23,54 +23,25 @@ export function EntityBrowser() {
     return (savedView === 'list' || savedView === 'grid') ? savedView : 'list';
   });
   
-  const [sortOption, setSortOption] = useState<SortOption>('alpha-asc');
-  const [filterType, setFilterType] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedEntity, setSelectedEntity] = useState<EntityWithReferences | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
   
-  // Use reactive LiveStore queries
-  const entities = useAllEntitiesArray();
-  const entitiesByType = useEntitiesByType();
+  // Use the new virtualized entities hook
+  const {
+    entities,
+    filteredTotal,
+    hasMore,
+    availableTypes,
+    filters,
+    updateFilters,
+    loadMore
+  } = useVirtualizedEntities();
   
   // Save view mode to local storage when it changes
   useEffect(() => {
     localStorage.setItem('entityBrowserViewMode', viewMode);
   }, [viewMode]);
-  
-  // Filter entities based on current filters and search
-  const filteredEntities = entities.filter(entity => {
-    // Filter by type if a type filter is selected
-    if (filterType && entity.kind !== filterType) {
-      return false;
-    }
-    
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return entity.label.toLowerCase().includes(query) || 
-             entity.kind.toLowerCase().includes(query);
-    }
-    
-    return true;
-  });
-  
-  // Sort entities based on current sort option
-  const sortedEntities = [...filteredEntities].sort((a, b) => {
-    switch (sortOption) {
-      case 'alpha-asc':
-        return a.label.localeCompare(b.label);
-      case 'alpha-desc':
-        return b.label.localeCompare(a.label);
-      case 'recent':
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      case 'references':
-        return b.referenceCount - a.referenceCount;
-      default:
-        return 0;
-    }
-  });
   
   // Handle entity selection
   const handleSelectEntity = (entity: EntityWithReferences) => {
@@ -84,19 +55,29 @@ export function EntityBrowser() {
     // Entities will automatically update via reactive queries
   };
   
-  // Get available entity types from the reactive data
-  const availableTypes = Array.from(entitiesByType.keys());
+  // Filter handlers
+  const handleFilterChange = (type: string | null) => {
+    updateFilters({ type });
+  };
+
+  const handleSearchChange = (search: string) => {
+    updateFilters({ search });
+  };
+
+  const handleSortChange = (sort: SortOption) => {
+    updateFilters({ sort });
+  };
   
   return (
     <div className="flex flex-col h-full gap-4">
       <div className="flex justify-between items-center">
         <EntityFilters 
-          onFilterChange={setFilterType} 
-          onSearchChange={setSearchQuery}
-          onSortChange={setSortOption}
-          currentFilter={filterType}
-          currentSort={sortOption}
-          currentSearch={searchQuery}
+          onFilterChange={handleFilterChange}
+          onSearchChange={handleSearchChange}
+          onSortChange={handleSortChange}
+          currentFilter={filters.type}
+          currentSort={filters.sort}
+          currentSearch={filters.search}
           availableTypes={availableTypes}
         />
         
@@ -122,16 +103,28 @@ export function EntityBrowser() {
         </div>
       </div>
       
-      <div className="flex-1 overflow-auto">
+      <div className="text-sm text-muted-foreground mb-2">
+        Showing {entities.length} of {filteredTotal} entities
+        {hasMore && " (loading more...)"}
+      </div>
+      
+      <div className="flex-1 overflow-hidden">
         {viewMode === 'list' ? (
-          <EntityList 
-            entities={sortedEntities} 
-            onSelectEntity={handleSelectEntity} 
+          <VirtualizedEntityList 
+            entities={entities} 
+            onSelectEntity={handleSelectEntity}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            height={600}
           />
         ) : (
-          <EntityGrid 
-            entities={sortedEntities} 
-            onSelectEntity={handleSelectEntity} 
+          <VirtualizedEntityGrid 
+            entities={entities} 
+            onSelectEntity={handleSelectEntity}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            height={600}
+            columnCount={4}
           />
         )}
       </div>

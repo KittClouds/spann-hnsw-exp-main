@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
 import { SortOption } from './EntityBrowser';
+import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 
 interface EntityFiltersProps {
   onFilterChange: (type: string | null) => void;
@@ -25,6 +26,13 @@ export function EntityFilters({
   currentSearch,
   availableTypes
 }: EntityFiltersProps) {
+  // Debounce search input for better performance
+  const debouncedSearch = useDebouncedCallback(onSearchChange, 300);
+
+  const handleSearchInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    debouncedSearch(e.target.value);
+  }, [debouncedSearch]);
+
   return (
     <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
       <div className="relative">
@@ -32,8 +40,8 @@ export function EntityFilters({
         <Input
           placeholder="Search entities..."
           className="pl-8 max-w-[300px]"
-          value={currentSearch}
-          onChange={(e) => onSearchChange(e.target.value)}
+          defaultValue={currentSearch}
+          onChange={handleSearchInput}
         />
       </div>
       
