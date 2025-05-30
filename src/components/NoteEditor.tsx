@@ -1,3 +1,4 @@
+
 import { useActiveNote, useActiveNoteId, useNotes, useNoteActions } from '@/hooks/useLiveStore';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -16,8 +17,6 @@ import { entityEditorSchema } from '@/lib/editor/EntityEditorSchema';
 import { EntityHighlighter } from '@/services/EntityHighlighter';
 import { useIdleCallback } from '@/hooks/useIdleCallback';
 import { useHardenedState } from '@/cursor-stability/useHardenedState';
-import { createBlockNoteAI, createAICommand } from "@blocknote/ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 export function NoteEditor() {
   const activeNote = useActiveNote();
@@ -53,31 +52,6 @@ export function NoteEditor() {
     schema: entityEditorSchema,
     initialContent: [createEmptyBlock()],
   });
-
-  // AI provider setup (Google Generative AI via Vercel AI SDK)
-  const google = createGoogleGenerativeAI({
-    apiKey: import.meta.env.VITE_GOOGLE_API_KEY || '',
-  });
-  
-  const bnAI = createBlockNoteAI({
-    // Use Gemini 1.5 Pro model
-    chatModel: google("models/gemini-1.5-pro-latest"),
-    // Optional: streamingUI can be "sidebar" or "inline"
-  });
-
-  // Add custom summarize command
-  const summarizeCmd = createAICommand({
-    title: "Summarize note",
-    icon: "🧠",
-    run: async ({ chat, editor }) => {
-      const plain = editor.blocksToPlainText(editor.document);
-      const { text } = await chat.complete(
-        `Summarize the following in a short paragraph:\n\n${plain}`
-      );
-      editor.insertText(text);        // drop summary at cursor
-    },
-  });
-  bnAI.addCommand(summarizeCmd);
 
   // Register editor with hardened state system
   useEffect(() => {
@@ -379,7 +353,6 @@ export function NoteEditor() {
           <BlockNoteView 
             editor={editor} 
             theme={theme}
-            ai={bnAI}
             className="min-h-full"
           />
         </div>
