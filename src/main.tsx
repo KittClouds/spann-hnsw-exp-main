@@ -7,7 +7,6 @@ import { ThemeProvider } from 'next-themes'
 import { Root } from './Root'
 import Index from './pages/Index'
 import EntityBrowserPage from './pages/EntityBrowser'
-import EntityDetail from './pages/EntityDetail'
 import { Migration } from './pages/Migration'
 import NotFound from './pages/NotFound'
 import { Toaster } from "@/components/ui/sonner"
@@ -27,10 +26,6 @@ const router = createBrowserRouter([
       {
         path: 'entities',
         element: <EntityBrowserPage />,
-      },
-      {
-        path: 'entity/:type/:label',
-        element: <EntityDetail />,
       },
       {
         path: 'migration',
