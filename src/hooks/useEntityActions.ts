@@ -11,15 +11,15 @@ export function useEntityActions() {
   const [, setSelectedEntity] = useAtom(selectedEntityAtom);
   const [, setRightSidebarContent] = useAtom(rightSidebarContentAtom);
   const [pinnedEntities, setPinnedEntities] = useAtom(pinnedEntitiesAtom);
-  const { open: rightSidebarOpen, setOpen: setRightSidebarOpen } = useRightSidebar();
+  const rightSidebar = useRightSidebar();
 
   const openEntityInSidebar = useCallback((entity: SelectedEntity) => {
     setSelectedEntity(entity);
     setRightSidebarContent('entity-detail');
-    if (!rightSidebarOpen) {
-      setRightSidebarOpen(true);
+    if (!rightSidebar.open) {
+      rightSidebar.setOpen(true);
     }
-  }, [setSelectedEntity, setRightSidebarContent, rightSidebarOpen, setRightSidebarOpen]);
+  }, [setSelectedEntity, setRightSidebarContent, rightSidebar]);
 
   const openEntityInNewTab = useCallback((entity: SelectedEntity) => {
     const url = `/entity/${encodeURIComponent(entity.kind.toLowerCase())}/${encodeURIComponent(entity.label)}`;
