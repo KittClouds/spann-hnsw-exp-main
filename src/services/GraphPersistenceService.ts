@@ -16,6 +16,7 @@ export class GraphPersistenceService {
   private readonly debounceMs = 300;
   private batchOperations: (() => void)[] = [];
   private isBatchMode = false;
+  private unsubscribeFunctions: (() => void)[] = [];
   
   /**
    * Initialize the service with LiveStore and Cytoscape instances
@@ -261,20 +262,18 @@ export class GraphPersistenceService {
     if (!this.store) return;
     
     // Listen for graph node changes from other clients
-    const unsubscribeNodes = graphNodes$.subscribe((nodes) => {
+    const unsubscribeNodes = this.store.subscribe(graphNodes$, (nodes) => {
       this.syncFromStore();
     });
     
     // Listen for graph edge changes from other clients
-    const unsubscribeEdges = graphEdges$.subscribe((edges) => {
+    const unsubscribeEdges = this.store.subscribe(graphEdges$, (edges) => {
       this.syncFromStore();
     });
     
     // Store unsubscribe functions for cleanup
     this.unsubscribeFunctions = [unsubscribeNodes, unsubscribeEdges];
   }
-  
-  private unsubscribeFunctions: (() => void)[] = [];
   
   /**
    * Remove LiveStore listeners
