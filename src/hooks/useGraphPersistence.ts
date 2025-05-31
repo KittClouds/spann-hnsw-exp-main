@@ -1,16 +1,13 @@
 
 import { useEffect } from 'react';
-import { useStore } from '@livestore/react';
+import { Store } from '@livestore/livestore';
+import { Core } from 'cytoscape';
 import { graphPersistenceService } from '@/services/GraphPersistenceService';
-import { useGraph } from '@/contexts/GraphContext';
 
 /**
  * Hook to initialize and manage graph persistence
  */
-export function useGraphPersistence() {
-  const { store } = useStore();
-  const { cytoscape } = useGraph(); // Use the exposed Cytoscape instance
-  
+export function useGraphPersistence(store?: Store, cytoscape?: Core | null) {
   useEffect(() => {
     if (store && cytoscape) {
       // Initialize the persistence service

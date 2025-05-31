@@ -81,8 +81,8 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   const [cytoscapeInstance, setCytoscapeInstance] = useState<Core | null>(null);
   const [persistenceReady, setPersistenceReady] = useState(false);
 
-  // Initialize graph persistence using the hook
-  const graphPersistence = useGraphPersistence();
+  // Initialize graph persistence with store and cytoscape instances
+  const graphPersistence = useGraphPersistence(store, cytoscapeInstance);
 
   const previousTagsMap = useRef(tagsMap);
   const previousMentionsMap = useRef(mentionsMap);
