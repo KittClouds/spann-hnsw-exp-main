@@ -25,6 +25,8 @@ import { Entity } from '@/lib/utils/parsingUtils';
 import { EntityWithReferences } from '@/components/entity-browser/EntityBrowser';
 import { SchemaDefinitions } from '@/lib/schema';
 import { Core } from 'cytoscape';
+import { useGraphPersistence } from '@/hooks/useGraphPersistence';
+import { graphServicePersistenceIntegrator } from '@/services/GraphServicePersistenceIntegrator';
 
 interface GraphContextType {
   cytoscape: Core | null;
@@ -76,9 +78,11 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   const triplesMap = store.useQuery(noteTriplesMap$);
 
   const [initialized, setInitialized] = useState(false);
-
-  // NEW: Track the Cytoscape instance
   const [cytoscapeInstance, setCytoscapeInstance] = useState<Core | null>(null);
+  const [persistenceInitialized, setPersistenceInitialized] = useState(false);
+
+  // Initialize graph persistence hook
+  const graphPersistence = useGraphPersistence();
 
   const previousTagsMap = useRef(tagsMap);
   const previousMentionsMap = useRef(mentionsMap);
@@ -86,13 +90,33 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   const previousEntitiesMap = useRef(entitiesMap);
   const previousTriplesMap = useRef(triplesMap);
 
-  // NEW: Effect to get the Cytoscape instance from GraphService
+  // Effect to get the Cytoscape instance from GraphService and initialize persistence
   useEffect(() => {
     const cy = graphService.getGraph();
     if (cy && cy !== cytoscapeInstance) {
       setCytoscapeInstance(cy);
     }
-  }, [cytoscapeInstance]);
+    
+    // Initialize persistence integration when we have both store and cytoscape
+    if (store && cy && !persistenceInitialized) {
+      try {
+        graphServicePersistenceIntegrator.initialize(graphService, store, cy);
+        setPersistenceInitialized(true);
+        console.log('[GraphContext] Graph persistence integration initialized');
+      } catch (error) {
+        console.error('[GraphContext] Failed to initialize persistence integration:', error);
+      }
+    }
+  }, [cytoscapeInstance, store, persistenceInitialized]);
+
+  // Cleanup persistence integration on unmount
+  useEffect(() => {
+    return () => {
+      if (persistenceInitialized) {
+        graphServicePersistenceIntegrator.destroy();
+      }
+    };
+  }, [persistenceInitialized]);
 
   // Load schema from storage on mount
   useEffect(() => {
