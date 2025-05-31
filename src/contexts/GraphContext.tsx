@@ -79,9 +79,9 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
 
   const [initialized, setInitialized] = useState(false);
   const [cytoscapeInstance, setCytoscapeInstance] = useState<Core | null>(null);
-  const [persistenceInitialized, setPersistenceInitialized] = useState(false);
+  const [persistenceReady, setPersistenceReady] = useState(false);
 
-  // Initialize graph persistence hook
+  // Initialize graph persistence using the hook
   const graphPersistence = useGraphPersistence();
 
   const previousTagsMap = useRef(tagsMap);
@@ -90,33 +90,42 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   const previousEntitiesMap = useRef(entitiesMap);
   const previousTriplesMap = useRef(triplesMap);
 
-  // Effect to get the Cytoscape instance from GraphService and initialize persistence
+  // Effect to get the Cytoscape instance from GraphService
   useEffect(() => {
     const cy = graphService.getGraph();
     if (cy && cy !== cytoscapeInstance) {
       setCytoscapeInstance(cy);
+      console.log('[GraphContext] Cytoscape instance ready');
     }
-    
-    // Initialize persistence integration when we have both store and cytoscape
-    if (store && cy && !persistenceInitialized) {
+  }, [cytoscapeInstance]);
+
+  // Effect to initialize persistence integration when we have both store and cytoscape
+  useEffect(() => {
+    if (store && cytoscapeInstance && !persistenceReady) {
       try {
-        graphServicePersistenceIntegrator.initialize(graphService, store, cy);
-        setPersistenceInitialized(true);
-        console.log('[GraphContext] Graph persistence integration initialized');
+        console.log('[GraphContext] Initializing graph persistence integration...');
+        
+        // Initialize the integrator which will wrap GraphService methods
+        graphServicePersistenceIntegrator.initialize(graphService, store, cytoscapeInstance);
+        
+        setPersistenceReady(true);
+        console.log('[GraphContext] Graph persistence integration completed');
+        
       } catch (error) {
         console.error('[GraphContext] Failed to initialize persistence integration:', error);
       }
     }
-  }, [cytoscapeInstance, store, persistenceInitialized]);
+  }, [store, cytoscapeInstance, persistenceReady]);
 
   // Cleanup persistence integration on unmount
   useEffect(() => {
     return () => {
-      if (persistenceInitialized) {
+      if (persistenceReady) {
+        console.log('[GraphContext] Cleaning up persistence integration...');
         graphServicePersistenceIntegrator.destroy();
       }
     };
-  }, [persistenceInitialized]);
+  }, [persistenceReady]);
 
   // Load schema from storage on mount
   useEffect(() => {
@@ -128,8 +137,8 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     const notesArray = Array.isArray(notes) ? notes : [];
     const clustersArray = Array.isArray(clusters) ? clusters : [];
     
-    if (!initialized && notesArray.length > 0) {
-      console.log("GraphProvider: Initializing graph with store data.");
+    if (!initialized && notesArray.length > 0 && persistenceReady) {
+      console.log("[GraphContext] Initializing graph with store data and persistence ready");
       syncManager.importFromStore(notesArray, clustersArray);
       previousTagsMap.current = tagsMap;
       previousMentionsMap.current = mentionsMap;
@@ -138,7 +147,7 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
       previousTriplesMap.current = triplesMap;
       setInitialized(true);
     }
-  }, [notes, clusters, initialized, tagsMap, mentionsMap, linksMap, entitiesMap, triplesMap]);
+  }, [notes, clusters, initialized, tagsMap, mentionsMap, linksMap, entitiesMap, triplesMap, persistenceReady]);
 
   // Effect to synchronize derived connections TO the graph
   useEffect(() => {
