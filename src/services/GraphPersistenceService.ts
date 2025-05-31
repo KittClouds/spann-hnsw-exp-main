@@ -261,14 +261,18 @@ export class GraphPersistenceService {
   private setupLiveStoreListeners(): void {
     if (!this.store) return;
     
-    // Listen for graph node changes from other clients
-    const unsubscribeNodes = this.store.subscribe(graphNodes$, (nodes) => {
-      this.syncFromStore();
+    // Listen for graph node changes from other clients - use correct subscribe syntax
+    const unsubscribeNodes = this.store.subscribe(graphNodes$, {
+      onUpdate: (nodes) => {
+        this.syncFromStore();
+      }
     });
     
-    // Listen for graph edge changes from other clients
-    const unsubscribeEdges = this.store.subscribe(graphEdges$, (edges) => {
-      this.syncFromStore();
+    // Listen for graph edge changes from other clients - use correct subscribe syntax
+    const unsubscribeEdges = this.store.subscribe(graphEdges$, {
+      onUpdate: (edges) => {
+        this.syncFromStore();
+      }
     });
     
     // Store unsubscribe functions for cleanup

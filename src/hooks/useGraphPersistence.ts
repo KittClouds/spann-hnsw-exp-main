@@ -9,12 +9,12 @@ import { useGraph } from '@/contexts/GraphContext';
  */
 export function useGraphPersistence() {
   const { store } = useStore();
-  const { graph } = useGraph(); // Using 'graph' which should be the correct property name
+  const { cytoscape } = useGraph(); // Use the exposed Cytoscape instance
   
   useEffect(() => {
-    if (store && graph) {
+    if (store && cytoscape) {
       // Initialize the persistence service
-      graphPersistenceService.initialize(store, graph);
+      graphPersistenceService.initialize(store, cytoscape);
       
       console.log('[useGraphPersistence] Graph persistence initialized');
       
@@ -24,7 +24,7 @@ export function useGraphPersistence() {
         console.log('[useGraphPersistence] Graph persistence destroyed');
       };
     }
-  }, [store, graph]);
+  }, [store, cytoscape]);
   
   return {
     saveGraph: () => graphPersistenceService.saveGraphToStore(),

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { graphService } from '../services/GraphService';
 import { syncManager } from '../services/SyncManager';
@@ -25,8 +24,10 @@ import { schema } from '@/lib/schema';
 import { Entity } from '@/lib/utils/parsingUtils';
 import { EntityWithReferences } from '@/components/entity-browser/EntityBrowser';
 import { SchemaDefinitions } from '@/lib/schema';
+import { Core } from 'cytoscape';
 
 interface GraphContextType {
+  cytoscape: Core | null;
   importNotes: () => void;
   exportNotes: () => { notes: Note[], clusters: Cluster[] };
   exportGraphJSON: () => GraphJSON;
@@ -76,11 +77,22 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
 
   const [initialized, setInitialized] = useState(false);
 
+  // NEW: Track the Cytoscape instance
+  const [cytoscapeInstance, setCytoscapeInstance] = useState<Core | null>(null);
+
   const previousTagsMap = useRef(tagsMap);
   const previousMentionsMap = useRef(mentionsMap);
   const previousLinksMap = useRef(linksMap);
   const previousEntitiesMap = useRef(entitiesMap);
   const previousTriplesMap = useRef(triplesMap);
+
+  // NEW: Effect to get the Cytoscape instance from GraphService
+  useEffect(() => {
+    const cy = graphService.getGraph();
+    if (cy && cy !== cytoscapeInstance) {
+      setCytoscapeInstance(cy);
+    }
+  }, [cytoscapeInstance]);
 
   // Load schema from storage on mount
   useEffect(() => {
@@ -195,6 +207,8 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   }, [tagsMap, mentionsMap, linksMap, entitiesMap, triplesMap, initialized]);
 
   const value: GraphContextType = {
+    cytoscape: cytoscapeInstance,
+    
     importNotes: () => {
       console.warn("GraphProvider: Explicit importNotes called. Re-importing from store.");
       setInitialized(false);
