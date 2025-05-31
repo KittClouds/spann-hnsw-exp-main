@@ -33,12 +33,13 @@ export const graphEdgesByType$ = (edgeType: string) => queryDb(
   { label: `graphEdgesByType$_${edgeType}`, deps: [edgeType] }
 );
 
-export const nodeEdges$ = (nodeId: string) => queryDb((get) => {
-  // Get all edges where this node is either source or target
-  const outgoing = get(queryDb(tables.graphEdges.where({ sourceId: nodeId })));
-  const incoming = get(queryDb(tables.graphEdges.where({ targetId: nodeId })));
-  return [...outgoing, ...incoming];
-}, { label: `nodeEdges$_${nodeId}`, deps: [nodeId] });
+// Fixed: Use proper queryDb syntax for complex queries
+export const nodeEdges$ = (nodeId: string) => queryDb(
+  () => tables.graphEdges.where({ sourceId: nodeId }).union(
+    tables.graphEdges.where({ targetId: nodeId })
+  ),
+  { label: `nodeEdges$_${nodeId}`, deps: [nodeId] }
+);
 
 // Graph layouts queries
 export const graphLayouts$ = queryDb(

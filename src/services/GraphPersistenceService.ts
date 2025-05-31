@@ -1,7 +1,7 @@
-
 import { Store } from '@livestore/livestore';
 import { Core, ElementDefinition, NodeSingular, EdgeSingular } from 'cytoscape';
 import { events, tables } from '@/livestore/schema';
+import { graphNodes$, graphEdges$ } from '@/livestore/queries/graphPersistence';
 import { NodeType, EdgeType } from './types';
 
 /**
@@ -46,6 +46,7 @@ export class GraphPersistenceService {
     }
     
     this.removeCytoscapeListeners();
+    this.removeLiveStoreListeners();
     this.isInitialized = false;
     this.store = null;
     this.cy = null;
@@ -68,13 +69,13 @@ export class GraphPersistenceService {
       this.cy.startBatch();
       
       // Load nodes
-      const nodes = this.store.query(tables.graphNodes);
+      const nodes = this.store.query(graphNodes$);
       for (const node of nodes) {
         this.addNodeToCytoscape(node);
       }
       
       // Load edges
-      const edges = this.store.query(tables.graphEdges);
+      const edges = this.store.query(graphEdges$);
       for (const edge of edges) {
         this.addEdgeToCytoscape(edge);
       }
@@ -260,18 +261,27 @@ export class GraphPersistenceService {
     if (!this.store) return;
     
     // Listen for graph node changes from other clients
-    this.store.subscribe(tables.graphNodes, {
-      onUpdate: () => {
-        this.syncFromStore();
-      }
+    const unsubscribeNodes = graphNodes$.subscribe((nodes) => {
+      this.syncFromStore();
     });
     
     // Listen for graph edge changes from other clients
-    this.store.subscribe(tables.graphEdges, {
-      onUpdate: () => {
-        this.syncFromStore();
-      }
+    const unsubscribeEdges = graphEdges$.subscribe((edges) => {
+      this.syncFromStore();
     });
+    
+    // Store unsubscribe functions for cleanup
+    this.unsubscribeFunctions = [unsubscribeNodes, unsubscribeEdges];
+  }
+  
+  private unsubscribeFunctions: (() => void)[] = [];
+  
+  /**
+   * Remove LiveStore listeners
+   */
+  private removeLiveStoreListeners(): void {
+    this.unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
+    this.unsubscribeFunctions = [];
   }
   
   /**

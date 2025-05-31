@@ -500,10 +500,8 @@ const materializers = State.SQLite.materializers(events, {
   'v1.GraphLayoutSaved': ({ id, name, layoutType, viewport, nodePositions, isDefault, clusterId, createdAt, updatedAt }) =>
     tables.graphLayouts.insert({ id, name, layoutType, viewport, nodePositions, isDefault, clusterId, createdAt, updatedAt }),
 
-  'v1.GraphLayoutLoaded': ({ id }) => {
-    // This is a read operation that doesn't modify state
-    // Could be used for analytics/tracking if needed
-  },
+  // Fixed: Return undefined instead of void for read-only operations
+  'v1.GraphLayoutLoaded': ({ id }) => undefined,
 
   'v1.GraphLayoutDeleted': ({ id }) =>
     tables.graphLayouts.delete().where({ id }),
