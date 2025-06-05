@@ -1,4 +1,5 @@
 
+
 import { connect, Connection, Table } from '@lancedb/lancedb';
 import { pipeline } from '@huggingface/transformers';
 
@@ -149,9 +150,8 @@ export class LanceDBService {
     try {
       const table = await this.connection.openTable('notes_vectors');
       
-      // Get the existing note
+      // Get the existing note using filter instead of search
       const existing = await table
-        .search()
         .where(`id = '${noteId}'`)
         .limit(1)
         .toArray();
@@ -212,3 +212,4 @@ export class LanceDBService {
 
 // Export singleton instance
 export const lanceDBService = new LanceDBService();
+
