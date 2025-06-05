@@ -97,7 +97,7 @@ export class LanceDBService {
       const queryVector = await this.generateEmbedding(query);
       
       const results = await table
-        .vectorSearch(queryVector)
+        .search(queryVector)
         .limit(limit)
         .toArray();
 
@@ -149,9 +149,9 @@ export class LanceDBService {
     try {
       const table = await this.connection.openTable('notes_vectors');
       
-      // Get the existing note
+      // Get the existing note using query() instead of search()
       const existing = await table
-        .search()
+        .query()
         .where(`id = '${noteId}'`)
         .limit(1)
         .toArray();
