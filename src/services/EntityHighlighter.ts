@@ -1,4 +1,3 @@
-
 import { BlockNoteEditor, Block } from '@blocknote/core';
 import { parseNoteConnections } from '@/lib/utils/parsingUtils';
 import { hasRawEntitySyntax } from '@/lib/utils/documentParser';
@@ -100,6 +99,35 @@ export class EntityHighlighter {
                 originalSyntax: match[0]
               }
             });
+          }
+        }
+      });
+
+      // Process backlinks <<title>>
+      connections.backlinks.forEach(backlink => {
+        const backlinkPattern = /<<\s*([^>\s|][^>|]*?)\s*(?:\|[^>]*)?>>/g;
+        
+        let match;
+        while ((match = backlinkPattern.exec(textContent)) !== null) {
+          const backlinkTitle = match[1].trim();
+          
+          // Only process if this matches our backlink and isn't part of other elements
+          if (backlinkTitle === backlink) {
+            const isPartOfOther = replacements.some(r => 
+              match!.index >= r.from && match!.index + match![0].length <= r.to
+            );
+            
+            if (!isPartOfOther) {
+              replacements.push({
+                from: match.index,
+                to: match.index + match[0].length,
+                type: "backlink",
+                props: {
+                  text: backlinkTitle,
+                  originalSyntax: match[0]
+                }
+              });
+            }
           }
         }
       });
