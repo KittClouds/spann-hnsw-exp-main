@@ -1,12 +1,6 @@
-
 import React, { useState } from "react";
 import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
-import { 
-  useNotes, 
-  useActiveNoteId, 
-  useActiveClusterId, 
-  useNoteActions 
-} from "@/hooks/useLiveStore";
+import { useNotes, useActiveNoteId, useActiveClusterId, useNoteActions } from "@/hooks/useLiveStore";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -15,7 +9,6 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGrou
 import { Button } from "./ui/button";
 import { ClusterView } from "./ClusterView";
 import { generateNoteId } from "@/lib/utils/ids";
-
 export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
@@ -23,15 +16,15 @@ export function AppSidebar({
   const [activeNoteId, setActiveNoteId] = useActiveNoteId();
   const [activeClusterId] = useActiveClusterId();
   const [activeTab, setActiveTab] = useState<string>("folders");
-  const { createNote } = useNoteActions();
-  
+  const {
+    createNote
+  } = useNoteActions();
+
   // For the Folders tab, only show notes that belong to standard_root (clusterId === null)
   // This ensures complete separation between standard notes and cluster notes
   const rootStandardNotes = notes.filter(note => note.parentId === null && note.clusterId === null);
-
   const handleNewItem = React.useCallback((type: 'note' | 'folder', parentId: string | null = null) => {
     const clusterId = activeTab === "folders" ? null : activeClusterId;
-    
     const newNote = {
       id: generateNoteId(),
       parentId,
@@ -45,19 +38,16 @@ export function AppSidebar({
       tags: null,
       mentions: null
     };
-    
     createNote(newNote);
     if (type === 'note') {
       setActiveNoteId(newNote.id);
     }
-    
     toast(`New ${type} created`, {
       description: type === 'note' ? "Start typing to edit your note" : "You can add notes inside this folder"
     });
   }, [activeClusterId, activeTab, createNote, setActiveNoteId]);
-
   return <Sidebar className="bg-black border-r border-[#1a1b23]" {...props}>
-      <SidebarContent>
+      <SidebarContent className="bg-black">
         <Tabs defaultValue="folders" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="w-full grid grid-cols-2 bg-transparent border-b border-[#1a1b23] rounded-none p-0 h-auto">
             <TabsTrigger value="folders" className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 sidebar-tab-inactive data-[state=active]:sidebar-tab-active">
@@ -91,16 +81,7 @@ export function AppSidebar({
               </SidebarGroupAction>
               <SidebarGroupContent>
                 <SidebarMenu className="px-1">
-                  {rootStandardNotes.map(note => (
-                    <NoteTree 
-                      key={note.id} 
-                      note={note} 
-                      notes={notes} 
-                      activeNoteId={activeNoteId} 
-                      onSelect={setActiveNoteId} 
-                      onNewItem={handleNewItem} 
-                    />
-                  ))}
+                  {rootStandardNotes.map(note => <NoteTree key={note.id} note={note} notes={notes} activeNoteId={activeNoteId} onSelect={setActiveNoteId} onNewItem={handleNewItem} />)}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -140,7 +121,6 @@ export function AppSidebar({
       <SidebarRail />
     </Sidebar>;
 }
-
 interface NoteTreeProps {
   note: any;
   notes: any[];
@@ -148,7 +128,6 @@ interface NoteTreeProps {
   onSelect: (id: string) => void;
   onNewItem: (type: 'note' | 'folder', parentId: string | null) => void;
 }
-
 function NoteTree({
   note,
   notes,
@@ -156,23 +135,26 @@ function NoteTree({
   onSelect,
   onNewItem
 }: NoteTreeProps) {
-  const { updateNote, deleteNote } = useNoteActions();
+  const {
+    updateNote,
+    deleteNote
+  } = useNoteActions();
   const isFolder = note.type === 'folder';
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(note.title);
   const childNotes = notes.filter(n => n.parentId === note.id);
-
   const handleRename = () => {
     if (editTitle.trim() === '') {
       toast.error("Folder name cannot be empty");
       setEditTitle(note.title);
       return;
     }
-    updateNote(note.id, { title: editTitle });
+    updateNote(note.id, {
+      title: editTitle
+    });
     setIsEditing(false);
     toast.success("Renamed successfully");
   };
-
   const handleDelete = () => {
     if (notes.filter(n => n.type === 'folder').length <= 1) {
       toast.error("Cannot delete the last folder");
@@ -181,7 +163,6 @@ function NoteTree({
     deleteNote(note.id);
     toast.success("Deleted successfully");
   };
-
   if (!isFolder) {
     return <SidebarMenuItem>
         <SidebarMenuButton isActive={activeNoteId === note.id} className="rounded-md transition-colors duration-200 hover:bg-[#12141f] data-[active=true]:sidebar-note-active-dark" onClick={() => onSelect(note.id)}>
@@ -190,7 +171,6 @@ function NoteTree({
         </SidebarMenuButton>
       </SidebarMenuItem>;
   }
-
   return <SidebarMenuItem>
       <Collapsible defaultOpen>
         <div className="flex items-center justify-between pr-2 bg-inherit">
