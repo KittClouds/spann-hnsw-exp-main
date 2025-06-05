@@ -25,6 +25,22 @@ const WikiLinkInline = ({ inlineContent }: { inlineContent: any }) => (
   </span>
 );
 
+// Enhanced Backlink inline component with display-only styling
+const BacklinkInline = ({ inlineContent }: { inlineContent: any }) => {
+  const userPreferences = useAtomValue(entityColorPreferencesAtom);
+  const colorClasses = getEntityColor('BACKLINK', userPreferences);
+  
+  return (
+    <span 
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold border ${colorClasses} cursor-pointer hover:opacity-80 transition-opacity`}
+      data-backlink-title={inlineContent.props.text}
+      data-original-syntax={inlineContent.props.originalSyntax}
+    >
+      &lt;&lt;{inlineContent.props.text}&gt;&gt;
+    </span>
+  );
+};
+
 // Enhanced Entity inline component with kind-based coloring
 const EntityInline = ({ inlineContent }: { inlineContent: any }) => {
   const userPreferences = useAtomValue(entityColorPreferencesAtom);
@@ -110,6 +126,20 @@ export const WikiLinkInlineSpec = createReactInlineContentSpec(
   },
   {
     render: WikiLinkInline
+  }
+);
+
+export const BacklinkInlineSpec = createReactInlineContentSpec(
+  {
+    type: "backlink",
+    propSchema: {
+      text: { default: "" },
+      originalSyntax: { default: "" }
+    },
+    content: "none"
+  },
+  {
+    render: BacklinkInline
   }
 );
 

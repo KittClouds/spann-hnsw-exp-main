@@ -13,6 +13,9 @@ const LINK_REGEX = /\[\[\s*([^\]\s|][^\]|]*?)\s*(?:\|[^\]]*)?\]\]/g; // Capture 
 const ENTITY_REGEX = /\[([A-Za-z0-9_]+)\|([^\]]+?)(?:\|({.*?}))?\]/g;
 const TRIPLE_REGEX = /\[([A-Za-z0-9_]+)\|([^\]]+?)(?:\|({.*?}))?\]\s*\(([A-Za-z0-9_]+)\)\s*\[([A-Za-z0-9_]+)\|([^\]]+?)(?:\|({.*?}))?\]/g;
 
+// Backlink regex for <<title>> syntax - THESE ARE DISPLAY-ONLY, NOT OUTGOING LINKS
+const BACKLINK_REGEX = /<<\s*([^>\s|][^>|]*?)\s*(?:\|[^>]*)?>>/g;
+
 export interface Entity {
   kind: string;
   label: string;
@@ -32,6 +35,7 @@ export interface ParsedConnections {
   links: string[]; // Stores link titles
   entities: Entity[];
   triples: Triple[];
+  backlinks: string[]; // Stores backlink titles from <<title>> - THESE ARE DISPLAY-ONLY
 }
 
 // Helper to extract text from InlineContent[]
@@ -99,7 +103,7 @@ function promoteMentionsToEntities(mentions: string[]): Entity[] {
 }
 
 export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnections {
-  const connections: ParsedConnections = { tags: [], mentions: [], links: [], entities: [], triples: [] };
+  const connections: ParsedConnections = { tags: [], mentions: [], links: [], entities: [], triples: [], backlinks: [] };
   if (!blocks) return connections;
 
   let fullText = '';
@@ -111,6 +115,7 @@ export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnect
   const uniqueTags = new Set<string>();
   const uniqueMentions = new Set<string>();
   const uniqueLinks = new Set<string>();
+  const uniqueBacklinks = new Set<string>();
   const uniqueEntities = new Map<string, Entity>(); // Use Map to deduplicate by kind+label
   const triples: Triple[] = [];
 
@@ -129,6 +134,16 @@ export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnect
     const linkTitle = match[1].trim(); // Capture group 1 is the title
     if (linkTitle) {
         uniqueLinks.add(linkTitle);
+    }
+  }
+  
+  // Extract backlinks
+  while ((match = BACKLINK_REGEX.exec(fullText)) !== null) {
+    const backlinkTitle = match[1].trim();
+    if (backlinkTitle) {
+        uniqueBacklinks.add(backlinkTitle);
+        console.log('parseNoteConnections: Found backlink (display-only):', backlinkTitle);
+        // IMPORTANT: backlinks don't create outgoingLinks, they're for display only
     }
   }
   
@@ -195,6 +210,7 @@ export function parseNoteConnections(blocks: Block[] | undefined): ParsedConnect
   connections.tags = Array.from(uniqueTags);
   connections.mentions = Array.from(uniqueMentions);
   connections.links = Array.from(uniqueLinks);
+  connections.backlinks = Array.from(uniqueBacklinks);
   
   // Unified entity promotion: combine explicit entities with promoted tags/mentions
   const allEntities = new Map<string, Entity>();
@@ -230,30 +246,34 @@ export function parseAllNotes(notes: Note[]): {
   linksMap: Map<string, string[]>; // Map note ID to link *titles*
   entitiesMap: Map<string, Entity[]>; // Map note ID to entities
   triplesMap: Map<string, Triple[]>; // Map note ID to triples
+  backlinksMap: Map<string, string[]>; // Map note ID to backlink titles
 } {
   const tagsMap = new Map<string, string[]>();
   const mentionsMap = new Map<string, string[]>();
   const linksMap = new Map<string, string[]>();
   const entitiesMap = new Map<string, Entity[]>();
   const triplesMap = new Map<string, Triple[]>();
+  const backlinksMap = new Map<string, string[]>();
 
   notes.forEach(note => {
     // Only parse actual notes; folders/other types get empty arrays
     if (note.type === 'note') {
-        const { tags, mentions, links, entities, triples } = parseNoteConnections(note.content);
+        const { tags, mentions, links, entities, triples, backlinks } = parseNoteConnections(note.content);
         tagsMap.set(note.id, tags);
         mentionsMap.set(note.id, mentions);
         linksMap.set(note.id, links);
         entitiesMap.set(note.id, entities);
         triplesMap.set(note.id, triples);
+        backlinksMap.set(note.id, backlinks);
     } else {
         tagsMap.set(note.id, []);
         mentionsMap.set(note.id, []);
         linksMap.set(note.id, []);
         entitiesMap.set(note.id, []);
         triplesMap.set(note.id, []);
+        backlinksMap.set(note.id, []);
     }
   });
 
-  return { tagsMap, mentionsMap, linksMap, entitiesMap, triplesMap };
+  return { tagsMap, mentionsMap, linksMap, entitiesMap, triplesMap, backlinksMap };
 }

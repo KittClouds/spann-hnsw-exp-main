@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { graphService } from '../services/GraphService';
 import { syncManager } from '../services/SyncManager';
@@ -18,6 +19,7 @@ import {
   noteTriplesMap$,
   uiState$
 } from '@/livestore/queries';
+import { useActiveNoteBacklinks } from '@/hooks/useLiveStore';
 import { events } from '@/livestore/schema';
 import { ClusterId } from '@/lib/utils/ids';
 import { schema } from '@/lib/schema';
@@ -76,6 +78,9 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
   const linksMap = store.useQuery(noteLinksMap$);
   const entitiesMap = store.useQuery(noteEntitiesMap$);
   const triplesMap = store.useQuery(noteTriplesMap$);
+  
+  // Use the backlinks hook for reactive backlink data
+  const activeNoteBacklinks = useActiveNoteBacklinks();
 
   const [initialized, setInitialized] = useState(false);
   const [cytoscapeInstance, setCytoscapeInstance] = useState<Core | null>(null);
@@ -311,7 +316,8 @@ export const GraphProvider: React.FC<{children: React.ReactNode}> = ({ children 
     },
     
     getBacklinks: (noteId) => {
-      return graphService.getBacklinks(noteId);
+      // Use the reactive backlinks data from LiveStore instead of GraphService
+      return activeNoteBacklinks;
     },
     
     tagNote: (noteId, tagName) => {

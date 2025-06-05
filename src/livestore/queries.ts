@@ -4,6 +4,7 @@ import { tables } from './schema';
 import { parseAllNotes } from '@/lib/utils/parsingUtils';
 import { parseNoteConnectionsFromDocument } from '@/lib/utils/documentParser';
 import { crossNoteRelationService } from '@/services/CrossNoteRelationService';
+import { backlinkService } from '@/services/BacklinkService';
 
 // Re-export entity queries
 export * from './queries/entities';
@@ -100,7 +101,8 @@ export const noteConnections$ = computed((get) => {
       mentionsMap: new Map(),
       linksMap: new Map(),
       entitiesMap: new Map(),
-      triplesMap: new Map()
+      triplesMap: new Map(),
+      backlinksMap: new Map()
     };
   }
   console.log("LiveStore: Recalculating all parsed connections (legacy)");
@@ -127,11 +129,15 @@ export const noteTriplesMap$ = computed((get) => {
   return get(noteConnections$).triplesMap;
 }, { label: 'noteTriplesMap$' });
 
+export const noteBacklinksMap$ = computed((get) => {
+  return get(noteConnections$).backlinksMap;
+}, { label: 'noteBacklinksMap$' });
+
 // New document-based parsing for canonical data
 export const activeNoteConnections$ = computed((get) => {
   const activeNote = get(activeNote$);
   if (!activeNote || !activeNote.content) {
-    return { tags: [], mentions: [], links: [], entities: [], triples: [] };
+    return { tags: [], mentions: [], links: [], entities: [], triples: [], backlinks: [] };
   }
 
   // Use document-based parsing for canonical data
@@ -143,9 +149,48 @@ export const activeNoteConnections$ = computed((get) => {
     mentions: connections.mentions,
     links: connections.links,
     entities: connections.entities,
-    triples: connections.triples
+    triples: connections.triples,
+    backlinks: connections.backlinks
   };
 }, { label: 'activeNoteConnections$' });
+
+// NEW: Backlink queries using BacklinkService
+export const backlinksToActiveNote$ = computed((get) => {
+  const activeNote = get(activeNote$);
+  const notes = get(notes$);
+  
+  if (!activeNote || !Array.isArray(notes)) {
+    return [];
+  }
+  
+  console.log("LiveStore: Computing backlinks to active note:", activeNote.title);
+  
+  // Update backlink service with current notes
+  backlinkService.updateFromNotes(notes);
+  
+  // Get backlinks to this note title
+  const backlinkRefs = backlinkService.getBacklinksTo(activeNote.title);
+  
+  // Convert to the format expected by UI components
+  return backlinkRefs.map(ref => ({
+    id: ref.noteId,
+    title: ref.noteTitle,
+    backlinkTitle: ref.backlinkTitle
+  }));
+}, { label: 'backlinksToActiveNote$' });
+
+export const backlinkStats$ = computed((get) => {
+  const notes = get(notes$);
+  
+  if (!Array.isArray(notes)) {
+    return { totalBacklinkTargets: 0, totalBacklinkReferences: 0, notesWithBacklinks: 0 };
+  }
+  
+  // Update backlink service with current notes
+  backlinkService.updateFromNotes(notes);
+  
+  return backlinkService.getStats();
+}, { label: 'backlinkStats$' });
 
 // NEW: Cross-Note Relation Engine queries
 // These provide reactive access to the computed cross-note relationships

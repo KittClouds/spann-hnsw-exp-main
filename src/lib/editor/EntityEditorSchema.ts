@@ -4,6 +4,7 @@ import {
   TagInlineSpec, 
   MentionInlineSpec, 
   WikiLinkInlineSpec, 
+  BacklinkInlineSpec,
   EntityInlineSpec, 
   TripleInlineSpec 
 } from '@/components/editor/inline/EntityInlineSpecs';
@@ -15,6 +16,7 @@ export const entityEditorSchema = BlockNoteSchema.create({
     tag: TagInlineSpec,
     mention: MentionInlineSpec,
     wikilink: WikiLinkInlineSpec,
+    backlink: BacklinkInlineSpec,
     entity: EntityInlineSpec,
     triple: TripleInlineSpec
   }

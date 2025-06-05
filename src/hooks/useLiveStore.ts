@@ -12,6 +12,8 @@ import {
   activeNoteConnections$,
   entityAttributes$,
   blueprints$,
+  backlinksToActiveNote$,
+  backlinkStats$,
   // New entity queries
   globalEntities$,
   clusterEntitiesMap$,
@@ -112,6 +114,17 @@ export function useBlueprintsArray() {
   const { store } = useStore();
   const blueprints = store.useQuery(blueprints$);
   return Array.isArray(blueprints) ? blueprints : [];
+}
+
+// NEW: Backlink hooks
+export function useActiveNoteBacklinks() {
+  const { store } = useStore();
+  return store.useQuery(backlinksToActiveNote$);
+}
+
+export function useBacklinkStats() {
+  const { store } = useStore();
+  return store.useQuery(backlinkStats$);
 }
 
 // New entity-specific hooks
