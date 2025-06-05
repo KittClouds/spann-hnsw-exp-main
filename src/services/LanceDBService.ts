@@ -2,11 +2,6 @@
 import { connect, Connection, Table } from '@lancedb/lancedb';
 import { pipeline } from '@huggingface/transformers';
 
-export interface EmbeddingFunction {
-  sourceColumn: string;
-  embed: (batch: string[]) => Promise<number[][]>;
-}
-
 export interface VectorSearchResult {
   id: string;
   text: string;
@@ -44,25 +39,16 @@ export class LanceDBService {
     }
   }
 
-  private createEmbeddingFunction(): EmbeddingFunction {
-    return {
-      sourceColumn: 'text',
-      embed: async (batch: string[]): Promise<number[][]> => {
-        if (!this.embedPipeline) {
-          throw new Error('Embedding pipeline not initialized');
-        }
+  private async generateEmbedding(text: string): Promise<number[]> {
+    if (!this.embedPipeline) {
+      throw new Error('Embedding pipeline not initialized');
+    }
 
-        const results: number[][] = [];
-        for (const text of batch) {
-          const res = await this.embedPipeline(text, { 
-            pooling: 'mean', 
-            normalize: true 
-          });
-          results.push(Array.from(res.data));
-        }
-        return results;
-      }
-    };
+    const res = await this.embedPipeline(text, { 
+      pooling: 'mean', 
+      normalize: true 
+    });
+    return Array.from(res.data);
   }
 
   async createNotesTable(notes: Array<{
@@ -76,14 +62,16 @@ export class LanceDBService {
     }
 
     try {
-      const embedFunction = this.createEmbeddingFunction();
-      
-      // Create table with notes data
-      const table = await this.connection.createTable(
-        'notes_vectors',
-        notes,
-        embedFunction
+      // Generate embeddings for all notes
+      const notesWithEmbeddings = await Promise.all(
+        notes.map(async (note) => ({
+          ...note,
+          vector: await this.generateEmbedding(note.text)
+        }))
       );
+      
+      // Create table with notes data and embeddings
+      const table = await this.connection.createTable('notes_vectors', notesWithEmbeddings);
       
       console.log(`Created notes table with ${notes.length} entries`);
       return table;
@@ -95,8 +83,7 @@ export class LanceDBService {
 
   async searchSimilarNotes(
     query: string,
-    limit: number = 5,
-    metricType: 'cosine' | 'l2' = 'cosine'
+    limit: number = 5
   ): Promise<VectorSearchResult[]> {
     if (!this.connection) {
       throw new Error('LanceDB not initialized');
@@ -106,11 +93,13 @@ export class LanceDBService {
       // Get or create the notes table
       const table = await this.connection.openTable('notes_vectors');
       
+      // Generate embedding for the query
+      const queryVector = await this.generateEmbedding(query);
+      
       const results = await table
-        .search(query)
-        .metricType(metricType)
+        .vectorSearch(queryVector)
         .limit(limit)
-        .execute();
+        .toArray();
 
       return results.map((result: any) => ({
         id: result.id,
@@ -137,7 +126,11 @@ export class LanceDBService {
 
     try {
       const table = await this.connection.openTable('notes_vectors');
-      await table.add([note]);
+      const noteWithEmbedding = {
+        ...note,
+        vector: await this.generateEmbedding(note.text)
+      };
+      await table.add([noteWithEmbedding]);
       console.log(`Added note ${note.id} to vector database`);
     } catch (error) {
       console.error('Failed to add note to vector database:', error);
@@ -154,20 +147,25 @@ export class LanceDBService {
     }
 
     try {
-      // For updates, we need to delete and re-add since LanceDB doesn't support in-place updates
       const table = await this.connection.openTable('notes_vectors');
       
       // Get the existing note
       const existing = await table
-        .search(`id = '${noteId}'`)
+        .search()
+        .where(`id = '${noteId}'`)
         .limit(1)
-        .execute();
+        .toArray();
       
       if (existing.length > 0) {
         const updatedNote = {
           ...existing[0],
           ...updates
         };
+        
+        // If text was updated, regenerate embedding
+        if (updates.text) {
+          updatedNote.vector = await this.generateEmbedding(updates.text);
+        }
         
         // Remove old and add updated
         await table.delete(`id = '${noteId}'`);
