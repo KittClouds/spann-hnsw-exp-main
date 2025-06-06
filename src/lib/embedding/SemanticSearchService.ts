@@ -2,6 +2,8 @@
 import { embeddingService } from './EmbeddingService';
 import { Block } from '@blocknote/core';
 import { vecToBlob, blobToVec } from './binaryUtils';
+import { tables, events } from '../../livestore/schema';
+import { toast } from 'sonner';
 
 interface NoteEmbedding {
   noteId: string;
@@ -49,9 +51,13 @@ class SemanticSearchService {
 
   async initialize() {
     if (this.isReady) return;
-    await embeddingService.ready();
-    this.isReady = true;
-    console.log('SemanticSearchService initialized');
+    try {
+      await embeddingService.ready();
+      this.isReady = true;
+      console.log('SemanticSearchService initialized');
+    } catch (error) {
+      console.error('Failed to initialize SemanticSearchService:', error);
+    }
   }
 
   // Method to inject store reference from React hooks
@@ -65,31 +71,41 @@ class SemanticSearchService {
 
   // Load all embeddings from LiveStore into memory for fast search
   private loadEmbeddingsFromStore() {
-    if (!this.storeRef) return;
+    if (!this.storeRef) {
+      console.warn('SemanticSearchService: Cannot load embeddings - no store reference');
+      return;
+    }
 
     try {
-      // Import tables from schema
-      const { tables } = require('../../livestore/schema');
-      
       // Query all embeddings from the database
       const embeddingRows = this.storeRef.query(tables.embeddings.select());
       
-      console.log(`SemanticSearchService: Loading ${embeddingRows.length} embeddings from LiveStore`);
+      console.log(`SemanticSearchService: Loading ${embeddingRows?.length || 0} embeddings from LiveStore`);
+      
+      // Reset embeddings map before loading
+      this.embeddings.clear();
       
       // Convert each row back to in-memory format
-      embeddingRows.forEach((row: any) => {
-        try {
-          const embedding = blobToVec(row.vecData, row.vecDim);
-          this.embeddings.set(row.noteId, {
-            noteId: row.noteId,
-            title: row.title,
-            content: row.content,
-            embedding
-          });
-        } catch (error) {
-          console.error(`Failed to load embedding for note ${row.noteId}:`, error);
-        }
-      });
+      if (Array.isArray(embeddingRows)) {
+        embeddingRows.forEach((row: any) => {
+          try {
+            if (!row || !row.vecData) {
+              console.warn(`Skipping invalid embedding row:`, row);
+              return;
+            }
+            
+            const embedding = blobToVec(row.vecData, row.vecDim);
+            this.embeddings.set(row.noteId, {
+              noteId: row.noteId,
+              title: row.title,
+              content: row.content,
+              embedding
+            });
+          } catch (error) {
+            console.error(`Failed to load embedding for note ${row?.noteId}:`, error);
+          }
+        });
+      }
 
       console.log(`SemanticSearchService: Loaded ${this.embeddings.size} embeddings into memory`);
     } catch (error) {
@@ -99,20 +115,19 @@ class SemanticSearchService {
 
   // This method now triggers LiveStore events instead of direct storage
   async addOrUpdateNote(noteId: string, title: string, content: Block[]) {
-    await this.initialize();
-    
-    const textContent = blocksToText(content);
-    if (!textContent.trim()) {
-      // Remove from both memory and LiveStore
-      this.embeddings.delete(noteId);
-      if (this.storeRef) {
-        const { events } = require('../../livestore/schema');
-        this.storeRef.commit(events.embeddingRemoved({ noteId }));
-      }
-      return;
-    }
-
     try {
+      await this.initialize();
+      
+      const textContent = blocksToText(content);
+      if (!textContent.trim()) {
+        // Remove from both memory and LiveStore
+        this.embeddings.delete(noteId);
+        if (this.storeRef) {
+          this.storeRef.commit(events.embeddingRemoved({ noteId }));
+        }
+        return;
+      }
+
       const { vector } = await embeddingService.embed([textContent]);
       
       // Update in-memory cache immediately for fast search
@@ -125,7 +140,6 @@ class SemanticSearchService {
 
       // Persist to LiveStore (will also sync across devices)
       if (this.storeRef) {
-        const { events } = require('../../livestore/schema');
         this.storeRef.commit(events.noteEmbedded({
           noteId,
           title,
@@ -135,30 +149,37 @@ class SemanticSearchService {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }));
+      } else {
+        console.warn('SemanticSearchService: Cannot commit embedding - no store reference');
       }
     } catch (error) {
       console.error('Failed to embed note:', error);
-      throw error;
+      toast.error('Failed to generate embedding for note');
     }
   }
 
   removeNote(noteId: string) {
-    // Remove from both memory and LiveStore
-    this.embeddings.delete(noteId);
-    if (this.storeRef) {
-      const { events } = require('../../livestore/schema');
-      this.storeRef.commit(events.embeddingRemoved({ noteId }));
+    try {
+      // Remove from both memory and LiveStore
+      this.embeddings.delete(noteId);
+      if (this.storeRef) {
+        this.storeRef.commit(events.embeddingRemoved({ noteId }));
+      } else {
+        console.warn('SemanticSearchService: Cannot remove embedding - no store reference');
+      }
+    } catch (error) {
+      console.error('Failed to remove embedding:', error);
     }
   }
 
   async search(query: string, limit = 10): Promise<SearchResult[]> {
-    await this.initialize();
-    
-    if (!query.trim() || this.embeddings.size === 0) {
-      return [];
-    }
-
     try {
+      await this.initialize();
+      
+      if (!query.trim() || this.embeddings.size === 0) {
+        return [];
+      }
+
       const { vector: queryVector } = await embeddingService.embed([`search_query: ${query}`]);
       
       const results: SearchResult[] = [];
@@ -178,38 +199,66 @@ class SemanticSearchService {
         .slice(0, limit);
     } catch (error) {
       console.error('Search failed:', error);
+      toast.error('Search failed');
       return [];
     }
   }
 
   private cosineSimilarity(a: Float32Array, b: Float32Array): number {
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-    
-    for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+    try {
+      let dotProduct = 0;
+      let normA = 0;
+      let normB = 0;
+      
+      for (let i = 0; i < a.length; i++) {
+        dotProduct += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
+      }
+      
+      if (normA === 0 || normB === 0) return 0;
+      
+      return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    } catch (error) {
+      console.error('Error calculating similarity:', error);
+      return 0;
     }
-    
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
   async syncAllNotes(notes: Array<{ id: string; title: string; content: Block[] }>) {
-    await this.initialize();
-    
-    console.log(`SemanticSearchService: Syncing ${notes.length} notes`);
-    
-    // Clear in-memory cache
-    this.embeddings.clear();
-    
-    // Process each note and generate embeddings
-    for (const note of notes) {
-      await this.addOrUpdateNote(note.id, note.title, note.content);
+    try {
+      await this.initialize();
+      
+      console.log(`SemanticSearchService: Syncing ${notes.length} notes`);
+      
+      // Clear in-memory cache
+      this.embeddings.clear();
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
+      // Process each note and generate embeddings
+      for (const note of notes) {
+        try {
+          await this.addOrUpdateNote(note.id, note.title, note.content);
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          console.error(`Failed to sync note ${note.id}:`, error);
+        }
+      }
+      
+      console.log(`SemanticSearchService: Sync complete, ${successCount} embeddings created, ${errorCount} errors`);
+      
+      // Reload from store to ensure consistency
+      this.loadEmbeddingsFromStore();
+      
+      return this.embeddings.size;
+    } catch (error) {
+      console.error('Failed to sync notes:', error);
+      toast.error('Failed to synchronize embeddings');
+      return 0;
     }
-    
-    console.log(`SemanticSearchService: Sync complete, ${this.embeddings.size} embeddings created`);
   }
 
   getEmbeddingCount(): number {
@@ -221,7 +270,6 @@ class SemanticSearchService {
     if (!this.storeRef) return 0;
     
     try {
-      const { tables } = require('../../livestore/schema');
       const countResult = this.storeRef.query(tables.embeddings.count());
       return countResult || 0;
     } catch (error) {

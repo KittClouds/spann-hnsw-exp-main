@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,12 +23,18 @@ export function SemanticSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [syncCount, setSyncCount] = useState(0);
   const [, setActiveNoteId] = useActiveNoteId();
   const notes = useNotes();
   
   // Use LiveStore reactive queries
   const embeddings = useEmbeddings();
   const embeddingCount = useEmbeddingCount();
+  
+  // Update sync count on mount and when embeddings change
+  useEffect(() => {
+    setSyncCount(semanticSearchService.getEmbeddingCount());
+  }, [embeddings]);
 
   const handleSearch = useDebouncedCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) {
@@ -51,8 +57,8 @@ export function SemanticSearch() {
   const handleSyncEmbeddings = useCallback(async () => {
     setIsLoading(true);
     try {
-      await semanticSearchService.syncAllNotes(notes);
-      const count = semanticSearchService.getEmbeddingCount();
+      const count = await semanticSearchService.syncAllNotes(notes);
+      setSyncCount(count);
       toast.success(`Synchronized ${count} note embeddings`);
     } catch (error) {
       console.error('Sync failed:', error);
@@ -105,7 +111,7 @@ export function SemanticSearch() {
               <span>{embeddingCount} embeddings stored</span>
             </div>
             <div className="flex items-center">
-              <span>{semanticSearchService.getEmbeddingCount()} in memory</span>
+              <span>{syncCount} in memory</span>
             </div>
           </div>
         </div>
