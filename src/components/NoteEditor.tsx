@@ -22,7 +22,7 @@ export function NoteEditor() {
   const activeNote = useActiveNote();
   const [activeNoteId, setActiveNoteId] = useActiveNoteId();
   const notes = useNotes();
-  const { updateNote, deleteNote } = useNoteActions();
+  const { updateNote, deleteNote, updateNoteWithEmbedding } = useNoteActions();
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== 'undefined') {
       return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -85,7 +85,7 @@ export function NoteEditor() {
     return () => observer.disconnect();
   }, []);
 
-  // Hardened idle save to LiveStore
+  // Hardened idle save to LiveStore with embedding
   const idleSave = useIdleCallback(async () => {
     if (!activeNote || isLoadingContentRef.current) return;
     
@@ -114,8 +114,8 @@ export function NoteEditor() {
     const success = await saveNote(activeNote.id, currentBlocks);
     
     if (success) {
-      // Persist to LiveStore
-      updateNote(activeNote.id, { content: currentBlocks });
+      // Persist to LiveStore with embedding
+      updateNoteWithEmbedding(activeNote.id, { content: currentBlocks });
       
       // Process entity highlighting after save
       if (entityHighlighterRef.current) {

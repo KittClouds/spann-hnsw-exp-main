@@ -9,9 +9,11 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    fs: { allow: ['..'] } // Allow serving model files
   },
   // Ensure Vite treats .wasm files as assets for proper serving
   assetsInclude: ['**/*.wasm'],
+  envPrefix: 'VITE_', // Expose variables prefixed with VITE_
   plugins: [
     react(),
     livestoreDevtoolsPlugin({ schemaPath: './src/livestore/schema.ts' }),

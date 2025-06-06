@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
+import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2, Search, Zap } from "lucide-react";
 import { useNotes, useActiveNoteId, useActiveClusterId, useNoteActions } from "@/hooks/useLiveStore";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -8,7 +8,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarGroupAction, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarFooter, SidebarRail } from "@/components/ui/sidebar";
 import { Button } from "./ui/button";
 import { ClusterView } from "./ClusterView";
+import { EmbeddingSearch } from "./EmbeddingSearch";
 import { generateNoteId } from "@/lib/utils/ids";
+import { embeddingService } from "@/services/EmbeddingService";
+
 export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
@@ -17,12 +20,13 @@ export function AppSidebar({
   const [activeClusterId] = useActiveClusterId();
   const [activeTab, setActiveTab] = useState<string>("folders");
   const {
-    createNote
+    createNoteWithEmbedding
   } = useNoteActions();
 
   // For the Folders tab, only show notes that belong to standard_root (clusterId === null)
   // This ensures complete separation between standard notes and cluster notes
   const rootStandardNotes = notes.filter(note => note.parentId === null && note.clusterId === null);
+  
   const handleNewItem = React.useCallback((type: 'note' | 'folder', parentId: string | null = null) => {
     const clusterId = activeTab === "folders" ? null : activeClusterId;
     const newNote = {
@@ -38,23 +42,50 @@ export function AppSidebar({
       tags: null,
       mentions: null
     };
-    createNote(newNote);
+    
+    if (type === 'note') {
+      createNoteWithEmbedding(newNote);
+    } else {
+      // Don't embed folders
+      // createNote(newNote);
+    }
+    
     if (type === 'note') {
       setActiveNoteId(newNote.id);
     }
     toast(`New ${type} created`, {
       description: type === 'note' ? "Start typing to edit your note" : "You can add notes inside this folder"
     });
-  }, [activeClusterId, activeTab, createNote, setActiveNoteId]);
+  }, [activeClusterId, activeTab, createNoteWithEmbedding, setActiveNoteId]);
+
+  const handleSyncEmbeddings = React.useCallback(async () => {
+    if (!embeddingService.isInitialized()) {
+      await embeddingService.initialize();
+    }
+    
+    toast.promise(
+      embeddingService.syncAllNotes(notes),
+      {
+        loading: 'Syncing embeddings...',
+        success: 'Embeddings synchronized successfully',
+        error: 'Failed to sync embeddings'
+      }
+    );
+  }, [notes]);
+
   return <Sidebar className="bg-black border-r border-[#1a1b23]" {...props}>
       <SidebarContent className="bg-black">
         <Tabs defaultValue="folders" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-2 bg-transparent border-b border-[#1a1b23] rounded-none p-0 h-auto">
+          <TabsList className="w-full grid grid-cols-3 bg-transparent border-b border-[#1a1b23] rounded-none p-0 h-auto">
             <TabsTrigger value="folders" className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 sidebar-tab-inactive data-[state=active]:sidebar-tab-active">
               Folders
             </TabsTrigger>
             <TabsTrigger value="clusters" className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 sidebar-tab-inactive data-[state=active]:sidebar-tab-active">
               Clusters
+            </TabsTrigger>
+            <TabsTrigger value="search" className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 sidebar-tab-inactive data-[state=active]:sidebar-tab-active">
+              <Search className="h-4 w-4 mr-1" />
+              Search
             </TabsTrigger>
           </TabsList>
           <TabsContent value="folders" className="mt-0">
@@ -89,9 +120,20 @@ export function AppSidebar({
           <TabsContent value="clusters" className="mt-0">
             <ClusterView />
           </TabsContent>
+          <TabsContent value="search" className="mt-0 flex-1 overflow-auto">
+            <EmbeddingSearch />
+          </TabsContent>
         </Tabs>
       </SidebarContent>
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 space-y-2">
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleSyncEmbeddings}
+        >
+          <Zap className="h-4 w-4 mr-2" />
+          Sync Embeddings
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button className="w-full bg-gradient-to-r from-[#1A1F2C] to-[#2A1F3D] hover:from-[#2A1F3D] hover:to-[#1A1F2C] text-white border border-[#7E69AB]/20 shadow-lg transition-all duration-300">
@@ -108,6 +150,11 @@ export function AppSidebar({
                   <Folder className="mr-2 h-4 w-4" />
                   New Folder
                 </DropdownMenuItem>
+              </> : activeTab === "search" ? <>
+                <DropdownMenuItem onClick={() => handleNewItem('note')}>
+                  <File className="mr-2 h-4 w-4" />
+                  New Note
+                </DropdownMenuItem>
               </> : <DropdownMenuItem onClick={() => {
             const clusterButton = document.querySelector('.ClusterView button:has(.h-3\\.5.w-3\\.5)') as HTMLButtonElement;
             if (clusterButton) clusterButton.click();
@@ -121,6 +168,7 @@ export function AppSidebar({
       <SidebarRail />
     </Sidebar>;
 }
+
 interface NoteTreeProps {
   note: any;
   notes: any[];

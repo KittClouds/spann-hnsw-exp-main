@@ -1,4 +1,3 @@
-
 import { useStore } from '@livestore/react';
 import { 
   activeNoteId$, 
@@ -34,6 +33,8 @@ import {
   topGlobalTriples$
 } from '../livestore/queries/derived';
 import { events } from '../livestore/schema';
+import { embeddingService } from '@/services/EmbeddingService';
+import { toast } from 'sonner';
 
 // Custom hooks that wrap LiveStore usage with proper typing
 export function useActiveNoteId() {
@@ -216,7 +217,80 @@ export function useNoteActions() {
     store.commit(events.noteCreated(note));
   };
 
+  const createNoteWithEmbedding = async (note: any) => {
+    store.commit(events.noteCreated(note));
+    
+    if (embeddingService.isInitialized()) {
+      try {
+        const chunkIds = await embeddingService.upsertNoteInVectorStore(note);
+        if (chunkIds && chunkIds.length > 0) {
+          // Store the chunk IDs in note metadata
+          store.commit(events.noteUpdated({
+            id: note.id,
+            updates: {
+              metadata: {
+                ...note.metadata,
+                vector_chunk_ids: chunkIds
+              }
+            },
+            updatedAt: new Date().toISOString()
+          }));
+        }
+        toast.success(`Note "${note.title}" embedded successfully`);
+      } catch (error) {
+        console.error("Failed to embed note:", error);
+        toast.error(`Failed to embed "${note.title}"`);
+      }
+    }
+  };
+
+  const updateNoteWithEmbedding = async (id: string, updates: any) => {
+    const currentNote = store.query(activeNote$);
+    
+    store.commit(events.noteUpdated({
+      id,
+      updates,
+      updatedAt: new Date().toISOString()
+    }));
+    
+    // Only re-embed if content changes and embedding service is initialized
+    if ('content' in updates && embeddingService.isInitialized() && currentNote) {
+      try {
+        const updatedNote = { ...currentNote, ...updates };
+        const oldChunkIds = currentNote.metadata?.vector_chunk_ids;
+        
+        const newChunkIds = await embeddingService.upsertNoteInVectorStore(
+          updatedNote, 
+          oldChunkIds
+        );
+        
+        if (newChunkIds && newChunkIds.length > 0) {
+          store.commit(events.noteUpdated({
+            id,
+            updates: {
+              metadata: {
+                ...updatedNote.metadata,
+                vector_chunk_ids: newChunkIds
+              }
+            },
+            updatedAt: new Date().toISOString()
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to re-embed note:", error);
+      }
+    }
+  };
+
   const deleteNote = (id: string) => {
+    // Get note before deletion to access chunk IDs
+    const notes = store.query(notes$);
+    const noteToDelete = notes.find(note => note.id === id);
+    
+    if (noteToDelete?.metadata?.vector_chunk_ids) {
+      embeddingService.deleteNoteFromVectorStore(noteToDelete.metadata.vector_chunk_ids);
+    }
+    
     store.commit(events.noteDeleted({ id }));
   };
 
@@ -239,6 +313,8 @@ export function useNoteActions() {
   return { 
     updateNote, 
     createNote, 
+    createNoteWithEmbedding,
+    updateNoteWithEmbedding,
     deleteNote,
     createCluster,
     updateCluster,
