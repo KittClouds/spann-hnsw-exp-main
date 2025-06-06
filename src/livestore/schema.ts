@@ -482,19 +482,9 @@ const materializers = State.SQLite.materializers(events, {
   'v1.NoteDeleted': ({ id }) =>
     tables.notes.delete().where({ id }),
 
-  // NEW: Fixed Embedding materializers to handle upsert properly
-  'v1.NoteEmbedded': ({ noteId, title, content, vecData, vecDim, createdAt, updatedAt }, ctx) => {
-    // Check if embedding already exists
-    const existing = ctx.query(tables.embeddings.select('noteId').where({ noteId }));
-    
-    if (existing && existing.length > 0) {
-      // Update existing embedding
-      return tables.embeddings.update({ title, content, vecData, vecDim, updatedAt }).where({ noteId });
-    } else {
-      // Insert new embedding
-      return tables.embeddings.insert({ noteId, title, content, vecData, vecDim, createdAt, updatedAt });
-    }
-  },
+  // NEW: Embedding materializers - fix the upsert pattern
+  'v1.NoteEmbedded': ({ noteId, title, content, vecData, vecDim, createdAt, updatedAt }) =>
+    tables.embeddings.insert({ noteId, title, content, vecData, vecDim, createdAt, updatedAt }),
 
   'v1.EmbeddingRemoved': ({ noteId }) =>
     tables.embeddings.delete().where({ noteId }),
