@@ -2,7 +2,7 @@
 import { pipeline, Tensor, matmul } from '@huggingface/transformers';
 
 /**
- * Lazy-loads the ModernBERT model once, then serves embeddings on demand.
+ * Lazy-loads the Snowflake Arctic Embed model once, then serves embeddings on demand.
  * Usage:
  *   await embeddingService.ready();
  *   const vec = await embeddingService.embed(['hello world']);
@@ -20,9 +20,11 @@ class EmbeddingService {
   private async init() {
     this.extractor = await pipeline(
       'feature-extraction',
-      // ✨ pick any Sentence-BERT-style model you like
-      'nomic-ai/modernbert-embed-base',
-      { dtype: 'fp32' }       // try 'q4f16' or 'q8' for smaller memory
+      'Snowflake/snowflake-arctic-embed-s',
+      { 
+        quantized: false, // Comment out this line to use the quantized version
+        dtype: 'fp32'
+      }
     );
 
     // Warm-up & capture output size
