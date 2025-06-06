@@ -6,11 +6,14 @@ import { Note } from "@/lib/store";
 // Helper to convert BlockNote content to plain text
 function blocksToText(blocks: Block[] | undefined): string {
   if (!blocks) return '';
-  return blocks.map(block => 
-    block.content?.map(inline => 
-      inline.type === 'text' ? inline.text : ''
-    ).join('') || ''
-  ).join('\n');
+  return blocks.map(block => {
+    if (block.content && Array.isArray(block.content)) {
+      return block.content.map(inline => 
+        inline.type === 'text' ? inline.text : ''
+      ).join('');
+    }
+    return '';
+  }).join('\n');
 }
 
 interface SearchResult {

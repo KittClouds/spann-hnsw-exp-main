@@ -20,6 +20,7 @@
     "@effect/platform-browser": "^0.64.0",
     "@effect/rpc": "^0.61.0",
     "@hookform/resolvers": "^3.9.0",
+    "@huggingface/transformers": "^3.5.2",
     "@langchain/community": "^0.2.33",
     "@langchain/textsplitters": "^0.0.3",
     "@livestore/adapter-web": "^0.3.0",
