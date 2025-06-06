@@ -234,14 +234,14 @@ export const events = {
     })
   }),
 
-  // NEW: Embedding events
+  // NEW: Embedding events - fix the schema issue
   noteEmbedded: Events.synced({
     name: 'v1.NoteEmbedded',
     schema: Schema.Struct({
       noteId: Schema.String,
       title: Schema.String,
       content: Schema.String,
-      vecData: Schema.Bytes, // Uint8Array for binary blob storage
+      vecData: Schema.Uint8ArrayFromSelf, // Use the correct schema for Uint8Array
       vecDim: Schema.Number,
       createdAt: Schema.String,
       updatedAt: Schema.String
@@ -482,12 +482,9 @@ const materializers = State.SQLite.materializers(events, {
   'v1.NoteDeleted': ({ id }) =>
     tables.notes.delete().where({ id }),
 
-  // NEW: Embedding materializers
-  'v1.NoteEmbedded': ({ noteId, title, content, vecData, vecDim, createdAt, updatedAt }) => [
-    // Use upsert pattern: try insert, then update if exists
+  // NEW: Embedding materializers - fix the upsert pattern
+  'v1.NoteEmbedded': ({ noteId, title, content, vecData, vecDim, createdAt, updatedAt }) =>
     tables.embeddings.insert({ noteId, title, content, vecData, vecDim, createdAt, updatedAt }),
-    tables.embeddings.update({ title, content, vecData, vecDim, updatedAt }).where({ noteId })
-  ],
 
   'v1.EmbeddingRemoved': ({ noteId }) =>
     tables.embeddings.delete().where({ noteId }),

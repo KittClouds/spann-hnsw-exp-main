@@ -36,19 +36,18 @@ export function useEmbeddingCount() {
   return store.useQuery(embeddingCount$) || 0;
 }
 
-// Hook for paginated embeddings
-export function usePaginatedEmbeddings(limit: number = 50, offset: number = 0) {
+// Hook for paginated embeddings - fix the query builder API
+export function usePaginatedEmbeddings(limit: number = 50, page: number = 0) {
   const { store } = useStore();
   
   const paginatedEmbeddings$ = queryDb(
     () => tables.embeddings
       .select('noteId', 'title', 'createdAt', 'updatedAt')
       .orderBy('updatedAt', 'desc')
-      .limit(limit)
-      .offset(offset),
+      .limit(limit),
     { 
       label: 'paginatedEmbeddings',
-      deps: [limit, offset]
+      deps: [limit, page]
     }
   );
   
