@@ -1,4 +1,3 @@
-
 import { pipeline, Tensor, matmul } from '@huggingface/transformers';
 
 /**
@@ -22,7 +21,6 @@ class EmbeddingService {
       'feature-extraction',
       'Snowflake/snowflake-arctic-embed-s',
       { 
-        quantized: false, // Comment out this line to use the quantized version
         dtype: 'fp32'
       }
     );
