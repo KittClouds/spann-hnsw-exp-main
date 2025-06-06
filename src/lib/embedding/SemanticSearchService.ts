@@ -1,4 +1,6 @@
+
 import { embeddingService } from './EmbeddingService';
+import { hnswService } from './HNSWService';
 import { Block } from '@blocknote/core';
 import { vecToBlob, blobToVec } from './binaryUtils';
 import { tables, events } from '../../livestore/schema';
@@ -60,8 +62,9 @@ class SemanticSearchService {
     if (this.isReady) return;
     try {
       await embeddingService.ready();
+      await hnswService.initialize();
       this.isReady = true;
-      console.log('SemanticSearchService initialized');
+      console.log('SemanticSearchService initialized with HNSW');
     } catch (error) {
       console.error('Failed to initialize SemanticSearchService:', error);
     }
@@ -76,7 +79,7 @@ class SemanticSearchService {
     }
   }
 
-  // Load all embeddings from LiveStore into memory for fast search
+  // Load all embeddings from LiveStore into memory for fallback search
   private loadEmbeddingsFromStore() {
     if (!this.storeRef) {
       console.warn('SemanticSearchService: Cannot load embeddings - no store reference');
@@ -120,15 +123,16 @@ class SemanticSearchService {
     }
   }
 
-  // This method now triggers LiveStore events instead of direct storage
+  // This method now triggers LiveStore events and HNSW updates
   async addOrUpdateNote(noteId: string, title: string, content: Block[]) {
     try {
       await this.initialize();
       
       const textContent = blocksToText(content);
       if (!textContent.trim()) {
-        // Remove from both memory and LiveStore
+        // Remove from memory, LiveStore, and HNSW
         this.embeddings.delete(noteId);
+        await hnswService.removeNote(noteId);
         if (this.storeRef) {
           this.storeRef.commit(events.embeddingRemoved({ noteId }));
         }
@@ -137,16 +141,19 @@ class SemanticSearchService {
 
       const { vector } = await embeddingService.embed([textContent]);
       
-      // Apply additional L2 normalization for vector hygiene (embeddingService already does this, but being explicit)
+      // Apply additional L2 normalization for vector hygiene
       const normalizedVector = l2Normalize(vector);
       
-      // Update in-memory cache immediately for fast search
+      // Update in-memory cache immediately for fallback search
       this.embeddings.set(noteId, {
         noteId,
         title,
         content: textContent,
         embedding: normalizedVector
       });
+
+      // Add to HNSW index
+      await hnswService.addOrUpdateNote(noteId, normalizedVector);
 
       // Persist to LiveStore (will also sync across devices)
       if (this.storeRef) {
@@ -170,8 +177,9 @@ class SemanticSearchService {
 
   removeNote(noteId: string) {
     try {
-      // Remove from both memory and LiveStore
+      // Remove from memory, LiveStore, and HNSW
       this.embeddings.delete(noteId);
+      hnswService.removeNote(noteId);
       if (this.storeRef) {
         this.storeRef.commit(events.embeddingRemoved({ noteId }));
       } else {
@@ -195,6 +203,32 @@ class SemanticSearchService {
       // Apply L2 normalization to query vector for vector hygiene
       const normalizedQueryVector = l2Normalize(queryVector);
       
+      // Try HNSW first (fast path)
+      const hnswResults = await hnswService.search(normalizedQueryVector, Math.min(limit * 2, 200));
+      
+      if (hnswResults.length > 0) {
+        console.log(`HNSW returned ${hnswResults.length} candidates`);
+        
+        // Convert HNSW results to final format
+        const results: SearchResult[] = [];
+        
+        for (const hnswResult of hnswResults) {
+          const embedding = this.embeddings.get(hnswResult.noteId);
+          if (embedding) {
+            results.push({
+              noteId: embedding.noteId,
+              title: embedding.title,
+              content: embedding.content,
+              score: hnswResult.score
+            });
+          }
+        }
+        
+        return results.slice(0, limit);
+      }
+      
+      // Fallback to brute force search if HNSW fails
+      console.log('Falling back to brute force search');
       const results: SearchResult[] = [];
       
       for (const [noteId, embedding] of this.embeddings) {
@@ -263,6 +297,9 @@ class SemanticSearchService {
       
       console.log(`SemanticSearchService: Sync complete, ${successCount} embeddings created, ${errorCount} errors`);
       
+      // Persist HNSW index after bulk operations
+      await hnswService.persist();
+      
       // Reload from store to ensure consistency
       this.loadEmbeddingsFromStore();
       
@@ -289,6 +326,16 @@ class SemanticSearchService {
       console.error('Failed to get stored embedding count:', error);
       return 0;
     }
+  }
+
+  // Get HNSW stats for debugging
+  getHNSWStats() {
+    return hnswService.getStats();
+  }
+
+  // Manual persistence trigger
+  async persistIndex() {
+    await hnswService.persist();
   }
 }
 

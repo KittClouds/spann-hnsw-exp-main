@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Loader2, Zap, Database } from 'lucide-react';
+import { Search, Loader2, Zap, Database, HardDrive } from 'lucide-react';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { semanticSearchService } from '@/lib/embedding/SemanticSearchService';
 import { useActiveNoteId, useNotes } from '@/hooks/useLiveStore';
@@ -24,6 +24,7 @@ export function SemanticSearch() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [syncCount, setSyncCount] = useState(0);
+  const [hnswStats, setHnswStats] = useState<any>({ ready: false });
   const [, setActiveNoteId] = useActiveNoteId();
   const notes = useNotes();
   
@@ -31,9 +32,10 @@ export function SemanticSearch() {
   const embeddings = useEmbeddings();
   const embeddingCount = useEmbeddingCount();
   
-  // Update sync count on mount and when embeddings change
+  // Update counts and stats on mount and when embeddings change
   useEffect(() => {
     setSyncCount(semanticSearchService.getEmbeddingCount());
+    setHnswStats(semanticSearchService.getHNSWStats());
   }, [embeddings]);
 
   const handleSearch = useDebouncedCallback(async (searchQuery: string) => {
@@ -59,6 +61,7 @@ export function SemanticSearch() {
     try {
       const count = await semanticSearchService.syncAllNotes(notes);
       setSyncCount(count);
+      setHnswStats(semanticSearchService.getHNSWStats());
       toast.success(`Synchronized ${count} note embeddings`);
     } catch (error) {
       console.error('Sync failed:', error);
@@ -67,6 +70,16 @@ export function SemanticSearch() {
       setIsLoading(false);
     }
   }, [notes]);
+
+  const handlePersistIndex = useCallback(async () => {
+    try {
+      await semanticSearchService.persistIndex();
+      toast.success('HNSW index persisted');
+    } catch (error) {
+      console.error('Persist failed:', error);
+      toast.error('Failed to persist index');
+    }
+  }, []);
 
   const handleSelectNote = (noteId: string) => {
     setActiveNoteId(noteId);
@@ -103,15 +116,41 @@ export function SemanticSearch() {
             )}
             Sync Embeddings
           </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={handlePersistIndex}
+          >
+            <HardDrive className="h-4 w-4 mr-2" />
+            Persist Index
+          </Button>
           
           {/* Display embedding status */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center">
-              <Database className="h-3 w-3 mr-1" />
-              <span>{embeddingCount} embeddings stored</span>
+          <div className="space-y-1 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Database className="h-3 w-3 mr-1" />
+                <span>{embeddingCount} embeddings stored</span>
+              </div>
+              <div className="flex items-center">
+                <span>{syncCount} in memory</span>
+              </div>
             </div>
-            <div className="flex items-center">
-              <span>{syncCount} in memory</span>
+            
+            {/* HNSW Status */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Badge variant={hnswStats.ready ? "default" : "secondary"} className="text-xs">
+                  HNSW {hnswStats.ready ? "Ready" : "Loading"}
+                </Badge>
+              </div>
+              {hnswStats.ready && (
+                <div className="text-xs">
+                  {hnswStats.currentCount || 0}/{hnswStats.maxElements || 0}
+                </div>
+              )}
             </div>
           </div>
         </div>
