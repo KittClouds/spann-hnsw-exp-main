@@ -9,8 +9,7 @@ import { pipeline, Tensor, matmul } from '@huggingface/transformers';
  */
 class EmbeddingService {
   /** HF feature-extraction pipeline (set after init) */
-  private extractor!: (inputs: string[],
-                       opts: { pooling: 'mean' | 'cls'; normalize: boolean }) => Promise<Tensor>;
+  private extractor: any; // Simplified type to avoid complex union type error
 
   /** Promise that resolves when the model is ready */
   private initPromise = this.init();

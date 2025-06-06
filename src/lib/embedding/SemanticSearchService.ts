@@ -19,11 +19,23 @@ interface SearchResult {
 // Helper to convert BlockNote content to plain text
 function blocksToText(blocks: Block[] | undefined): string {
   if (!blocks) return '';
-  return blocks.map(block => 
-    block.content?.map(inline => 
-      inline.type === 'text' ? inline.text : ''
-    ).join('') || ''
-  ).join('\n');
+  
+  return blocks.map(block => {
+    if (!block.content) return '';
+    
+    // Handle different content types safely
+    if (Array.isArray(block.content)) {
+      return block.content.map(inline => {
+        if (typeof inline === 'object' && inline !== null && 'type' in inline && inline.type === 'text') {
+          return (inline as any).text || '';
+        }
+        return '';
+      }).join('');
+    }
+    
+    // Handle non-array content (like tables)
+    return '';
+  }).join('\n');
 }
 
 class SemanticSearchService {
