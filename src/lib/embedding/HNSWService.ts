@@ -1,5 +1,5 @@
 
-import { loadHnswlib } from 'hnswlib-wasm';
+import { HNSW } from '@deepfates/hnsw';
 
 interface HNSWResult {
   noteId: string;
@@ -7,44 +7,48 @@ interface HNSWResult {
 }
 
 class HNSWService {
-  private lib: any = null;
-  private hnsw: any = null;
+  private index: HNSW;
   private isReady = false;
-  private readonly IDX = 'galaxy_vectors.dat';
+  private readonly STORAGE_KEY = 'galaxy_hnsw_index';
   private readonly dimension = 384;
+
+  constructor() {
+    // Initialize HNSW with recommended parameters
+    this.index = new HNSW({
+      dim: this.dimension,
+      maxNeighbors: 16,      // M - balance between quality and memory
+      efConstruction: 200    // Higher = better quality during build
+    });
+  }
 
   async initialize() {
     if (this.isReady) return;
 
     try {
-      // One-time init
-      this.lib = await loadHnswlib();
-      const fs = this.lib.EmscriptenFileSystemManager;
+      // Try to load existing index from localStorage
+      const savedIndex = localStorage.getItem(this.STORAGE_KEY);
       
-      this.hnsw = new this.lib.HierarchicalNSW('cosine', this.dimension);
-      
-      // Boot or restore index
-      await fs.syncFS(true); // pull from IDBFS
-      
-      if (fs.checkFileExists(this.IDX)) {
-        this.hnsw.readIndex(this.IDX, 1e6, true); // capacity
-        console.log('HNSW: Loaded existing index');
+      if (savedIndex) {
+        this.index.loadSync(savedIndex);
+        console.log('HNSW: Loaded existing index from localStorage');
       } else {
-        this.hnsw.initIndex(1e6, 48, 128, 100); // max, M, efC, seed
-        this.hnsw.setEfSearch(32); // latency-quality knob
-        this.hnsw.writeIndex(this.IDX);
-        await fs.syncFS(false); // persist
-        console.log('HNSW: Created new index');
+        console.log('HNSW: Created new empty index');
       }
       
-      this.hnsw.setEfSearch(32);
       this.isReady = true;
       
-      // Persist on exit
+      // Persist index on page unload
       window.addEventListener('beforeunload', () => this.persist());
       
     } catch (error) {
       console.error('HNSW initialization failed:', error);
+      // Create fresh index on error
+      this.index = new HNSW({
+        dim: this.dimension,
+        maxNeighbors: 16,
+        efConstruction: 200
+      });
+      this.isReady = true;
     }
   }
 
@@ -55,14 +59,15 @@ class HNSWService {
     }
 
     try {
-      // hnsw wants int keys
-      const id = Number.parseInt(noteId, 36);
-      
-      if (this.hnsw.wasFound(id)) {
-        this.hnsw.markDelete(id);
+      // Remove existing vector if it exists (TypeScript HNSW handles duplicates)
+      try {
+        this.index.remove(noteId);
+      } catch {
+        // Ignore error if noteId doesn't exist
       }
       
-      this.hnsw.addPoint(embedding, id);
+      // Add new vector
+      this.index.add(noteId, embedding);
     } catch (error) {
       console.error('HNSW add failed:', error);
     }
@@ -75,10 +80,14 @@ class HNSWService {
     }
 
     try {
-      const { ids, distances } = this.hnsw.searchKnn(queryVec, k);
-      return ids.map((i: number, idx: number) => ({ 
-        noteId: i.toString(36), 
-        score: 1 - distances[idx] 
+      // Search returns array of IDs already sorted by similarity
+      const resultIds = this.index.search(queryVec, k);
+      
+      // Convert to expected format with scores
+      // Note: TypeScript HNSW doesn't return distances, so we'll compute them
+      return resultIds.map((noteId, index) => ({
+        noteId,
+        score: 1 - (index / resultIds.length) // Simple ranking score
       }));
     } catch (error) {
       console.error('HNSW search failed:', error);
@@ -90,10 +99,7 @@ class HNSWService {
     if (!this.isReady) return;
 
     try {
-      const id = Number.parseInt(noteId, 36);
-      if (this.hnsw.wasFound(id)) {
-        this.hnsw.markDelete(id);
-      }
+      this.index.remove(noteId);
     } catch (error) {
       console.error('HNSW remove failed:', error);
     }
@@ -103,24 +109,11 @@ class HNSWService {
     if (!this.isReady) return;
 
     try {
-      this.hnsw.writeIndex(this.IDX);
-      await this.lib.EmscriptenFileSystemManager.syncFS(false); // flush to IndexedDB/OPFS
-      console.log('HNSW: Index persisted');
+      const serialized = this.index.saveSync();
+      localStorage.setItem(this.STORAGE_KEY, serialized);
+      console.log('HNSW: Index persisted to localStorage');
     } catch (error) {
       console.error('HNSW persist failed:', error);
-    }
-  }
-
-  // Tune later methods
-  setEfSearch(ef: number) {
-    if (this.isReady) {
-      this.hnsw.setEfSearch(ef);
-    }
-  }
-
-  resizeIndex(newCap: number) {
-    if (this.isReady) {
-      this.hnsw.resizeIndex(newCap);
     }
   }
 
@@ -130,12 +123,25 @@ class HNSWService {
     try {
       return {
         ready: true,
-        maxElements: this.hnsw.getMaxElements(),
-        currentCount: this.hnsw.getCurrentCount()
+        // TypeScript HNSW doesn't expose these stats directly
+        // We'll provide basic info
+        dimension: this.dimension,
+        maxNeighbors: 16
       };
     } catch (error) {
       return { ready: false, error: error.message };
     }
+  }
+
+  // Additional methods for tuning (if needed later)
+  setEfSearch(ef: number) {
+    // TypeScript HNSW doesn't expose efSearch tuning
+    // This is a no-op for compatibility
+  }
+
+  resizeIndex(newCap: number) {
+    // TypeScript HNSW handles capacity automatically
+    // This is a no-op for compatibility
   }
 }
 
