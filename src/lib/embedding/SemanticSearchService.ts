@@ -1,4 +1,3 @@
-
 import { embeddingService } from './EmbeddingService';
 import { Block } from '@blocknote/core';
 import { vecToBlob, blobToVec } from './binaryUtils';
@@ -39,6 +38,14 @@ function blocksToText(blocks: Block[] | undefined): string {
     // Handle non-array content (like tables)
     return '';
   }).join('\n');
+}
+
+// L2 normalize a vector to unit length for vector hygiene
+function l2Normalize(v: Float32Array): Float32Array {
+  let norm = 0; 
+  for (const x of v) norm += x * x;
+  norm = 1 / Math.sqrt(norm || 1e-9);
+  return v.map(x => x * norm) as Float32Array;
 }
 
 class SemanticSearchService {
@@ -130,12 +137,15 @@ class SemanticSearchService {
 
       const { vector } = await embeddingService.embed([textContent]);
       
+      // Apply additional L2 normalization for vector hygiene (embeddingService already does this, but being explicit)
+      const normalizedVector = l2Normalize(vector);
+      
       // Update in-memory cache immediately for fast search
       this.embeddings.set(noteId, {
         noteId,
         title,
         content: textContent,
-        embedding: vector
+        embedding: normalizedVector
       });
 
       // Persist to LiveStore (will also sync across devices)
@@ -144,8 +154,8 @@ class SemanticSearchService {
           noteId,
           title,
           content: textContent,
-          vecData: vecToBlob(vector),
-          vecDim: vector.length,
+          vecData: vecToBlob(normalizedVector),
+          vecDim: normalizedVector.length,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }));
@@ -182,10 +192,13 @@ class SemanticSearchService {
 
       const { vector: queryVector } = await embeddingService.embed([`search_query: ${query}`]);
       
+      // Apply L2 normalization to query vector for vector hygiene
+      const normalizedQueryVector = l2Normalize(queryVector);
+      
       const results: SearchResult[] = [];
       
       for (const [noteId, embedding] of this.embeddings) {
-        const similarity = this.cosineSimilarity(queryVector, embedding.embedding);
+        const similarity = this.cosineSimilarity(normalizedQueryVector, embedding.embedding);
         results.push({
           noteId: embedding.noteId,
           title: embedding.title,
