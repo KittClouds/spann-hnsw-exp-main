@@ -1,4 +1,3 @@
-
 import { useActiveNote, useActiveNoteId, useNotes, useNoteActions } from '@/hooks/useLiveStore';
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -17,6 +16,7 @@ import { entityEditorSchema } from '@/lib/editor/EntityEditorSchema';
 import { EntityHighlighter } from '@/services/EntityHighlighter';
 import { useIdleCallback } from '@/hooks/useIdleCallback';
 import { useHardenedState } from '@/cursor-stability/useHardenedState';
+import { semanticSearchService } from '@/lib/embedding/SemanticSearchService';
 
 export function NoteEditor() {
   const activeNote = useActiveNote();
@@ -116,6 +116,19 @@ export function NoteEditor() {
     if (success) {
       // Persist to LiveStore
       updateNote(activeNote.id, { content: currentBlocks });
+      
+      // Background embedding update
+      queueMicrotask(async () => {
+        try {
+          await semanticSearchService.addOrUpdateNote(
+            activeNote.id, 
+            activeNote.title, 
+            currentBlocks
+          );
+        } catch (error) {
+          console.error('Failed to update note embedding:', error);
+        }
+      });
       
       // Process entity highlighting after save
       if (entityHighlighterRef.current) {

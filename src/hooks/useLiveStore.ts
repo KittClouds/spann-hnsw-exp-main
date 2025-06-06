@@ -1,4 +1,3 @@
-
 import { useStore } from '@livestore/react';
 import { 
   activeNoteId$, 
@@ -201,6 +200,8 @@ export function useTopGlobalTriples() {
 }
 
 // Helper to commit note updates
+import { semanticSearchService } from '@/lib/embedding/SemanticSearchService';
+
 export function useNoteActions() {
   const { store } = useStore();
   
@@ -214,10 +215,22 @@ export function useNoteActions() {
 
   const createNote = (note: any) => {
     store.commit(events.noteCreated(note));
+    
+    // Background embedding creation
+    queueMicrotask(async () => {
+      try {
+        await semanticSearchService.addOrUpdateNote(note.id, note.title, note.content);
+      } catch (error) {
+        console.error('Failed to create note embedding:', error);
+      }
+    });
   };
 
   const deleteNote = (id: string) => {
     store.commit(events.noteDeleted({ id }));
+    
+    // Remove from semantic search
+    semanticSearchService.removeNote(id);
   };
 
   const createCluster = (cluster: any) => {

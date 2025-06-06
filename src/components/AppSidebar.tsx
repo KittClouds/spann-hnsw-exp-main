@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2 } from "lucide-react";
+import { ChevronRight, File, Folder, Plus, MoreVertical, PenLine, Trash2, Search } from "lucide-react";
 import { useNotes, useActiveNoteId, useActiveClusterId, useNoteActions } from "@/hooks/useLiveStore";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -9,6 +9,8 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGrou
 import { Button } from "./ui/button";
 import { ClusterView } from "./ClusterView";
 import { generateNoteId } from "@/lib/utils/ids";
+import { SemanticSearch } from "./SemanticSearch";
+
 export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
@@ -49,12 +51,16 @@ export function AppSidebar({
   return <Sidebar className="bg-black border-r border-[#1a1b23]" {...props}>
       <SidebarContent className="bg-black">
         <Tabs defaultValue="folders" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-2 bg-transparent border-b border-[#1a1b23] rounded-none p-0 h-auto">
+          <TabsList className="w-full grid grid-cols-3 bg-transparent border-b border-[#1a1b23] rounded-none p-0 h-auto">
             <TabsTrigger value="folders" className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 sidebar-tab-inactive data-[state=active]:sidebar-tab-active">
               Folders
             </TabsTrigger>
             <TabsTrigger value="clusters" className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 sidebar-tab-inactive data-[state=active]:sidebar-tab-active">
               Clusters
+            </TabsTrigger>
+            <TabsTrigger value="search" className="rounded-none border-0 data-[state=active]:bg-transparent data-[state=active]:shadow-none h-10 sidebar-tab-inactive data-[state=active]:sidebar-tab-active">
+              <Search className="h-4 w-4 mr-1" />
+              Search
             </TabsTrigger>
           </TabsList>
           <TabsContent value="folders" className="mt-0">
@@ -89,6 +95,9 @@ export function AppSidebar({
           <TabsContent value="clusters" className="mt-0">
             <ClusterView />
           </TabsContent>
+          <TabsContent value="search" className="mt-0 flex-1 overflow-hidden">
+            <SemanticSearch />
+          </TabsContent>
         </Tabs>
       </SidebarContent>
       <SidebarFooter className="p-4">
@@ -121,6 +130,7 @@ export function AppSidebar({
       <SidebarRail />
     </Sidebar>;
 }
+
 interface NoteTreeProps {
   note: any;
   notes: any[];
