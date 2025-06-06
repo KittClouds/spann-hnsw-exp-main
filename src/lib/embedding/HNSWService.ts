@@ -22,21 +22,23 @@ class HNSWService {
       
       // One-time init
       this.lib = await loadHnswlib();
+      console.log('HNSW: Library loaded successfully');
+      
       const fs = this.lib.EmscriptenFileSystemManager;
       
-      // Create HNSW with correct parameters: space, dimension, maxElements
-      this.hnsw = new this.lib.HierarchicalNSW('cosine', this.dimension, this.maxElements);
-      console.log('HNSW: Constructor created successfully');
-      
-      // Boot or restore index
+      // Boot or restore index - check for existing first
       await fs.syncFS(true); // pull from IDBFS
       
       if (fs.checkFileExists(this.IDX)) {
         console.log('HNSW: Loading existing index...');
+        // Create HNSW and load existing index
+        this.hnsw = new this.lib.HierarchicalNSW('cosine', this.dimension);
         this.hnsw.readIndex(this.IDX, this.maxElements, true); // capacity, allow resize
         console.log('HNSW: Loaded existing index');
       } else {
         console.log('HNSW: Creating new index...');
+        // Create HNSW and initialize new index
+        this.hnsw = new this.lib.HierarchicalNSW('cosine', this.dimension);
         this.hnsw.initIndex(this.maxElements, 48, 128, 100); // max, M, efC, seed
         this.hnsw.writeIndex(this.IDX);
         await fs.syncFS(false); // persist

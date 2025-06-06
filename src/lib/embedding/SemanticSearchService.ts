@@ -54,19 +54,25 @@ class SemanticSearchService {
   private embeddings = new Map<string, NoteEmbedding>();
   private isReady = false;
   private isInitialized = false;
+  private isInitializing = false;
 
   // Store reference will be injected by the hooks
   private storeRef: any = null;
 
   async initialize() {
-    if (this.isReady) return;
+    if (this.isReady || this.isInitializing) return;
+    
+    this.isInitializing = true;
     try {
+      console.log('SemanticSearchService: Starting initialization...');
       await embeddingService.ready();
       await hnswService.initialize();
       this.isReady = true;
-      console.log('SemanticSearchService initialized with HNSW');
+      console.log('SemanticSearchService: Initialized with HNSW');
     } catch (error) {
       console.error('Failed to initialize SemanticSearchService:', error);
+    } finally {
+      this.isInitializing = false;
     }
   }
 
