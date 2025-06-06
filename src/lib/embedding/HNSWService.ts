@@ -1,42 +1,43 @@
 
-import { HnswLib } from 'hnsw-js';
+// Simple in-memory HNSW implementation as fallback
+// This provides the same interface but uses brute force search
 
 interface HNSWResult {
   noteId: string;
   score: number;
 }
 
+interface StoredVector {
+  id: string;
+  vector: number[];
+}
+
 class HNSWService {
-  private index: HnswLib;
+  private vectors: Map<string, number[]> = new Map();
   private isReady = false;
   private readonly STORAGE_KEY = 'galaxy_hnsw_index';
   private readonly dimension = 384;
 
   constructor() {
-    // Initialize HNSW with recommended parameters
-    this.index = new HnswLib('cosine', this.dimension);
+    // Simple in-memory implementation
   }
 
   async initialize() {
     if (this.isReady) return;
 
     try {
-      // Try to load existing index from localStorage
-      const savedIndex = localStorage.getItem(this.STORAGE_KEY);
+      // Try to load existing vectors from localStorage
+      const savedData = localStorage.getItem(this.STORAGE_KEY);
       
-      if (savedIndex) {
-        // Parse the saved data and rebuild index
-        const savedData = JSON.parse(savedIndex);
-        this.index = new HnswLib('cosine', this.dimension);
-        
-        // Add all saved vectors back to index
-        if (savedData.vectors && Array.isArray(savedData.vectors)) {
-          for (const item of savedData.vectors) {
-            this.index.addPoint(item.vector, item.id);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        if (parsed.vectors && Array.isArray(parsed.vectors)) {
+          this.vectors.clear();
+          for (const item of parsed.vectors) {
+            this.vectors.set(item.id, item.vector);
           }
+          console.log(`HNSW: Loaded ${this.vectors.size} vectors from localStorage`);
         }
-        
-        console.log('HNSW: Loaded existing index from localStorage');
       } else {
         console.log('HNSW: Created new empty index');
       }
@@ -48,8 +49,7 @@ class HNSWService {
       
     } catch (error) {
       console.error('HNSW initialization failed:', error);
-      // Create fresh index on error
-      this.index = new HnswLib('cosine', this.dimension);
+      this.vectors.clear();
       this.isReady = true;
     }
   }
@@ -61,34 +61,36 @@ class HNSWService {
     }
 
     try {
-      // Convert Float32Array to regular array for hnsw-js
+      // Convert Float32Array to regular array and store
       const vector = Array.from(embedding);
-      
-      // Add new vector (hnsw-js handles duplicates automatically)
-      this.index.addPoint(vector, noteId);
+      this.vectors.set(noteId, vector);
     } catch (error) {
       console.error('HNSW add failed:', error);
     }
   }
 
   async search(queryVec: Float32Array, k: number = 10): Promise<HNSWResult[]> {
-    if (!this.isReady) {
-      console.warn('HNSW not ready, returning empty results');
+    if (!this.isReady || this.vectors.size === 0) {
       return [];
     }
 
     try {
-      // Convert Float32Array to regular array
       const queryVector = Array.from(queryVec);
+      const results: HNSWResult[] = [];
       
-      // Search returns { distances: number[], neighbors: string[] }
-      const results = this.index.searchKnn(queryVector, k);
+      // Brute force search with cosine similarity
+      for (const [noteId, vector] of this.vectors) {
+        const similarity = this.cosineSimilarity(queryVector, vector);
+        results.push({
+          noteId,
+          score: similarity
+        });
+      }
       
-      // Convert to expected format with scores
-      return results.neighbors.map((noteId, index) => ({
-        noteId,
-        score: 1 - results.distances[index] // Convert distance to similarity score
-      }));
+      // Sort by similarity (highest first) and take top k
+      return results
+        .sort((a, b) => b.score - a.score)
+        .slice(0, k);
     } catch (error) {
       console.error('HNSW search failed:', error);
       return [];
@@ -99,9 +101,7 @@ class HNSWService {
     if (!this.isReady) return;
 
     try {
-      // hnsw-js doesn't have direct remove, so we'll rebuild without this note
-      // For now, we'll just mark it as removed and handle in search
-      console.warn('HNSW: Remove not directly supported, note will be filtered in search');
+      this.vectors.delete(noteId);
     } catch (error) {
       console.error('HNSW remove failed:', error);
     }
@@ -111,17 +111,35 @@ class HNSWService {
     if (!this.isReady) return;
 
     try {
-      // Since hnsw-js doesn't have built-in serialization, we'll store vectors manually
-      const vectors: Array<{ id: string; vector: number[] }> = [];
+      const vectors: StoredVector[] = Array.from(this.vectors.entries()).map(([id, vector]) => ({
+        id,
+        vector
+      }));
       
-      // We need to track vectors manually since hnsw-js doesn't expose them
-      // For now, we'll implement a simpler persistence strategy
       const serializedData = JSON.stringify({ vectors });
       localStorage.setItem(this.STORAGE_KEY, serializedData);
-      console.log('HNSW: Index persisted to localStorage');
+      console.log(`HNSW: Persisted ${vectors.length} vectors to localStorage`);
     } catch (error) {
       console.error('HNSW persist failed:', error);
     }
+  }
+
+  private cosineSimilarity(a: number[], b: number[]): number {
+    if (a.length !== b.length) return 0;
+    
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    
+    for (let i = 0; i < a.length; i++) {
+      dotProduct += a[i] * b[i];
+      normA += a[i] * a[i];
+      normB += b[i] * b[i];
+    }
+    
+    if (normA === 0 || normB === 0) return 0;
+    
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
   getStats() {
@@ -131,23 +149,21 @@ class HNSWService {
       return {
         ready: true,
         dimension: this.dimension,
-        // hnsw-js doesn't expose detailed stats
-        indexType: 'hnsw-js'
+        vectorCount: this.vectors.size,
+        indexType: 'in-memory-brute-force'
       };
     } catch (error) {
       return { ready: false, error: error.message };
     }
   }
 
-  // Additional methods for tuning (if needed later)
+  // Additional methods for tuning (no-ops for this simple implementation)
   setEfSearch(ef: number) {
-    // hnsw-js doesn't expose efSearch tuning
-    // This is a no-op for compatibility
+    // No-op for compatibility
   }
 
   resizeIndex(newCap: number) {
-    // hnsw-js handles capacity automatically
-    // This is a no-op for compatibility
+    // No-op for compatibility
   }
 }
 
