@@ -1,3 +1,4 @@
+
 import { useStore } from '@livestore/react';
 import { 
   activeNoteId$, 
@@ -199,9 +200,7 @@ export function useTopGlobalTriples() {
   return store.useQuery(topGlobalTriples$);
 }
 
-// Helper to commit note updates
-import { semanticSearchService } from '@/lib/embedding/SemanticSearchService';
-
+// Helper to commit note updates with embedding integration
 export function useNoteActions() {
   const { store } = useStore();
   
@@ -216,9 +215,11 @@ export function useNoteActions() {
   const createNote = (note: any) => {
     store.commit(events.noteCreated(note));
     
-    // Background embedding creation
+    // Background embedding creation - semantic search service will handle LiveStore events
     queueMicrotask(async () => {
       try {
+        // Import here to avoid circular dependency
+        const { semanticSearchService } = await import('@/lib/embedding/SemanticSearchService');
         await semanticSearchService.addOrUpdateNote(note.id, note.title, note.content);
       } catch (error) {
         console.error('Failed to create note embedding:', error);
@@ -229,8 +230,15 @@ export function useNoteActions() {
   const deleteNote = (id: string) => {
     store.commit(events.noteDeleted({ id }));
     
-    // Remove from semantic search
-    semanticSearchService.removeNote(id);
+    // Remove from semantic search - service will handle LiveStore events
+    queueMicrotask(async () => {
+      try {
+        const { semanticSearchService } = await import('@/lib/embedding/SemanticSearchService');
+        semanticSearchService.removeNote(id);
+      } catch (error) {
+        console.error('Failed to remove note embedding:', error);
+      }
+    });
   };
 
   const createCluster = (cluster: any) => {

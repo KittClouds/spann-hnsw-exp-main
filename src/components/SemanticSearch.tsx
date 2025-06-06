@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Loader2, Zap } from 'lucide-react';
+import { Search, Loader2, Zap, Database } from 'lucide-react';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { semanticSearchService } from '@/lib/embedding/SemanticSearchService';
 import { useActiveNoteId, useNotes } from '@/hooks/useLiveStore';
+import { useEmbeddings, useEmbeddingCount } from '@/hooks/useEmbeddings';
 import { toast } from 'sonner';
 
 interface SearchResult {
@@ -24,6 +25,10 @@ export function SemanticSearch() {
   const [isSearching, setIsSearching] = useState(false);
   const [, setActiveNoteId] = useActiveNoteId();
   const notes = useNotes();
+  
+  // Use LiveStore reactive queries
+  const embeddings = useEmbeddings();
+  const embeddingCount = useEmbeddingCount();
 
   const handleSearch = useDebouncedCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) {
@@ -77,20 +82,33 @@ export function SemanticSearch() {
           />
         </div>
         
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={handleSyncEmbeddings}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Zap className="h-4 w-4 mr-2" />
-          )}
-          Sync Embeddings
-        </Button>
+        <div className="flex flex-col space-y-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={handleSyncEmbeddings}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4 mr-2" />
+            )}
+            Sync Embeddings
+          </Button>
+          
+          {/* Display embedding status */}
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center">
+              <Database className="h-3 w-3 mr-1" />
+              <span>{embeddingCount} embeddings stored</span>
+            </div>
+            <div className="flex items-center">
+              <span>{semanticSearchService.getEmbeddingCount()} in memory</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {isSearching && (

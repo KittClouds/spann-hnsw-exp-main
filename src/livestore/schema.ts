@@ -82,6 +82,20 @@ export const tables = {
     }
   }),
 
+  // NEW: Embeddings table for semantic search
+  embeddings: State.SQLite.table({
+    name: 'embeddings',
+    columns: {
+      noteId: State.SQLite.text({ primaryKey: true }),
+      title: State.SQLite.text(),
+      content: State.SQLite.text(),
+      vecDim: State.SQLite.integer({ default: 384 }),
+      vecData: State.SQLite.blob(), // Binary embedding data
+      createdAt: State.SQLite.text(),
+      updatedAt: State.SQLite.text()
+    }
+  }),
+
   // NEW: Graph persistence tables
   graphNodes: State.SQLite.table({
     name: 'graphNodes',
@@ -217,6 +231,27 @@ export const events = {
     name: 'v1.NoteDeleted',
     schema: Schema.Struct({
       id: Schema.String
+    })
+  }),
+
+  // NEW: Embedding events
+  noteEmbedded: Events.synced({
+    name: 'v1.NoteEmbedded',
+    schema: Schema.Struct({
+      noteId: Schema.String,
+      title: Schema.String,
+      content: Schema.String,
+      vecData: Schema.Bytes, // Uint8Array for binary blob storage
+      vecDim: Schema.Number,
+      createdAt: Schema.String,
+      updatedAt: Schema.String
+    })
+  }),
+
+  embeddingRemoved: Events.synced({
+    name: 'v1.EmbeddingRemoved',
+    schema: Schema.Struct({
+      noteId: Schema.String
     })
   }),
 
@@ -446,6 +481,16 @@ const materializers = State.SQLite.materializers(events, {
 
   'v1.NoteDeleted': ({ id }) =>
     tables.notes.delete().where({ id }),
+
+  // NEW: Embedding materializers
+  'v1.NoteEmbedded': ({ noteId, title, content, vecData, vecDim, createdAt, updatedAt }) => [
+    // Use upsert pattern: try insert, then update if exists
+    tables.embeddings.insert({ noteId, title, content, vecData, vecDim, createdAt, updatedAt }),
+    tables.embeddings.update({ title, content, vecData, vecDim, updatedAt }).where({ noteId })
+  ],
+
+  'v1.EmbeddingRemoved': ({ noteId }) =>
+    tables.embeddings.delete().where({ noteId }),
 
   // Thread materializers
   'v1.ThreadCreated': ({ id, title, createdAt, updatedAt }) =>
