@@ -35,21 +35,21 @@ export class HnswPersistence {
       // 2. Create filename with timestamp
       const fileName = `graphs/snap-${Date.now()}.bin`;
       
-      // 3. Write to OPFS
+      // 3. Write to OPFS using async API
       const root = await navigator.storage.getDirectory();
       const dir = await root.getDirectoryHandle('graphs', { create: true });
       const file = await dir.getFileHandle(fileName.split('/').at(-1)!, { create: true });
-      const handle = await file.createSyncAccessHandle();
-
-      handle.write(data);
-      await handle.flush();
-      await handle.close();
+      
+      // Use writable stream instead of sync access handle
+      const writable = await file.createWritable();
+      await writable.write(data);
+      await writable.close();
       
       console.log(`HnswPersistence: Wrote graph to OPFS: ${fileName}`);
 
       // 4. Generate checksum and emit event
       const checksum = await createChecksum(data);
-      const createdAt = Date.now();
+      const createdAt = new Date(); // Fix: use Date object instead of number
       
       this.storeRef.commit(events.hnswGraphSnapshotCreated({ 
         fileName, 
