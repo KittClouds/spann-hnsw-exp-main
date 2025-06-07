@@ -2,7 +2,7 @@
 import { useStore } from '@livestore/react';
 import { queryDb } from '@livestore/livestore';
 import { tables } from '../livestore/schema';
-import { semanticSearchService } from '@/lib/embedding/SemanticSearchService';
+import { spannSearchService } from '@/lib/embedding/SpannSearchService';
 import { useEffect } from 'react';
 
 // Query for all embeddings
@@ -17,14 +17,20 @@ const embeddingCount$ = queryDb(
   { label: 'embeddingCount' }
 );
 
+// Query for embedding clusters count
+const embeddingClustersCount$ = queryDb(
+  () => tables.embeddingClusters.count(),
+  { label: 'embeddingClustersCount' }
+);
+
 // Reactive hook for embeddings data
 export function useEmbeddings() {
   const { store } = useStore();
   const embeddings = store.useQuery(embeddings$);
   
-  // Inject store reference into semantic search service
+  // Inject store reference into SPANN search service
   useEffect(() => {
-    semanticSearchService.setStore(store);
+    spannSearchService.setStore(store);
   }, [store]);
   
   return Array.isArray(embeddings) ? embeddings : [];
@@ -36,13 +42,19 @@ export function useEmbeddingCount() {
   return store.useQuery(embeddingCount$) || 0;
 }
 
-// Hook for paginated embeddings - fix the query builder API
+// Hook for embedding clusters count
+export function useEmbeddingClustersCount() {
+  const { store } = useStore();
+  return store.useQuery(embeddingClustersCount$) || 0;
+}
+
+// Hook for paginated embeddings
 export function usePaginatedEmbeddings(limit: number = 50, page: number = 0) {
   const { store } = useStore();
   
   const paginatedEmbeddings$ = queryDb(
     () => tables.embeddings
-      .select('noteId', 'title', 'createdAt', 'updatedAt')
+      .select('noteId', 'title', 'createdAt', 'updatedAt', 'clusterId')
       .orderBy('updatedAt', 'desc')
       .limit(limit),
     { 

@@ -4,11 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Loader2, Zap, Database } from 'lucide-react';
+import { Search, Loader2, Zap, Database, Building } from 'lucide-react';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
-import { semanticSearchService } from '@/lib/embedding/SemanticSearchService';
+import { spannSearchService } from '@/lib/embedding/SpannSearchService';
 import { useActiveNoteId, useNotes } from '@/hooks/useLiveStore';
-import { useEmbeddings, useEmbeddingCount } from '@/hooks/useEmbeddings';
+import { useEmbeddings, useEmbeddingCount, useEmbeddingClustersCount } from '@/hooks/useEmbeddings';
 import { toast } from 'sonner';
 
 interface SearchResult {
@@ -23,6 +23,7 @@ export function SemanticSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isBuildingIndex, setIsBuildingIndex] = useState(false);
   const [syncCount, setSyncCount] = useState(0);
   const [, setActiveNoteId] = useActiveNoteId();
   const notes = useNotes();
@@ -30,10 +31,11 @@ export function SemanticSearch() {
   // Use LiveStore reactive queries
   const embeddings = useEmbeddings();
   const embeddingCount = useEmbeddingCount();
+  const clustersCount = useEmbeddingClustersCount();
   
   // Update sync count on mount and when embeddings change
   useEffect(() => {
-    setSyncCount(semanticSearchService.getEmbeddingCount());
+    setSyncCount(spannSearchService.getEmbeddingCount());
   }, [embeddings]);
 
   const handleSearch = useDebouncedCallback(async (searchQuery: string) => {
@@ -44,7 +46,7 @@ export function SemanticSearch() {
 
     setIsSearching(true);
     try {
-      const searchResults = await semanticSearchService.search(searchQuery, 10);
+      const searchResults = await spannSearchService.search(searchQuery, 10);
       setResults(searchResults);
     } catch (error) {
       console.error('Search failed:', error);
@@ -57,7 +59,7 @@ export function SemanticSearch() {
   const handleSyncEmbeddings = useCallback(async () => {
     setIsLoading(true);
     try {
-      const count = await semanticSearchService.syncAllNotes(notes);
+      const count = await spannSearchService.syncAllNotes(notes);
       setSyncCount(count);
       toast.success(`Synchronized ${count} note embeddings`);
     } catch (error) {
@@ -68,9 +70,24 @@ export function SemanticSearch() {
     }
   }, [notes]);
 
+  const handleBuildIndex = useCallback(async () => {
+    setIsBuildingIndex(true);
+    try {
+      const centroidCount = await spannSearchService.buildIndex();
+      toast.success(`Built SPANN index with ${centroidCount} clusters`);
+    } catch (error) {
+      console.error('Index build failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to build index');
+    } finally {
+      setIsBuildingIndex(false);
+    }
+  }, []);
+
   const handleSelectNote = (noteId: string) => {
     setActiveNoteId(noteId);
   };
+
+  const isIndexBuilt = spannSearchService.isIndexBuilt();
 
   return (
     <div className="p-4 flex flex-col h-full">
@@ -104,14 +121,39 @@ export function SemanticSearch() {
             Sync Embeddings
           </Button>
           
-          {/* Display embedding status */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center">
-              <Database className="h-3 w-3 mr-1" />
-              <span>{embeddingCount} embeddings stored</span>
+          <Button
+            variant={isIndexBuilt ? "outline" : "default"}
+            size="sm"
+            className="w-full"
+            onClick={handleBuildIndex}
+            disabled={isBuildingIndex || embeddingCount < 10}
+          >
+            {isBuildingIndex ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Building className="h-4 w-4 mr-2" />
+            )}
+            {isIndexBuilt ? 'Rebuild Index' : 'Build Index'}
+          </Button>
+          
+          {/* Display embedding and index status */}
+          <div className="flex flex-col space-y-1 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Database className="h-3 w-3 mr-1" />
+                <span>{embeddingCount} embeddings</span>
+              </div>
+              <div className="flex items-center">
+                <Building className="h-3 w-3 mr-1" />
+                <span>{clustersCount} clusters</span>
+              </div>
             </div>
-            <div className="flex items-center">
-              <span>{syncCount} in memory</span>
+            <div className="text-center">
+              {isIndexBuilt ? (
+                <Badge variant="secondary" className="text-xs">Index Ready</Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs">Index Not Built</Badge>
+              )}
             </div>
           </div>
         </div>
@@ -145,6 +187,9 @@ export function SemanticSearch() {
           {query && !isSearching && results.length === 0 && (
             <div className="text-center text-muted-foreground py-4">
               <p className="text-sm">No results found</p>
+              {!isIndexBuilt && (
+                <p className="text-xs mt-1">Build the search index first for better results</p>
+              )}
             </div>
           )}
         </div>

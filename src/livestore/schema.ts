@@ -82,31 +82,43 @@ export const tables = {
     }
   }),
 
-  // NEW: Embeddings table for semantic search
+  // NEW: Table to store cluster centroids for SPANN-like search
+  embeddingClusters: State.SQLite.table({
+    name: 'embeddingClusters',
+    columns: {
+      id: State.SQLite.integer({ primaryKey: true }),
+      vecData: State.SQLite.blob(),
+      vecDim: State.SQLite.integer(),
+      createdAt: State.SQLite.text(),
+    }
+  }),
+
+  // MODIFIED: Embeddings table with clusterId for SPANN architecture
   embeddings: State.SQLite.table({
     name: 'embeddings',
     columns: {
       noteId: State.SQLite.text({ primaryKey: true }),
+      clusterId: State.SQLite.integer({ nullable: true, index: true }),
       title: State.SQLite.text(),
       content: State.SQLite.text(),
       vecDim: State.SQLite.integer({ default: 384 }),
-      vecData: State.SQLite.blob(), // Binary embedding data
+      vecData: State.SQLite.blob(),
       createdAt: State.SQLite.text(),
       updatedAt: State.SQLite.text()
     }
   }),
 
-  // NEW: Graph persistence tables
+  // ... keep existing code (graphNodes, graphEdges, graphLayouts, uiState tables) ...
   graphNodes: State.SQLite.table({
     name: 'graphNodes',
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
-      nodeType: State.SQLite.text(), // 'note', 'entity', 'cluster', 'tag', 'triple'
-      entityKind: State.SQLite.text({ nullable: true }), // for entity nodes
-      entityLabel: State.SQLite.text({ nullable: true }), // for entity nodes
+      nodeType: State.SQLite.text(),
+      entityKind: State.SQLite.text({ nullable: true }),
+      entityLabel: State.SQLite.text({ nullable: true }),
       position: State.SQLite.json({ schema: Schema.Struct({ x: Schema.Number, y: Schema.Number }) }),
-      style: State.SQLite.json({ schema: Schema.Any, nullable: true }), // cytoscape styling
-      metadata: State.SQLite.json({ schema: Schema.Any, nullable: true }), // additional node data
+      style: State.SQLite.json({ schema: Schema.Any, nullable: true }),
+      metadata: State.SQLite.json({ schema: Schema.Any, nullable: true }),
       clusterId: State.SQLite.text({ nullable: true }),
       createdAt: State.SQLite.text(),
       updatedAt: State.SQLite.text()
@@ -119,10 +131,10 @@ export const tables = {
       id: State.SQLite.text({ primaryKey: true }),
       sourceId: State.SQLite.text(),
       targetId: State.SQLite.text(),
-      edgeType: State.SQLite.text(), // 'contains', 'mentions', 'has_tag', etc.
+      edgeType: State.SQLite.text(),
       weight: State.SQLite.real({ default: 1 }),
       style: State.SQLite.json({ schema: Schema.Any, nullable: true }),
-      metadata: State.SQLite.json({ schema: Schema.Any, nullable: true }), // relationship metadata
+      metadata: State.SQLite.json({ schema: Schema.Any, nullable: true }),
       createdAt: State.SQLite.text(),
       updatedAt: State.SQLite.text()
     }
@@ -133,14 +145,14 @@ export const tables = {
     columns: {
       id: State.SQLite.text({ primaryKey: true }),
       name: State.SQLite.text(),
-      layoutType: State.SQLite.text(), // 'dagre', 'circle', 'grid', etc.
+      layoutType: State.SQLite.text(),
       viewport: State.SQLite.json({ 
         schema: Schema.Struct({ 
           zoom: Schema.Number, 
           pan: Schema.Struct({ x: Schema.Number, y: Schema.Number }) 
         }) 
       }),
-      nodePositions: State.SQLite.json({ schema: Schema.Any }), // serialized position data
+      nodePositions: State.SQLite.json({ schema: Schema.Any }),
       isDefault: State.SQLite.boolean({ default: false }),
       clusterId: State.SQLite.text({ nullable: true }),
       createdAt: State.SQLite.text(),
@@ -148,7 +160,6 @@ export const tables = {
     }
   }),
 
-  // Client-only UI state (like atoms, doesn't sync)
   uiState: State.SQLite.clientDocument({
     name: 'uiState',
     schema: Schema.Struct({
@@ -234,14 +245,39 @@ export const events = {
     })
   }),
 
-  // NEW: Embedding events - fix the schema issue
+  // NEW: SPANN index management events
+  embeddingClusterCreated: Events.synced({
+    name: 'v1.EmbeddingClusterCreated',
+    schema: Schema.Struct({
+      id: Schema.Number,
+      vecData: Schema.Uint8ArrayFromSelf,
+      vecDim: Schema.Number,
+      createdAt: Schema.String,
+    })
+  }),
+
+  embeddingsAssignedToCluster: Events.synced({
+    name: 'v1.EmbeddingsAssignedToCluster',
+    schema: Schema.Struct({
+      clusterId: Schema.Number,
+      noteIds: Schema.Array(Schema.String),
+    })
+  }),
+
+  embeddingIndexCleared: Events.synced({
+    name: 'v1.EmbeddingIndexCleared',
+    schema: Schema.Struct({})
+  }),
+
+  // MODIFIED: NoteEmbedded event now includes clusterId
   noteEmbedded: Events.synced({
     name: 'v1.NoteEmbedded',
     schema: Schema.Struct({
       noteId: Schema.String,
+      clusterId: Schema.NullOr(Schema.Number),
       title: Schema.String,
       content: Schema.String,
-      vecData: Schema.Uint8ArrayFromSelf, // Use the correct schema for Uint8Array
+      vecData: Schema.Uint8ArrayFromSelf,
       vecDim: Schema.Number,
       createdAt: Schema.String,
       updatedAt: Schema.String
@@ -482,10 +518,22 @@ const materializers = State.SQLite.materializers(events, {
   'v1.NoteDeleted': ({ id }) =>
     tables.notes.delete().where({ id }),
 
-  // FIXED: Embedding materializers - use INSERT OR REPLACE for SQLite upsert
-  'v1.NoteEmbedded': ({ noteId, title, content, vecData, vecDim, createdAt, updatedAt }) => [
+  // NEW: SPANN index materializers
+  'v1.EmbeddingClusterCreated': ({ id, vecData, vecDim, createdAt }) =>
+    tables.embeddingClusters.insert({ id, vecData, vecDim, createdAt }),
+
+  'v1.EmbeddingsAssignedToCluster': ({ clusterId, noteIds }) =>
+    tables.embeddings.update({ clusterId }).where(tables.embeddings.columns.noteId.in(noteIds)),
+
+  'v1.EmbeddingIndexCleared': () => [
+    tables.embeddingClusters.delete(),
+    tables.embeddings.update({ clusterId: null })
+  ],
+
+  // MODIFIED: NoteEmbedded materializer now handles clusterId
+  'v1.NoteEmbedded': ({ noteId, clusterId, title, content, vecData, vecDim, createdAt, updatedAt }) => [
     tables.embeddings.delete().where({ noteId }),
-    tables.embeddings.insert({ noteId, title, content, vecData, vecDim, createdAt, updatedAt })
+    tables.embeddings.insert({ noteId, clusterId, title, content, vecData, vecDim, createdAt, updatedAt })
   ],
 
   'v1.EmbeddingRemoved': ({ noteId }) =>
@@ -544,7 +592,6 @@ const materializers = State.SQLite.materializers(events, {
   'v1.GraphLayoutSaved': ({ id, name, layoutType, viewport, nodePositions, isDefault, clusterId, createdAt, updatedAt }) =>
     tables.graphLayouts.insert({ id, name, layoutType, viewport, nodePositions, isDefault, clusterId, createdAt, updatedAt }),
 
-  // Fixed: Return undefined instead of void for read-only operations
   'v1.GraphLayoutLoaded': ({ id }) => undefined,
 
   'v1.GraphLayoutDeleted': ({ id }) =>
