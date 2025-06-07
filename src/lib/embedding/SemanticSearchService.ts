@@ -1,8 +1,10 @@
+
 import { embeddingService } from './EmbeddingService';
 import { Block } from '@blocknote/core';
 import { vecToBlob, blobToVec } from './binaryUtils';
 import { tables, events } from '../../livestore/schema';
 import { toast } from 'sonner';
+import { HNSW } from './hnsw';
 
 interface NoteEmbedding {
   noteId: string;
@@ -50,18 +52,27 @@ function l2Normalize(v: Float32Array): Float32Array {
 
 class SemanticSearchService {
   private embeddings = new Map<string, NoteEmbedding>();
+  private hnswIndex: HNSW;
+  private noteIdToHnswId = new Map<string, number>();
+  private hnswIdToNoteId = new Map<number, string>();
+  private nextHnswId = 0;
   private isReady = false;
   private isInitialized = false;
 
   // Store reference will be injected by the hooks
   private storeRef: any = null;
 
+  constructor() {
+    // Initialize HNSW with cosine similarity (same as before)
+    this.hnswIndex = new HNSW(16, 200, null, 'cosine');
+  }
+
   async initialize() {
     if (this.isReady) return;
     try {
       await embeddingService.ready();
       this.isReady = true;
-      console.log('SemanticSearchService initialized');
+      console.log('SemanticSearchService initialized with HNSW');
     } catch (error) {
       console.error('Failed to initialize SemanticSearchService:', error);
     }
@@ -89,11 +100,17 @@ class SemanticSearchService {
       
       console.log(`SemanticSearchService: Loading ${embeddingRows?.length || 0} embeddings from LiveStore`);
       
-      // Reset embeddings map before loading
+      // Reset embeddings map and HNSW index before loading
       this.embeddings.clear();
+      this.hnswIndex = new HNSW(16, 200, null, 'cosine');
+      this.noteIdToHnswId.clear();
+      this.hnswIdToNoteId.clear();
+      this.nextHnswId = 0;
       
-      // Convert each row back to in-memory format
+      // Convert each row back to in-memory format and build HNSW index
       if (Array.isArray(embeddingRows)) {
+        const hnswData: { id: number; vector: Float32Array }[] = [];
+        
         embeddingRows.forEach((row: any) => {
           try {
             if (!row || !row.vecData) {
@@ -102,16 +119,34 @@ class SemanticSearchService {
             }
             
             const embedding = blobToVec(row.vecData, row.vecDim);
+            const hnswId = this.nextHnswId++;
+            
+            // Store mapping between noteId and HNSW ID
+            this.noteIdToHnswId.set(row.noteId, hnswId);
+            this.hnswIdToNoteId.set(hnswId, row.noteId);
+            
             this.embeddings.set(row.noteId, {
               noteId: row.noteId,
               title: row.title,
               content: row.content,
               embedding
             });
+            
+            // Prepare data for HNSW index
+            hnswData.push({ id: hnswId, vector: embedding });
           } catch (error) {
             console.error(`Failed to load embedding for note ${row?.noteId}:`, error);
           }
         });
+        
+        // Build HNSW index with all data at once for better performance
+        if (hnswData.length > 0) {
+          this.hnswIndex.buildIndex(hnswData).then(() => {
+            console.log(`SemanticSearchService: Built HNSW index with ${hnswData.length} vectors`);
+          }).catch((error) => {
+            console.error('Failed to build HNSW index:', error);
+          });
+        }
       }
 
       console.log(`SemanticSearchService: Loaded ${this.embeddings.size} embeddings into memory`);
@@ -127,8 +162,8 @@ class SemanticSearchService {
       
       const textContent = blocksToText(content);
       if (!textContent.trim()) {
-        // Remove from both memory and LiveStore
-        this.embeddings.delete(noteId);
+        // Remove from both memory, HNSW index, and LiveStore
+        this.removeNoteFromIndex(noteId);
         if (this.storeRef) {
           this.storeRef.commit(events.embeddingRemoved({ noteId }));
         }
@@ -139,6 +174,17 @@ class SemanticSearchService {
       
       // Apply additional L2 normalization for vector hygiene (embeddingService already does this, but being explicit)
       const normalizedVector = l2Normalize(vector);
+      
+      // Remove old entry if it exists
+      this.removeNoteFromIndex(noteId);
+      
+      // Add to HNSW index
+      const hnswId = this.nextHnswId++;
+      await this.hnswIndex.addPoint(hnswId, normalizedVector);
+      
+      // Store mapping between noteId and HNSW ID
+      this.noteIdToHnswId.set(noteId, hnswId);
+      this.hnswIdToNoteId.set(hnswId, noteId);
       
       // Update in-memory cache immediately for fast search
       this.embeddings.set(noteId, {
@@ -168,10 +214,24 @@ class SemanticSearchService {
     }
   }
 
+  private removeNoteFromIndex(noteId: string) {
+    // Remove from embeddings map
+    this.embeddings.delete(noteId);
+    
+    // Remove from HNSW mappings
+    const hnswId = this.noteIdToHnswId.get(noteId);
+    if (hnswId !== undefined) {
+      this.noteIdToHnswId.delete(noteId);
+      this.hnswIdToNoteId.delete(hnswId);
+      // Note: HNSW doesn't support individual node removal easily, 
+      // so we'll rely on the search to filter out non-existent notes
+    }
+  }
+
   removeNote(noteId: string) {
     try {
       // Remove from both memory and LiveStore
-      this.embeddings.delete(noteId);
+      this.removeNoteFromIndex(noteId);
       if (this.storeRef) {
         this.storeRef.commit(events.embeddingRemoved({ noteId }));
       } else {
@@ -195,16 +255,23 @@ class SemanticSearchService {
       // Apply L2 normalization to query vector for vector hygiene
       const normalizedQueryVector = l2Normalize(queryVector);
       
+      // Use HNSW for fast approximate nearest neighbor search
+      const hnswResults = this.hnswIndex.searchKNN(normalizedQueryVector, Math.min(limit * 2, 50));
+      
       const results: SearchResult[] = [];
       
-      for (const [noteId, embedding] of this.embeddings) {
-        const similarity = this.cosineSimilarity(normalizedQueryVector, embedding.embedding);
-        results.push({
-          noteId: embedding.noteId,
-          title: embedding.title,
-          content: embedding.content,
-          score: similarity
-        });
+      // Convert HNSW results back to our format
+      for (const hnswResult of hnswResults) {
+        const noteId = this.hnswIdToNoteId.get(hnswResult.id);
+        if (noteId && this.embeddings.has(noteId)) {
+          const embedding = this.embeddings.get(noteId)!;
+          results.push({
+            noteId: embedding.noteId,
+            title: embedding.title,
+            content: embedding.content,
+            score: hnswResult.score
+          });
+        }
       }
 
       return results
@@ -217,35 +284,18 @@ class SemanticSearchService {
     }
   }
 
-  private cosineSimilarity(a: Float32Array, b: Float32Array): number {
-    try {
-      let dotProduct = 0;
-      let normA = 0;
-      let normB = 0;
-      
-      for (let i = 0; i < a.length; i++) {
-        dotProduct += a[i] * b[i];
-        normA += a[i] * a[i];
-        normB += b[i] * b[i];
-      }
-      
-      if (normA === 0 || normB === 0) return 0;
-      
-      return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-    } catch (error) {
-      console.error('Error calculating similarity:', error);
-      return 0;
-    }
-  }
-
   async syncAllNotes(notes: Array<{ id: string; title: string; content: Block[] }>) {
     try {
       await this.initialize();
       
       console.log(`SemanticSearchService: Syncing ${notes.length} notes`);
       
-      // Clear in-memory cache
+      // Clear in-memory cache and HNSW index
       this.embeddings.clear();
+      this.hnswIndex = new HNSW(16, 200, null, 'cosine');
+      this.noteIdToHnswId.clear();
+      this.hnswIdToNoteId.clear();
+      this.nextHnswId = 0;
       
       let successCount = 0;
       let errorCount = 0;
