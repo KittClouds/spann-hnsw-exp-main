@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Loader2, Zap, Database, Building } from 'lucide-react';
+import { Search, Loader2, Database, Building } from 'lucide-react';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { spannSearchService } from '@/lib/embedding/SpannSearchService';
 import { useActiveNoteId, useNotes } from '@/hooks/useLiveStore';
@@ -21,10 +21,8 @@ interface SearchResult {
 export function SemanticSearch() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [isBuildingIndex, setIsBuildingIndex] = useState(false);
-  const [syncCount, setSyncCount] = useState(0);
+  const [isSyncingAndRebuilding, setIsSyncingAndRebuilding] = useState(false);
   const [, setActiveNoteId] = useActiveNoteId();
   const notes = useNotes();
   
@@ -32,11 +30,6 @@ export function SemanticSearch() {
   const embeddings = useEmbeddings();
   const embeddingCount = useEmbeddingCount();
   const clustersCount = useEmbeddingClustersCount();
-  
-  // Update sync count on mount and when embeddings change
-  useEffect(() => {
-    setSyncCount(spannSearchService.getEmbeddingCount());
-  }, [embeddings]);
 
   const handleSearch = useDebouncedCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) {
@@ -56,30 +49,16 @@ export function SemanticSearch() {
     }
   }, 500);
 
-  const handleSyncEmbeddings = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const count = await spannSearchService.syncAllNotes(notes);
-      setSyncCount(count);
-      toast.success(`Synchronized ${count} note embeddings`);
-    } catch (error) {
-      console.error('Sync failed:', error);
-      toast.error('Failed to sync embeddings');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [notes]);
-
-  const handleBuildIndex = useCallback(async () => {
-    setIsBuildingIndex(true);
+  const handleSyncAndRebuildIndex = useCallback(async () => {
+    setIsSyncingAndRebuilding(true);
     try {
       const centroidCount = await spannSearchService.buildIndex();
-      toast.success(`Built SPANN index with ${centroidCount} clusters`);
+      toast.success(`Sync & rebuild complete! Built index with ${centroidCount} clusters`);
     } catch (error) {
-      console.error('Index build failed:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to build index');
+      console.error('Sync and rebuild failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to sync and rebuild index');
     } finally {
-      setIsBuildingIndex(false);
+      setIsSyncingAndRebuilding(false);
     }
   }, []);
 
@@ -88,6 +67,7 @@ export function SemanticSearch() {
   };
 
   const isIndexBuilt = spannSearchService.isIndexBuilt();
+  const minEmbeddingsRequired = 3; // Updated to match the new threshold
 
   return (
     <div className="p-4 flex flex-col h-full">
@@ -107,34 +87,25 @@ export function SemanticSearch() {
         
         <div className="flex flex-col space-y-2">
           <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={handleSyncEmbeddings}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Zap className="h-4 w-4 mr-2" />
-            )}
-            Sync Embeddings
-          </Button>
-          
-          <Button
             variant={isIndexBuilt ? "outline" : "default"}
             size="sm"
             className="w-full"
-            onClick={handleBuildIndex}
-            disabled={isBuildingIndex || embeddingCount < 10}
+            onClick={handleSyncAndRebuildIndex}
+            disabled={isSyncingAndRebuilding || embeddingCount < minEmbeddingsRequired}
           >
-            {isBuildingIndex ? (
+            {isSyncingAndRebuilding ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Building className="h-4 w-4 mr-2" />
             )}
-            {isIndexBuilt ? 'Rebuild Index' : 'Build Index'}
+            {isIndexBuilt ? 'Sync & Rebuild Index' : 'Sync & Build Index'}
           </Button>
+          
+          {embeddingCount < minEmbeddingsRequired && (
+            <p className="text-xs text-muted-foreground text-center">
+              Need at least {minEmbeddingsRequired} notes to build the search index
+            </p>
+          )}
           
           {/* Display embedding and index status */}
           <div className="flex flex-col space-y-1 text-xs text-muted-foreground">

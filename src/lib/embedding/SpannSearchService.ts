@@ -1,3 +1,4 @@
+
 import { HNSW } from './hnsw';
 import { tables, events } from '../../livestore/schema';
 import { blobToVec, vecToBlob } from './binaryUtils';
@@ -89,7 +90,7 @@ class SpannSearchService {
       this.isReady = true;
       console.log('SpannSearchService initialized');
       if (!this.centroidIndex) {
-        console.warn('SPANN index is not built. Use "Build Index" to create the index.');
+        console.warn('SPANN index is not built. Use "Sync & Rebuild Index" to create the index.');
       }
     } catch (error) {
       console.error('Failed to initialize SpannSearchService:', error);
@@ -127,83 +128,115 @@ class SpannSearchService {
   }
 
   /**
-   * The core index-building process. Triggered by the user.
+   * The new, authoritative "sync and rebuild" process. This should be
+   * the single method called by the "Sync & Rebuild Index" button.
    */
   public async buildIndex() {
     if (!this.storeRef || !this.isReady) {
-      throw new Error("Service not ready");
+      throw new Error("SpannSearchService is not ready.");
+    }
+    console.log("SPANN: Starting authoritative sync and rebuild process.");
+
+    // --- Phase 1: Synchronize Embeddings Table ---
+    // This phase ensures the `embeddings` table perfectly matches the `notes` table.
+
+    console.log("SPANN: Fetching source of truth (notes) and current state (embeddings).");
+    // 1. Get all current notes (the source of truth).
+    const allNotes = this.storeRef.query(tables.notes.select());
+    const currentNoteIds = new Set(allNotes.map((n: any) => n.id));
+
+    // 2. Get all note IDs that currently have an embedding.
+    const allEmbeddingRows = this.storeRef.query(tables.embeddings.select('noteId'));
+    const existingEmbeddingIds = new Set(allEmbeddingRows.map((e: any) => e.noteId));
+
+    // 3. Identify stale embeddings to be deleted.
+    const noteIdsToDelete = [...existingEmbeddingIds].filter(id => !currentNoteIds.has(id));
+    
+    if (noteIdsToDelete.length > 0) {
+      console.log(`SPANN: Found ${noteIdsToDelete.length} stale embeddings to remove.`);
+      // Remove stale embeddings one by one to avoid issues with bulk operations
+      for (const noteId of noteIdsToDelete) {
+        this.storeRef.commit(events.embeddingRemoved({ noteId }));
+      }
+    }
+
+    // 4. Add/Update embeddings for all current notes.
+    console.log(`SPANN: Syncing embeddings for ${currentNoteIds.size} current notes.`);
+    let syncedCount = 0;
+    for (const note of allNotes) {
+      try {
+        // This existing method will create or update the embedding as needed.
+        await this.addOrUpdateNote(note.id, note.title, note.content);
+        syncedCount++;
+      } catch (error) {
+        console.error(`Failed to sync note ${note.id}:`, error);
+      }
+    }
+
+    // --- Phase 2: Rebuild the SPANN Index ---
+    // Now that the `embeddings` table is clean, we can build the index.
+    
+    console.log("SPANN: Embeddings table synchronized. Now rebuilding clusters.");
+    const allEmbeddings = this.storeRef.query(tables.embeddings.select());
+    // Reduced minimum requirement to 3 for testing
+    const minEmbeddings = 3;
+    
+    if (!allEmbeddings || allEmbeddings.length < minEmbeddings) {
+      const message = `Not enough embeddings (${allEmbeddings?.length || 0}) to build index. Need at least ${minEmbeddings}.`;
+      console.error(message);
+      throw new Error(message);
+    }
+
+    // Clear old cluster data
+    this.storeRef.commit(events.embeddingIndexCleared({}));
+    
+    // Select centroids (random sampling from the clean data)
+    const sampledEmbeddings: any[] = [];
+    const usedIndices = new Set<number>();
+    const targetCount = Math.min(this.config.numClusters, allEmbeddings.length);
+    while (sampledEmbeddings.length < targetCount) {
+      const randomIndex = Math.floor(Math.random() * allEmbeddings.length);
+      if (!usedIndices.has(randomIndex)) {
+        sampledEmbeddings.push(allEmbeddings[randomIndex]);
+        usedIndices.add(randomIndex);
+      }
+    }
+
+    // Commit new centroids
+    sampledEmbeddings.forEach((embedding, i) => {
+      this.storeRef.commit(events.embeddingClusterCreated({
+        id: i,
+        vecData: embedding.vecData,
+        vecDim: embedding.vecDim,
+        createdAt: new Date().toISOString(),
+      }));
+    });
+
+    // Reload centroids and build in-memory index
+    await this.loadCentroidsFromDB();
+    if (!this.centroidIndex) throw new Error("Failed to build centroid index after sync.");
+
+    // Assign each embedding to its nearest cluster
+    console.log(`SPANN: Assigning ${allEmbeddings.length} embeddings to ${this.centroids.length} clusters.`);
+    const assignments = new Map<number, string[]>();
+    for (const embedding of allEmbeddings) {
+      const vector = blobToVec(embedding.vecData, embedding.vecDim);
+      const [nearestCentroid] = this.centroidIndex.searchKNN(vector, 1);
+      if (nearestCentroid) {
+        if (!assignments.has(nearestCentroid.id)) {
+          assignments.set(nearestCentroid.id, []);
+        }
+        assignments.get(nearestCentroid.id)!.push(embedding.noteId);
+      }
     }
     
-    console.log("SPANN: Build process started");
-
-    try {
-      // 1. Fetch all embeddings from the database
-      const allEmbeddings = this.storeRef.query(tables.embeddings.select());
-      // Reduced minimum requirement from max(10, numClusters) to just 3 for testing
-      const minEmbeddings = 3;
-      
-      if (!allEmbeddings || allEmbeddings.length < minEmbeddings) {
-        throw new Error(`Not enough embeddings (${allEmbeddings?.length || 0}) to build index. Need at least ${minEmbeddings}.`);
-      }
-
-      // 2. Clear previous index data from the database
-      this.storeRef.commit(events.embeddingIndexCleared({}));
-      
-      // 3. Select centroids using random sampling
-      const sampledEmbeddings: any[] = [];
-      const usedIndices = new Set<number>();
-      const targetCount = Math.min(this.config.numClusters, allEmbeddings.length);
-      
-      while (sampledEmbeddings.length < targetCount) {
-        const randomIndex = Math.floor(Math.random() * allEmbeddings.length);
-        if (!usedIndices.has(randomIndex)) {
-          sampledEmbeddings.push(allEmbeddings[randomIndex]);
-          usedIndices.add(randomIndex);
-        }
-      }
-
-      // 4. Commit the new centroids to the embeddingClusters table
-      sampledEmbeddings.forEach((embedding, i) => {
-        this.storeRef.commit(events.embeddingClusterCreated({
-          id: i,
-          vecData: embedding.vecData,
-          vecDim: embedding.vecDim,
-          createdAt: new Date().toISOString(),
-        }));
-      });
-
-      // 5. Reload the new centroids and rebuild the in-memory index
-      await this.loadCentroidsFromDB();
-      if (!this.centroidIndex) {
-        throw new Error("Failed to build centroid index");
-      }
-
-      // 6. Assign every full embedding to its nearest cluster
-      console.log(`SPANN: Assigning ${allEmbeddings.length} embeddings to ${this.centroids.length} clusters`);
-      const assignments = new Map<number, string[]>();
-      
-      for (const embedding of allEmbeddings) {
-        const vector = blobToVec(embedding.vecData, embedding.vecDim);
-        const [nearestCentroid] = this.centroidIndex.searchKNN(vector, 1);
-        if (nearestCentroid) {
-          if (!assignments.has(nearestCentroid.id)) {
-            assignments.set(nearestCentroid.id, []);
-          }
-          assignments.get(nearestCentroid.id)!.push(embedding.noteId);
-        }
-      }
-      
-      // 7. Commit assignments to the database by updating the clusterId field
-      for (const [clusterId, noteIds] of assignments.entries()) {
-        this.storeRef.commit(events.embeddingsAssignedToCluster({ clusterId, noteIds }));
-      }
-
-      console.log("SPANN: Index build complete");
-      return this.centroids.length;
-    } catch (error) {
-      console.error('Failed to build SPANN index:', error);
-      throw error;
+    // Commit cluster assignments
+    for (const [clusterId, noteIds] of assignments.entries()) {
+      this.storeRef.commit(events.embeddingsAssignedToCluster({ clusterId, noteIds }));
     }
+
+    console.log(`SPANN: Authoritative sync and rebuild complete. Synced ${syncedCount} notes, removed ${noteIdsToDelete.length} stale embeddings.`);
+    return this.centroids.length;
   }
 
   /**
@@ -313,7 +346,12 @@ class SpannSearchService {
     }
   }
 
+  /**
+   * @deprecated Use buildIndex() instead for authoritative sync and rebuild
+   */
   public async syncAllNotes(notes: Array<{ id: string; title: string; content: Block[] }>) {
+    console.warn('syncAllNotes is deprecated. Use buildIndex() for authoritative sync and rebuild.');
+    
     try {
       await this.initialize();
       
