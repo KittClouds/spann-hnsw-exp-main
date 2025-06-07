@@ -198,6 +198,7 @@ class SemanticSearchService {
       if (this.storeRef) {
         this.storeRef.commit(events.noteEmbedded({
           noteId,
+          clusterId: null, // Add the missing clusterId field
           title,
           content: textContent,
           vecData: vecToBlob(normalizedVector),

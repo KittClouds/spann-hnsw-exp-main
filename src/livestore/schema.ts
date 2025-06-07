@@ -1,3 +1,4 @@
+
 import {
   Events,
   makeSchema,
@@ -98,7 +99,7 @@ export const tables = {
     name: 'embeddings',
     columns: {
       noteId: State.SQLite.text({ primaryKey: true }),
-      clusterId: State.SQLite.integer({ nullable: true, index: true }),
+      clusterId: State.SQLite.integer({ nullable: true }),
       title: State.SQLite.text(),
       content: State.SQLite.text(),
       vecDim: State.SQLite.integer({ default: 384 }),
@@ -523,7 +524,7 @@ const materializers = State.SQLite.materializers(events, {
     tables.embeddingClusters.insert({ id, vecData, vecDim, createdAt }),
 
   'v1.EmbeddingsAssignedToCluster': ({ clusterId, noteIds }) =>
-    tables.embeddings.update({ clusterId }).where(tables.embeddings.columns.noteId.in(noteIds)),
+    tables.embeddings.update({ clusterId }).where(tables.embeddings.noteId.in(noteIds)),
 
   'v1.EmbeddingIndexCleared': () => [
     tables.embeddingClusters.delete(),

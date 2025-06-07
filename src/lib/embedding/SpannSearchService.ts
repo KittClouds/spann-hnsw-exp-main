@@ -229,7 +229,7 @@ class SpannSearchService {
       // Retrieve all vectors from only the candidate clusters
       const clusterIdsToFetch = candidateClusters.map(c => c.id);
       const candidateEmbeddings = this.storeRef.query(
-        tables.embeddings.select().where(tables.embeddings.columns.clusterId.in(clusterIdsToFetch))
+        tables.embeddings.select().where(tables.embeddings.clusterId.in(clusterIdsToFetch))
       );
 
       if (!Array.isArray(candidateEmbeddings) || candidateEmbeddings.length === 0) {
