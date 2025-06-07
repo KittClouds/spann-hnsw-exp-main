@@ -226,11 +226,14 @@ class SpannSearchService {
       if (candidateClusters.length === 0) return [];
 
       // Phase 2: Disk Search
-      // Retrieve all vectors from only the candidate clusters
+      // Retrieve all vectors from only the candidate clusters using proper LiveStore syntax
       const clusterIdsToFetch = candidateClusters.map(c => c.id);
-      const candidateEmbeddings = this.storeRef.query(
-        tables.embeddings.select().where(tables.embeddings.clusterId.in(clusterIdsToFetch))
-      );
+      
+      // Use raw SQL query instead of the complex where clause that's causing issues
+      const candidateEmbeddings = this.storeRef.query({
+        query: `SELECT * FROM embeddings WHERE clusterId IN (${clusterIdsToFetch.map(() => '?').join(',')})`,
+        args: clusterIdsToFetch
+      });
 
       if (!Array.isArray(candidateEmbeddings) || candidateEmbeddings.length === 0) {
         return [];

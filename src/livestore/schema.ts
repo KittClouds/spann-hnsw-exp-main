@@ -1,4 +1,3 @@
-
 import {
   Events,
   makeSchema,
@@ -109,7 +108,6 @@ export const tables = {
     }
   }),
 
-  // ... keep existing code (graphNodes, graphEdges, graphLayouts, uiState tables) ...
   graphNodes: State.SQLite.table({
     name: 'graphNodes',
     columns: {
@@ -523,12 +521,17 @@ const materializers = State.SQLite.materializers(events, {
   'v1.EmbeddingClusterCreated': ({ id, vecData, vecDim, createdAt }) =>
     tables.embeddingClusters.insert({ id, vecData, vecDim, createdAt }),
 
-  'v1.EmbeddingsAssignedToCluster': ({ clusterId, noteIds }) =>
-    tables.embeddings.update({ clusterId }).where(tables.embeddings.noteId.in(noteIds)),
+  'v1.EmbeddingsAssignedToCluster': ({ clusterId, noteIds }) => {
+    // Use raw SQL for the IN clause since LiveStore query builder might not support it directly
+    return {
+      query: `UPDATE embeddings SET clusterId = ? WHERE noteId IN (${noteIds.map(() => '?').join(',')})`,
+      args: [clusterId, ...noteIds]
+    };
+  },
 
   'v1.EmbeddingIndexCleared': () => [
     tables.embeddingClusters.delete(),
-    tables.embeddings.update({ clusterId: null })
+    { query: 'UPDATE embeddings SET clusterId = NULL', args: [] }
   ],
 
   // MODIFIED: NoteEmbedded materializer now handles clusterId
