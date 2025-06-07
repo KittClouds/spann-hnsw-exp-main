@@ -1,3 +1,4 @@
+
 import { HNSW } from './hnsw';
 import { tables, events } from '../../livestore/schema';
 import { blobToVec, vecToBlob } from './binaryUtils';
@@ -225,22 +226,25 @@ class SpannSearchService {
       if (candidateClusters.length === 0) return [];
 
       // Phase 2: Disk Search
-      // Retrieve all vectors from only the candidate clusters using proper LiveStore syntax
-      const clusterIdsToFetch = candidateClusters.map(c => c.id);
+      // For each candidate cluster, fetch all embeddings with that clusterId
+      const allCandidateEmbeddings: any[] = [];
       
-      // Use raw SQL query with correct LiveStore syntax
-      const candidateEmbeddings = this.storeRef.query({
-        sql: `SELECT * FROM embeddings WHERE clusterId IN (${clusterIdsToFetch.map(() => '?').join(',')})`,
-        bindValues: clusterIdsToFetch
-      });
+      for (const cluster of candidateClusters) {
+        const embeddingsForCluster = this.storeRef.query(
+          tables.embeddings.select().where({ clusterId: cluster.id })
+        );
+        if (Array.isArray(embeddingsForCluster)) {
+          allCandidateEmbeddings.push(...embeddingsForCluster);
+        }
+      }
 
-      if (!Array.isArray(candidateEmbeddings) || candidateEmbeddings.length === 0) {
+      if (allCandidateEmbeddings.length === 0) {
         return [];
       }
       
       // Perform a final, exact search on the small subset of retrieved vectors
       const finalResults: SearchResult[] = [];
-      for (const embedding of candidateEmbeddings) {
+      for (const embedding of allCandidateEmbeddings) {
         const vector = blobToVec(embedding.vecData, embedding.vecDim);
         const normalizedVector = l2Normalize(vector);
         const score = this.centroidIndex.similarityFunction(normalizedQueryVector, normalizedVector);

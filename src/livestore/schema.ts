@@ -521,17 +521,17 @@ const materializers = State.SQLite.materializers(events, {
   'v1.EmbeddingClusterCreated': ({ id, vecData, vecDim, createdAt }) =>
     tables.embeddingClusters.insert({ id, vecData, vecDim, createdAt }),
 
+  // Simplified materializer that processes one noteId at a time
   'v1.EmbeddingsAssignedToCluster': ({ clusterId, noteIds }) => {
-    // Use raw SQL for the IN clause with correct LiveStore syntax
-    return {
-      sql: `UPDATE embeddings SET clusterId = ? WHERE noteId IN (${noteIds.map(() => '?').join(',')})`,
-      bindValues: [clusterId, ...noteIds]
-    };
+    // Return an array of individual update operations instead of raw SQL
+    return noteIds.map(noteId => 
+      tables.embeddings.update({ clusterId }).where({ noteId })
+    );
   },
 
   'v1.EmbeddingIndexCleared': () => [
     tables.embeddingClusters.delete(),
-    { sql: 'UPDATE embeddings SET clusterId = NULL', bindValues: [] }
+    tables.embeddings.update({ clusterId: null })
   ],
 
   // MODIFIED: NoteEmbedded materializer now handles clusterId
