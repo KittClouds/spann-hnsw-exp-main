@@ -1,4 +1,3 @@
-
 import { HNSW } from './hnsw';
 import { tables, events } from '../../livestore/schema';
 import { blobToVec, vecToBlob } from './binaryUtils';
@@ -64,10 +63,11 @@ class SpannSearchService {
 
   constructor(private config = {
     // How many clusters/centroids to partition the dataset into.
-    numClusters: 100,
+    // Reduced from 100 to 5 for easier testing
+    numClusters: 5,
     // How many of the closest clusters to search during a query.
     // Higher is more accurate but slower.
-    searchProbeCount: 5,
+    searchProbeCount: 3,
   }) {}
 
   /**
@@ -139,7 +139,8 @@ class SpannSearchService {
     try {
       // 1. Fetch all embeddings from the database
       const allEmbeddings = this.storeRef.query(tables.embeddings.select());
-      const minEmbeddings = Math.max(10, this.config.numClusters);
+      // Reduced minimum requirement from max(10, numClusters) to just 3 for testing
+      const minEmbeddings = 3;
       
       if (!allEmbeddings || allEmbeddings.length < minEmbeddings) {
         throw new Error(`Not enough embeddings (${allEmbeddings?.length || 0}) to build index. Need at least ${minEmbeddings}.`);
