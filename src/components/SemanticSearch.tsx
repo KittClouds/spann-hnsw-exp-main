@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Loader2, Database, Building } from 'lucide-react';
+import { Search, Loader2, Database, Building, Trash2 } from 'lucide-react';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { spannSearchService } from '@/lib/embedding/SpannSearchService';
 import { useActiveNoteId, useNotes } from '@/hooks/useLiveStore';
@@ -23,6 +23,7 @@ export function SemanticSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isSyncingAndRebuilding, setIsSyncingAndRebuilding] = useState(false);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [, setActiveNoteId] = useActiveNoteId();
   const notes = useNotes();
   
@@ -49,6 +50,30 @@ export function SemanticSearch() {
     }
   }, 500);
 
+  const handleForceCleanup = useCallback(async () => {
+    setIsCleaningUp(true);
+    try {
+      const result = await spannSearchService.forceCleanupStaleEmbeddings();
+      
+      if (result.removed > 0) {
+        toast.success(`Cleanup complete! Removed ${result.removed} stale embeddings`);
+      } else {
+        toast.success('No stale embeddings found - database is clean');
+      }
+      
+      if (result.errors.length > 0) {
+        toast.error(`Cleanup had ${result.errors.length} errors. Check console for details.`);
+      }
+      
+      console.log('Cleanup result:', result);
+    } catch (error) {
+      console.error('Force cleanup failed:', error);
+      toast.error('Failed to cleanup stale embeddings');
+    } finally {
+      setIsCleaningUp(false);
+    }
+  }, []);
+
   const handleSyncAndRebuildIndex = useCallback(async () => {
     setIsSyncingAndRebuilding(true);
     try {
@@ -67,7 +92,8 @@ export function SemanticSearch() {
   };
 
   const isIndexBuilt = spannSearchService.isIndexBuilt();
-  const minEmbeddingsRequired = 3; // Updated to match the new threshold
+  const minEmbeddingsRequired = 3;
+  const hasStaleData = embeddingCount > notes.length;
 
   return (
     <div className="p-4 flex flex-col h-full">
@@ -101,6 +127,23 @@ export function SemanticSearch() {
             {isIndexBuilt ? 'Sync & Rebuild Index' : 'Sync & Build Index'}
           </Button>
           
+          {hasStaleData && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-destructive hover:bg-destructive/10"
+              onClick={handleForceCleanup}
+              disabled={isCleaningUp}
+            >
+              {isCleaningUp ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Force Cleanup Stale Data
+            </Button>
+          )}
+          
           {embeddingCount < minEmbeddingsRequired && (
             <p className="text-xs text-muted-foreground text-center">
               Need at least {minEmbeddingsRequired} notes to build the search index
@@ -118,6 +161,14 @@ export function SemanticSearch() {
                 <Building className="h-3 w-3 mr-1" />
                 <span>{clustersCount} clusters</span>
               </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>{notes.length} notes</span>
+              {hasStaleData && (
+                <Badge variant="destructive" className="text-xs">
+                  Stale Data Detected
+                </Badge>
+              )}
             </div>
             <div className="text-center">
               {isIndexBuilt ? (
@@ -160,6 +211,9 @@ export function SemanticSearch() {
               <p className="text-sm">No results found</p>
               {!isIndexBuilt && (
                 <p className="text-xs mt-1">Build the search index first for better results</p>
+              )}
+              {hasStaleData && (
+                <p className="text-xs mt-1 text-destructive">Try cleaning up stale data first</p>
               )}
             </div>
           )}

@@ -127,64 +127,138 @@ class SpannSearchService {
   }
 
   /**
-   * The new, authoritative "sync and rebuild" process. This should be
-   * the single method called by the "Sync & Rebuild Index" button.
+   * Force cleanup of stale embeddings - standalone method for debugging
+   */
+  public async forceCleanupStaleEmbeddings() {
+    if (!this.storeRef) {
+      console.error("SPANN: Store reference not available for cleanup");
+      return { removed: 0, errors: [] };
+    }
+
+    console.log("SPANN: Starting force cleanup of stale embeddings");
+
+    // Get current notes (source of truth)
+    const allNotesResult = this.storeRef.query(tables.notes.select());
+    const allNotes = Array.isArray(allNotesResult) ? allNotesResult : [];
+    const currentNoteIds = new Set(
+      allNotes
+        .map((n: any) => n.id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    );
+
+    console.log(`SPANN: Found ${currentNoteIds.size} valid notes`);
+
+    // Get all embeddings
+    const allEmbeddingRowsResult = this.storeRef.query(tables.embeddings.select());
+    const allEmbeddingRows = Array.isArray(allEmbeddingRowsResult) ? allEmbeddingRowsResult : [];
+    
+    console.log(`SPANN: Found ${allEmbeddingRows.length} total embeddings`);
+
+    // Find stale embeddings
+    const staleEmbeddings = allEmbeddingRows.filter((embedding: any) => {
+      const noteId = embedding.noteId;
+      const isValid = typeof noteId === 'string' && noteId.length > 0;
+      const noteExists = isValid && currentNoteIds.has(noteId);
+      
+      if (!isValid) {
+        console.log(`SPANN: Found invalid noteId in embedding:`, noteId);
+        return true; // Remove invalid embeddings
+      }
+      
+      if (!noteExists) {
+        console.log(`SPANN: Found stale embedding for deleted note:`, noteId);
+        return true; // Remove stale embeddings
+      }
+      
+      return false;
+    });
+
+    console.log(`SPANN: Found ${staleEmbeddings.length} stale embeddings to remove`);
+
+    // Remove stale embeddings
+    const errors: string[] = [];
+    let removedCount = 0;
+
+    for (const embedding of staleEmbeddings) {
+      try {
+        const noteId = embedding.noteId;
+        if (typeof noteId === 'string' && noteId.length > 0) {
+          console.log(`SPANN: Removing stale embedding for noteId: ${noteId}`);
+          this.storeRef.commit(events.embeddingRemoved({ noteId }));
+          removedCount++;
+        } else {
+          console.log(`SPANN: Skipping embedding with invalid noteId:`, noteId);
+        }
+      } catch (error) {
+        const errorMsg = `Failed to remove embedding for noteId ${embedding.noteId}: ${error}`;
+        console.error(`SPANN: ${errorMsg}`);
+        errors.push(errorMsg);
+      }
+    }
+
+    // Verify cleanup worked
+    const afterCleanupResult = this.storeRef.query(tables.embeddings.select());
+    const afterCleanupRows = Array.isArray(afterCleanupResult) ? afterCleanupResult : [];
+    console.log(`SPANN: After cleanup: ${afterCleanupRows.length} embeddings remain`);
+
+    // Double-check for any remaining stale embeddings
+    const remainingStale = afterCleanupRows.filter((embedding: any) => {
+      const noteId = embedding.noteId;
+      return !(typeof noteId === 'string' && noteId.length > 0 && currentNoteIds.has(noteId));
+    });
+
+    if (remainingStale.length > 0) {
+      console.warn(`SPANN: Warning - ${remainingStale.length} stale embeddings still remain after cleanup`);
+      remainingStale.forEach(embedding => {
+        console.warn(`SPANN: Remaining stale embedding:`, embedding.noteId);
+      });
+    }
+
+    console.log(`SPANN: Force cleanup complete. Removed ${removedCount} stale embeddings, ${errors.length} errors`);
+    
+    return {
+      removed: removedCount,
+      errors,
+      totalBefore: allEmbeddingRows.length,
+      totalAfter: afterCleanupRows.length,
+      remainingStale: remainingStale.length
+    };
+  }
+
+  /**
+   * The new, authoritative "sync and rebuild" process with enhanced cleanup.
    */
   public async buildIndex() {
     if (!this.storeRef || !this.isReady) {
       throw new Error("SpannSearchService is not ready.");
     }
-    console.log("SPANN: Starting authoritative sync and rebuild process.");
+    console.log("SPANN: Starting enhanced sync and rebuild process.");
 
-    // --- Phase 1: Synchronize Embeddings Table ---
-    // This phase ensures the `embeddings` table perfectly matches the `notes` table.
-
-    console.log("SPANN: Fetching source of truth (notes) and current state (embeddings).");
-    // 1. Get all current notes (the source of truth).
-    const allNotesResult = this.storeRef.query(tables.notes.select());
-    const allNotes = Array.isArray(allNotesResult) ? allNotesResult : [];
-    const currentNoteIds = new Set(allNotes.map((n: any) => n.id).filter((id): id is string => typeof id === 'string' && id.length > 0));
-
-    // 2. Get all note IDs that currently have an embedding.
-    const allEmbeddingRowsResult = this.storeRef.query(tables.embeddings.select('noteId'));
-    const allEmbeddingRows = Array.isArray(allEmbeddingRowsResult) ? allEmbeddingRowsResult : [];
+    // --- Phase 1: Enhanced Stale Embedding Cleanup ---
+    console.log("SPANN: Phase 1 - Enhanced stale embedding cleanup");
     
-    // Filter out any invalid noteIds before creating the Set
-    const validEmbeddingIds = allEmbeddingRows
-      .map((e: any) => e.noteId)
-      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    const cleanupResult = await this.forceCleanupStaleEmbeddings();
     
-    const existingEmbeddingIds = new Set(validEmbeddingIds);
+    if (cleanupResult.errors.length > 0) {
+      console.warn(`SPANN: Cleanup completed with ${cleanupResult.errors.length} errors:`, cleanupResult.errors);
+    }
     
-    console.log(`SPANN: Found ${allEmbeddingRows.length} embedding rows, ${validEmbeddingIds.length} with valid noteIds`);
-
-    // 3. Identify stale embeddings to be deleted (only valid noteIds that don't exist in notes).
-    const noteIdsToDelete = [...existingEmbeddingIds].filter(id => 
-      typeof id === 'string' && id.length > 0 && !currentNoteIds.has(id)
-    );
+    console.log(`SPANN: Cleanup summary - Removed: ${cleanupResult.removed}, Before: ${cleanupResult.totalBefore}, After: ${cleanupResult.totalAfter}`);
     
-    if (noteIdsToDelete.length > 0) {
-      console.log(`SPANN: Found ${noteIdsToDelete.length} stale embeddings to remove.`);
-      // Remove stale embeddings one by one with proper error handling
-      for (const noteId of noteIdsToDelete) {
-        try {
-          if (typeof noteId === 'string' && noteId.length > 0) {
-            this.storeRef.commit(events.embeddingRemoved({ noteId }));
-          } else {
-            console.warn(`SPANN: Skipping invalid noteId during deletion:`, noteId);
-          }
-        } catch (error) {
-          console.error(`SPANN: Failed to remove embedding for noteId ${noteId}:`, error);
-        }
-      }
+    if (cleanupResult.remainingStale > 0) {
+      console.warn(`SPANN: Warning - ${cleanupResult.remainingStale} stale embeddings still remain. This may cause phantom search results.`);
     }
 
-    // 4. Add/Update embeddings for all current notes.
-    console.log(`SPANN: Syncing embeddings for ${currentNoteIds.size} current notes.`);
+    // --- Phase 2: Sync Current Notes ---
+    console.log("SPANN: Phase 2 - Syncing current notes");
+    
+    const allNotesResult = this.storeRef.query(tables.notes.select());
+    const allNotes = Array.isArray(allNotesResult) ? allNotesResult : [];
+    
+    console.log(`SPANN: Syncing embeddings for ${allNotes.length} current notes.`);
     let syncedCount = 0;
     for (const note of allNotes) {
       try {
-        // Validate note data before processing
         if (typeof note.id === 'string' && note.id.length > 0 && typeof note.title === 'string') {
           await this.addOrUpdateNote(note.id, note.title, note.content);
           syncedCount++;
@@ -196,14 +270,14 @@ class SpannSearchService {
       }
     }
 
-    // --- Phase 2: Rebuild the SPANN Index ---
-    // Now that the `embeddings` table is clean, we can build the index.
+    // --- Phase 3: Rebuild the SPANN Index ---
+    console.log("SPANN: Phase 3 - Rebuilding SPANN index");
     
-    console.log("SPANN: Embeddings table synchronized. Now rebuilding clusters.");
     const allEmbeddingsResult = this.storeRef.query(tables.embeddings.select());
     const allEmbeddings = Array.isArray(allEmbeddingsResult) ? allEmbeddingsResult : [];
-    // Reduced minimum requirement to 3 for testing
     const minEmbeddings = 3;
+    
+    console.log(`SPANN: Found ${allEmbeddings.length} embeddings for index building`);
     
     if (!allEmbeddings || allEmbeddings.length < minEmbeddings) {
       const message = `Not enough embeddings (${allEmbeddings?.length || 0}) to build index. Need at least ${minEmbeddings}.`;
@@ -259,7 +333,17 @@ class SpannSearchService {
       this.storeRef.commit(events.embeddingsAssignedToCluster({ clusterId, noteIds }));
     }
 
-    console.log(`SPANN: Authoritative sync and rebuild complete. Synced ${syncedCount} notes, removed ${noteIdsToDelete.length} stale embeddings.`);
+    // Final verification
+    const finalEmbeddingCount = this.storeRef.query(tables.embeddings.count()) || 0;
+    const finalNoteCount = this.storeRef.query(tables.notes.count()) || 0;
+    
+    console.log(`SPANN: Final verification - Notes: ${finalNoteCount}, Embeddings: ${finalEmbeddingCount}`);
+    
+    if (finalEmbeddingCount > finalNoteCount) {
+      console.warn(`SPANN: Warning - More embeddings (${finalEmbeddingCount}) than notes (${finalNoteCount}). Some stale data may remain.`);
+    }
+
+    console.log(`SPANN: Enhanced sync and rebuild complete. Synced ${syncedCount} notes, cleaned ${cleanupResult.removed} stale embeddings.`);
     return this.centroids.length;
   }
 
@@ -363,6 +447,7 @@ class SpannSearchService {
   public removeNote(noteId: string) {
     try {
       if (this.storeRef && typeof noteId === 'string' && noteId.length > 0) {
+        console.log(`SPANN: Removing embedding for noteId: ${noteId}`);
         this.storeRef.commit(events.embeddingRemoved({ noteId }));
       } else {
         console.warn('SpannSearchService: Cannot remove embedding - invalid noteId or no store reference');
