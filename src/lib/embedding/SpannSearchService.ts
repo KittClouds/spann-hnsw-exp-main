@@ -97,7 +97,7 @@ class SpannSearchService {
   }
 
   /**
-   * Loads centroids from database and attempts to restore graph from persistence
+   * Loads centroids from database
    */
   private async loadCentroidsFromDB() {
     if (!this.storeRef) return;
@@ -122,7 +122,7 @@ class SpannSearchService {
   }
 
   /**
-   * Attempts to load persisted HNSW graph from OPFS
+   * Attempts to load persisted HNSW graph from OPFS with vector validation
    */
   private async loadPersistedGraph() {
     if (this.centroids.length === 0) return;
@@ -131,16 +131,23 @@ class SpannSearchService {
       const persistedGraph = await hnswPersistence.loadLatestGraph();
       
       if (persistedGraph && persistedGraph.nodes.size > 0) {
-        // Restore vectors to the graph nodes from our centroids
-        for (const centroid of this.centroids) {
-          const node = persistedGraph.nodes.get(centroid.id);
-          if (node) {
-            node.vector = centroid.vector;
+        // Validate that vectors are properly restored
+        let hasValidVectors = true;
+        for (const [nodeId, node] of persistedGraph.nodes) {
+          if (!node.vector || node.vector.length === 0) {
+            console.error(`SpannSearchService: Node ${nodeId} has missing or empty vector`);
+            hasValidVectors = false;
+            break;
           }
         }
         
-        this.centroidIndex = persistedGraph;
-        console.log(`SpannSearchService: Restored graph from persistence with ${persistedGraph.nodes.size} nodes`);
+        if (hasValidVectors) {
+          this.centroidIndex = persistedGraph;
+          console.log(`SpannSearchService: Restored graph from persistence with ${persistedGraph.nodes.size} nodes and valid vectors`);
+        } else {
+          console.warn('SpannSearchService: Persisted graph has invalid vectors, will build fresh index');
+          this.centroidIndex = null;
+        }
       } else {
         console.log('SpannSearchService: No valid persisted graph found, will build fresh index');
       }
@@ -156,6 +163,14 @@ class SpannSearchService {
     if (!this.centroidIndex || this.centroidIndex.nodes.size === 0) {
       console.log('SpannSearchService: No graph to persist');
       return;
+    }
+
+    // Validate vectors before persisting
+    for (const [nodeId, node] of this.centroidIndex.nodes) {
+      if (!node.vector || node.vector.length === 0) {
+        console.error(`SpannSearchService: Cannot persist graph - node ${nodeId} has missing vector`);
+        return;
+      }
     }
 
     try {
@@ -349,16 +364,30 @@ class SpannSearchService {
       }));
     });
 
-    // Reload centroids and build in-memory index
+    // Reload centroids and build in-memory index with proper vectors
     await this.loadCentroidsFromDB();
-    if (!this.centroidIndex) {
-      // Build fresh index
-      this.centroidIndex = new HNSW(16, 200, null, 'cosine');
-      const hnswData = this.centroids.map(c => ({ id: c.id, vector: c.vector }));
-      await this.centroidIndex.buildIndex(hnswData);
-      
-      // Persist the new graph
+    
+    // Always build fresh index to ensure vectors are properly included
+    this.centroidIndex = new HNSW(16, 200, null, 'cosine');
+    const hnswData = this.centroids.map(c => ({ id: c.id, vector: c.vector }));
+    await this.centroidIndex.buildIndex(hnswData);
+    
+    // Validate vectors before persisting
+    console.log('SPANN: Validating vectors in built index...');
+    let vectorValidationPassed = true;
+    for (const [nodeId, node] of this.centroidIndex.nodes) {
+      if (!node.vector || node.vector.length === 0) {
+        console.error(`SPANN: Built index has invalid vector for node ${nodeId}`);
+        vectorValidationPassed = false;
+      }
+    }
+    
+    if (vectorValidationPassed) {
+      // Persist the new graph with vectors
       await this.persistGraph();
+      console.log('SPANN: Index built and persisted with valid vectors');
+    } else {
+      console.error('SPANN: Cannot persist index - vector validation failed');
     }
 
     // Assign each embedding to its nearest cluster
@@ -398,7 +427,7 @@ class SpannSearchService {
   }
 
   /**
-   * Performs the two-phase hybrid search.
+   * Performs the two-phase hybrid search with vector validation.
    */
   public async search(query: string, k = 10): Promise<SearchResult[]> {
     try {
@@ -406,6 +435,15 @@ class SpannSearchService {
       
       if (!query.trim() || !this.centroidIndex) {
         return [];
+      }
+
+      // Validate that the index has proper vectors
+      if (this.centroidIndex.nodes.size > 0) {
+        const firstNode = this.centroidIndex.nodes.values().next().value;
+        if (!firstNode || !firstNode.vector || firstNode.vector.length === 0) {
+          console.error('SPANN Search: Index has invalid vectors, cannot perform search');
+          throw new Error('Search index has invalid vectors. Please rebuild the index.');
+        }
       }
 
       // Phase 1: In-Memory Search
@@ -451,7 +489,7 @@ class SpannSearchService {
         .slice(0, k);
     } catch (error) {
       console.error('Search failed:', error);
-      toast.error('Search failed');
+      toast.error(error instanceof Error ? error.message : 'Search failed');
       return [];
     }
   }

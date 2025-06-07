@@ -10,6 +10,7 @@ export function encodeGraph(graph: HNSW): Uint8Array {
   
   for (const [nodeId, node] of graph.nodes) {
     totalSize += 5; // nodeId(4) + levelCount(1)
+    totalSize += (graph.d || 384) * 4; // vector data (float32 = 4 bytes each)
     for (let level = 0; level <= node.level; level++) {
       totalSize += 2; // neighbourCount(2)
       const neighbors = node.neighbors[level].filter(id => id !== -1);
@@ -44,6 +45,13 @@ export function encodeGraph(graph: HNSW): Uint8Array {
     
     view.setUint8(offset, node.level + 1); // levelCount = level + 1
     offset += 1;
+    
+    // Write vector data
+    const vector = node.vector instanceof Float32Array ? node.vector : new Float32Array(node.vector);
+    for (let i = 0; i < vector.length; i++) {
+      view.setFloat32(offset, vector[i], false);
+      offset += 4;
+    }
     
     for (let level = 0; level <= node.level; level++) {
       const neighbors = node.neighbors[level].filter(id => id !== -1);
@@ -97,8 +105,16 @@ export function decodeGraph(bytes: Uint8Array): HNSW {
     
     const nodeLevel = levelCount - 1;
     
-    // Create a placeholder node - we'll need to reconstruct the vector later
-    const node = new Node(nodeId, new Float32Array(d || 384), nodeLevel, M);
+    // Read vector data
+    const vectorDim = d || 384;
+    const vector = new Float32Array(vectorDim);
+    for (let j = 0; j < vectorDim; j++) {
+      vector[j] = view.getFloat32(offset, false);
+      offset += 4;
+    }
+    
+    // Create node with actual vector data
+    const node = new Node(nodeId, vector, nodeLevel, M);
     
     // Read neighbors for each level
     for (let level = 0; level <= nodeLevel; level++) {
