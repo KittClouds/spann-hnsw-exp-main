@@ -1,4 +1,3 @@
-
 import { HNSW } from './hnsw';
 import { tables, events } from '../../livestore/schema';
 import { blobToVec, vecToBlob } from './binaryUtils';
@@ -229,10 +228,10 @@ class SpannSearchService {
       // Retrieve all vectors from only the candidate clusters using proper LiveStore syntax
       const clusterIdsToFetch = candidateClusters.map(c => c.id);
       
-      // Use raw SQL query instead of the complex where clause that's causing issues
+      // Use raw SQL query with correct LiveStore syntax
       const candidateEmbeddings = this.storeRef.query({
-        query: `SELECT * FROM embeddings WHERE clusterId IN (${clusterIdsToFetch.map(() => '?').join(',')})`,
-        args: clusterIdsToFetch
+        sql: `SELECT * FROM embeddings WHERE clusterId IN (${clusterIdsToFetch.map(() => '?').join(',')})`,
+        bindValues: clusterIdsToFetch
       });
 
       if (!Array.isArray(candidateEmbeddings) || candidateEmbeddings.length === 0) {
