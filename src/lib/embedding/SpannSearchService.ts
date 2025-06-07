@@ -1,4 +1,3 @@
-
 import { HNSW } from './hnsw';
 import { tables, events } from '../../livestore/schema';
 import { blobToVec, vecToBlob } from './binaryUtils';
@@ -144,21 +143,39 @@ class SpannSearchService {
     // 1. Get all current notes (the source of truth).
     const allNotesResult = this.storeRef.query(tables.notes.select());
     const allNotes = Array.isArray(allNotesResult) ? allNotesResult : [];
-    const currentNoteIds = new Set(allNotes.map((n: any) => n.id));
+    const currentNoteIds = new Set(allNotes.map((n: any) => n.id).filter((id): id is string => typeof id === 'string' && id.length > 0));
 
     // 2. Get all note IDs that currently have an embedding.
     const allEmbeddingRowsResult = this.storeRef.query(tables.embeddings.select('noteId'));
     const allEmbeddingRows = Array.isArray(allEmbeddingRowsResult) ? allEmbeddingRowsResult : [];
-    const existingEmbeddingIds = new Set(allEmbeddingRows.map((e: any) => e.noteId));
+    
+    // Filter out any invalid noteIds before creating the Set
+    const validEmbeddingIds = allEmbeddingRows
+      .map((e: any) => e.noteId)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    
+    const existingEmbeddingIds = new Set(validEmbeddingIds);
+    
+    console.log(`SPANN: Found ${allEmbeddingRows.length} embedding rows, ${validEmbeddingIds.length} with valid noteIds`);
 
-    // 3. Identify stale embeddings to be deleted.
-    const noteIdsToDelete = [...existingEmbeddingIds].filter(id => !currentNoteIds.has(id));
+    // 3. Identify stale embeddings to be deleted (only valid noteIds that don't exist in notes).
+    const noteIdsToDelete = [...existingEmbeddingIds].filter(id => 
+      typeof id === 'string' && id.length > 0 && !currentNoteIds.has(id)
+    );
     
     if (noteIdsToDelete.length > 0) {
       console.log(`SPANN: Found ${noteIdsToDelete.length} stale embeddings to remove.`);
-      // Remove stale embeddings one by one to avoid issues with bulk operations
+      // Remove stale embeddings one by one with proper error handling
       for (const noteId of noteIdsToDelete) {
-        this.storeRef.commit(events.embeddingRemoved({ noteId }));
+        try {
+          if (typeof noteId === 'string' && noteId.length > 0) {
+            this.storeRef.commit(events.embeddingRemoved({ noteId }));
+          } else {
+            console.warn(`SPANN: Skipping invalid noteId during deletion:`, noteId);
+          }
+        } catch (error) {
+          console.error(`SPANN: Failed to remove embedding for noteId ${noteId}:`, error);
+        }
       }
     }
 
@@ -167,9 +184,13 @@ class SpannSearchService {
     let syncedCount = 0;
     for (const note of allNotes) {
       try {
-        // This existing method will create or update the embedding as needed.
-        await this.addOrUpdateNote(note.id as string, note.title as string, note.content);
-        syncedCount++;
+        // Validate note data before processing
+        if (typeof note.id === 'string' && note.id.length > 0 && typeof note.title === 'string') {
+          await this.addOrUpdateNote(note.id, note.title, note.content);
+          syncedCount++;
+        } else {
+          console.warn(`SPANN: Skipping note with invalid data:`, { id: note.id, title: note.title });
+        }
       } catch (error) {
         console.error(`Failed to sync note ${note.id}:`, error);
       }
@@ -341,8 +362,10 @@ class SpannSearchService {
 
   public removeNote(noteId: string) {
     try {
-      if (this.storeRef) {
+      if (this.storeRef && typeof noteId === 'string' && noteId.length > 0) {
         this.storeRef.commit(events.embeddingRemoved({ noteId }));
+      } else {
+        console.warn('SpannSearchService: Cannot remove embedding - invalid noteId or no store reference');
       }
     } catch (error) {
       console.error('Failed to remove embedding:', error);
