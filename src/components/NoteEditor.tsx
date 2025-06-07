@@ -16,7 +16,7 @@ import { entityEditorSchema } from '@/lib/editor/EntityEditorSchema';
 import { EntityHighlighter } from '@/services/EntityHighlighter';
 import { useIdleCallback } from '@/hooks/useIdleCallback';
 import { useHardenedState } from '@/cursor-stability/useHardenedState';
-import { semanticSearchService } from '@/lib/embedding/SemanticSearchService';
+import { spannSearchService } from '@/lib/embedding/SpannSearchService';
 
 export function NoteEditor() {
   const activeNote = useActiveNote();
@@ -120,7 +120,7 @@ export function NoteEditor() {
       // Background embedding update
       queueMicrotask(async () => {
         try {
-          await semanticSearchService.addOrUpdateNote(
+          await spannSearchService.addOrUpdateNote(
             activeNote.id, 
             activeNote.title, 
             currentBlocks

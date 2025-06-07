@@ -215,12 +215,12 @@ export function useNoteActions() {
   const createNote = (note: any) => {
     store.commit(events.noteCreated(note));
     
-    // Background embedding creation - semantic search service will handle LiveStore events
+    // Background embedding creation - spann search service will handle LiveStore events
     queueMicrotask(async () => {
       try {
         // Import here to avoid circular dependency
-        const { semanticSearchService } = await import('@/lib/embedding/SemanticSearchService');
-        await semanticSearchService.addOrUpdateNote(note.id, note.title, note.content);
+        const { spannSearchService } = await import('@/lib/embedding/SpannSearchService');
+        await spannSearchService.addOrUpdateNote(note.id, note.title, note.content);
       } catch (error) {
         console.error('Failed to create note embedding:', error);
       }
@@ -230,11 +230,11 @@ export function useNoteActions() {
   const deleteNote = (id: string) => {
     store.commit(events.noteDeleted({ id }));
     
-    // Remove from semantic search - service will handle LiveStore events
+    // Remove from spann search - service will handle LiveStore events
     queueMicrotask(async () => {
       try {
-        const { semanticSearchService } = await import('@/lib/embedding/SemanticSearchService');
-        semanticSearchService.removeNote(id);
+        const { spannSearchService } = await import('@/lib/embedding/SpannSearchService');
+        spannSearchService.removeNote(id);
       } catch (error) {
         console.error('Failed to remove note embedding:', error);
       }
