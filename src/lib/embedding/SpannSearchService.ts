@@ -142,11 +142,13 @@ class SpannSearchService {
 
     console.log("SPANN: Fetching source of truth (notes) and current state (embeddings).");
     // 1. Get all current notes (the source of truth).
-    const allNotes = this.storeRef.query(tables.notes.select());
+    const allNotesResult = this.storeRef.query(tables.notes.select());
+    const allNotes = Array.isArray(allNotesResult) ? allNotesResult : [];
     const currentNoteIds = new Set(allNotes.map((n: any) => n.id));
 
     // 2. Get all note IDs that currently have an embedding.
-    const allEmbeddingRows = this.storeRef.query(tables.embeddings.select('noteId'));
+    const allEmbeddingRowsResult = this.storeRef.query(tables.embeddings.select('noteId'));
+    const allEmbeddingRows = Array.isArray(allEmbeddingRowsResult) ? allEmbeddingRowsResult : [];
     const existingEmbeddingIds = new Set(allEmbeddingRows.map((e: any) => e.noteId));
 
     // 3. Identify stale embeddings to be deleted.
@@ -166,7 +168,7 @@ class SpannSearchService {
     for (const note of allNotes) {
       try {
         // This existing method will create or update the embedding as needed.
-        await this.addOrUpdateNote(note.id, note.title, note.content);
+        await this.addOrUpdateNote(note.id as string, note.title as string, note.content);
         syncedCount++;
       } catch (error) {
         console.error(`Failed to sync note ${note.id}:`, error);
@@ -177,7 +179,8 @@ class SpannSearchService {
     // Now that the `embeddings` table is clean, we can build the index.
     
     console.log("SPANN: Embeddings table synchronized. Now rebuilding clusters.");
-    const allEmbeddings = this.storeRef.query(tables.embeddings.select());
+    const allEmbeddingsResult = this.storeRef.query(tables.embeddings.select());
+    const allEmbeddings = Array.isArray(allEmbeddingsResult) ? allEmbeddingsResult : [];
     // Reduced minimum requirement to 3 for testing
     const minEmbeddings = 3;
     
