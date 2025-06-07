@@ -49,7 +49,7 @@ export class HnswPersistence {
 
       // 4. Generate checksum and emit event
       const checksum = await createChecksum(data);
-      const createdAt = Date.now(); // Fix: use timestamp number to match schema
+      const createdAt = new Date(); // Use Date object to match event schema
       
       this.storeRef.commit(events.hnswGraphSnapshotCreated({ 
         fileName, 
